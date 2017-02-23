@@ -31,6 +31,13 @@ ENDIF(NOT DEVELOPMENT_ROOT)
 # external/internal libraries --------------------------------------------------
 # ==============================================================================
 
+# boost =======================
+SET(BOOST_ROOT ${DEVELOPMENT_ROOT}/thirdparty/boost/1.59.0)
+INCLUDE_DIRECTORIES(${BOOST_ROOT} SYSTEM)
+
+ADD_DEFINITIONS(-DUSE_BOOST)
+
+# obcore ======================
 INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/2.3.1/include SYSTEM)
 include_directories(${DEVELOPMENT_ROOT}/thirdparty/obcore/2.3.1/include/inchi SYSTEM)
 SET(OBCORE_LIB_NAME obcore)

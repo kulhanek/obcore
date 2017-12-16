@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -24,7 +45,7 @@
 
 #include "mode.h"
 
-#if( TEST_RENUMB_ATOMS == 1 )
+#if ( TEST_RENUMB_ATOMS == 1 )
 #include "ichitime.h"
 #endif
 #include "inpdef.h"
@@ -68,11 +89,11 @@ static int CompareDfsDescendants4CT( const void *a1, const void *a2 );
 int GetSp3RelRacAbs( const INChI *pINChI, INChI_Stereo *Stereo );
 
 
-#if( TEST_RENUMB_ATOMS == 1 || READ_INCHI_STRING == 1 ) /*  { */
+#if ( TEST_RENUMB_ATOMS == 1 || READ_INCHI_STRING == 1 ) /*  { */
 int CompareStereoINChI( INChI_Stereo *s1, INChI_Stereo *s2 );
 #endif
 
-#if( READ_INCHI_STRING == 1 ) /*  { */
+#if ( READ_INCHI_STRING == 1 ) /*  { */
 /*************************************************************************************/
 
 int CompareReversedStereoINChI2( INChI_Stereo *s1, INChI_Stereo *s2, ICR *picr);
@@ -104,12 +125,12 @@ int inp2spATOM( inp_ATOM *inp_at, int num_inp_at, sp_ATOM *at )
         at[i].charge             = inp_at[i].charge;
         at[i].radical            = inp_at[i].radical;
 
-#if( FIND_RING_SYSTEMS == 1 )
+#if ( FIND_RING_SYSTEMS == 1 )
         at[i].nBlockSystem       = inp_at[i].nBlockSystem;
         at[i].bCutVertex         = inp_at[i].bCutVertex;
         at[i].nRingSystem        = inp_at[i].nRingSystem;
         at[i].nNumAtInRingSystem = inp_at[i].nNumAtInRingSystem;
-#if( FIND_RINS_SYSTEMS_DISTANCES == 1 )
+#if ( FIND_RINS_SYSTEMS_DISTANCES == 1 )
         at[i].nDistanceFromTerminal = inp_at[i].nDistanceFromTerminal;
 #endif
 #endif
@@ -183,10 +204,10 @@ int CompareHillFormulas( const char *f1, const char *f2 )
         ret1 = GetElementAndCount( &f1, szEl1, &count1 );
         ret2 = GetElementAndCount( &f2, szEl2, &count2 );
         if ( 0 <= ret1 && 0 <= ret2 ) {
-            if ( ret = strcmp( szEl1, szEl2 ) ) {
+            if ( (ret = strcmp( szEl1, szEl2 )) ) {
                 return ret; /*  lexicographic order, string termination > any character */
             }
-            if ( ret = count2 - count1 ) {
+            if ( (ret = count2 - count1) ) {
                 return ret; /*  inverse atom count order */
             }
         } else {
@@ -215,10 +236,10 @@ int CompareHillFormulasNoH( const char *f1, const char *f2, int *num_H1, int *nu
             ret2 = GetElementAndCount( &f2, szEl2, &count2 );
         }
         if ( 0 <= ret1 && 0 <= ret2 ) {
-            if ( ret = strcmp( szEl1, szEl2 ) ) {
+            if ( (ret = strcmp( szEl1, szEl2 )) ) {
                 return ret; /*  lexicographic order, string termination > any character */
             }
-            if ( ret = count2 - count1 ) {
+            if ( (ret = count2 - count1) ) {
                 return ret; /*  inverse atom count order */
             }
         } else {
@@ -237,11 +258,11 @@ int CompareTautNonIsoPartOfINChI( const INChI *i1, const INChI *i2 )
 
     len1 = i1->lenTautomer > 0 && i1->nTautomer[0]? i1->lenTautomer:0;
     len2 = i2->lenTautomer > 0 && i2->nTautomer[0]? i2->lenTautomer:0;
-    if ( ret  = len2 - len1 ) {
+    if ( (ret  = len2 - len1) ) {
         return ret;
     }
     for ( i = 0; i < len1; i ++ ) {
-        if ( ret = (int)i2->nTautomer[i] - (int)i1->nTautomer[i] )
+        if ( (ret = (int)i2->nTautomer[i] - (int)i1->nTautomer[i]) )
             return ret;
     }
     return 0;
@@ -288,7 +309,7 @@ int CompINChITautVsNonTaut(const INCHI_SORT *p1, const INCHI_SORT *p2, int bComp
     num_H1 = num_H2 = 0;
     
     /* do not compare terminal H */
-    if ( ret = CompareHillFormulasNoH( i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2 ) ) {
+    if ( (ret = CompareHillFormulasNoH( i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2 )) ) {
         return ret;  /* lexicographic order except the shorter one is greater (last): CH2O < CH2; C3XX < C2XX */
     }
 
@@ -297,29 +318,29 @@ int CompINChITautVsNonTaut(const INCHI_SORT *p1, const INCHI_SORT *p2, int bComp
      *********************************************************/
 
     /* compare number of atoms (excluding terminal H) */
-    if ( ret = i2->nNumberOfAtoms - i1->nNumberOfAtoms )
+    if ( (ret = i2->nNumberOfAtoms - i1->nNumberOfAtoms) )
         return ret; /*  more atoms first */
     
     /*  compare elements  (excluding terminal H) */
     num = i1->nNumberOfAtoms;
     for ( i = 0; i < num; i ++ ) { /* should always be equal if Hill formulas are same */
-        if ( ret = (int)i2->nAtom[i] - (int)i1->nAtom[i] )
+        if ( (ret = (int)i2->nAtom[i] - (int)i1->nAtom[i]) )
             return ret; /* greater periodic number first */
     }
     /**********************************************************
         compare connection tables
     ***********************************************************/
-    if ( ret = i2->lenConnTable - i1->lenConnTable )
+    if ( (ret = i2->lenConnTable - i1->lenConnTable) )
         return ret; /* longer connection table first */
     num = i2->lenConnTable; 
     for ( i = 0; i < num; i ++ ) {
-        if ( ret = (int)i2->nConnTable[i] - (int)i1->nConnTable[i] )
+        if ( (ret = (int)i2->nConnTable[i] - (int)i1->nConnTable[i]) )
             return ret; /* greater connection table first */
     }
     /*********************************************************
       compare compare total number of H (inverse: H3 < H2 )
     **********************************************************/
-    if ( ret = num_H2 - num_H1 )
+    if ( (ret = num_H2 - num_H1) )
         return ret;
     /*********************************************************
       compare non-tautomeric num_H: N < NH3 < NH2 < NH
@@ -335,7 +356,7 @@ int CompINChITautVsNonTaut(const INCHI_SORT *p1, const INCHI_SORT *p2, int bComp
     /*********************************************************
          compare non-isotopic tautomeric part
      *********************************************************/
-    if ( ret = CompareTautNonIsoPartOfINChI( i1, i2) ) {
+    if ( (ret = CompareTautNonIsoPartOfINChI( i1, i2)) ) {
         return ret;
     }
     /*
@@ -393,30 +414,30 @@ int CompINChITautVsNonTaut(const INCHI_SORT *p1, const INCHI_SORT *p2, int bComp
          compare isotopic non-tautomeric part
      ******************************************************/
     if ( bCompareIsotopic ) {
-        if ( ret = i2->nNumberOfIsotopicAtoms - i1->nNumberOfIsotopicAtoms )
+        if ( (ret = i2->nNumberOfIsotopicAtoms - i1->nNumberOfIsotopicAtoms) )
             return ret;
         num = i1->nNumberOfIsotopicAtoms;
         /*  compare isotopic atoms */
         for ( i = 0; i < num; i ++ ) {
-            if ( ret = (int)i2->IsotopicAtom[i].nAtomNumber - (int)i1->IsotopicAtom[i].nAtomNumber )
+            if ( (ret = (int)i2->IsotopicAtom[i].nAtomNumber - (int)i1->IsotopicAtom[i].nAtomNumber) )
                 return ret;
-            if ( ret = (int)i2->IsotopicAtom[i].nIsoDifference - (int)i1->IsotopicAtom[i].nIsoDifference )
+            if ( (ret = (int)i2->IsotopicAtom[i].nIsoDifference - (int)i1->IsotopicAtom[i].nIsoDifference) )
                 return ret;
         }
         /* compare isotopic H */
         /* if tautomeric comparison mode then here are compared only non-tautomeric H */
         for ( i = 0; i < num; i ++ ) {
-            if ( ret = (int)i2->IsotopicAtom[i].nNum_T - (int)i1->IsotopicAtom[i].nNum_T )
+            if ( (ret = (int)i2->IsotopicAtom[i].nNum_T - (int)i1->IsotopicAtom[i].nNum_T) )
                 return ret;
-            if ( ret = (int)i2->IsotopicAtom[i].nNum_D - (int)i1->IsotopicAtom[i].nNum_D )
+            if ( (ret = (int)i2->IsotopicAtom[i].nNum_D - (int)i1->IsotopicAtom[i].nNum_D) )
                 return ret;
-            if ( ret = (int)i2->IsotopicAtom[i].nNum_H - (int)i1->IsotopicAtom[i].nNum_H )
+            if ( (ret = (int)i2->IsotopicAtom[i].nNum_H - (int)i1->IsotopicAtom[i].nNum_H) )
                 return ret;
         }
         /*****************************************************
              compare isotopic tautomeric part
          *****************************************************/
-        if ( ret = i2->nNumberOfIsotopicTGroups || i1->nNumberOfIsotopicTGroups )
+        if ( (ret = i2->nNumberOfIsotopicTGroups || i1->nNumberOfIsotopicTGroups) )
             return ret;
         /*
         num = i1->nNumberOfIsotopicTGroups;
@@ -451,7 +472,7 @@ int CompINChITautVsNonTaut(const INCHI_SORT *p1, const INCHI_SORT *p2, int bComp
         ret = (int)i1->nTotalCharge - (int)i2->nTotalCharge;
         return ret;
     }
-    if ( ret = (i1->nTotalCharge? 1:0) - (i2->nTotalCharge? 1:0) ) {
+    if ( (ret = (i1->nTotalCharge? 1:0) - (i2->nTotalCharge? 1:0)) ) {
         /*  only one is charged; uncharged first */
         return ret;
     }
@@ -480,7 +501,7 @@ int GetSp3RelRacAbs( const INChI *pINChI, INChI_Stereo *Stereo )
     if ( pINChI && !pINChI->bDeleted && Stereo && 0 < Stereo->nNumberOfStereoCenters ) {
         if ( 0 != Stereo->nCompInv2Abs ) {
             if ( pINChI->nFlags & INCHI_FLAG_REL_STEREO ) {
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
                 if ( 1 <  Stereo->nNumberOfStereoCenters ) {
                     nRet = SP3_REL;
                 }
@@ -489,7 +510,7 @@ int GetSp3RelRacAbs( const INChI *pINChI, INChI_Stereo *Stereo )
 #endif
             } else
             if ( pINChI->nFlags & INCHI_FLAG_RAC_STEREO ) {
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
                 if ( 1 <  Stereo->nNumberOfStereoCenters ) {
                     nRet = SP3_REL;
                 }
@@ -500,7 +521,7 @@ int GetSp3RelRacAbs( const INChI *pINChI, INChI_Stereo *Stereo )
                 nRet = SP3_ABS;
             }
         } else
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
         if ( !(( pINChI->nFlags & (INCHI_FLAG_REL_STEREO|INCHI_FLAG_RAC_STEREO) ) && 1 == Stereo->nNumberOfStereoCenters) )
 #endif
         {
@@ -1021,28 +1042,28 @@ int CompINChILayers(const INCHI_SORT *p1, const INCHI_SORT *p2,
                 diff = 0;
                 for ( i = 0; i < num; i ++ ) {
                     /* compare isotopic atoms */
-                    if ( diff = (int)i2->IsotopicAtom[i].nAtomNumber - (int)i1->IsotopicAtom[i].nAtomNumber )
+                    if ( (diff = (int)i2->IsotopicAtom[i].nAtomNumber - (int)i1->IsotopicAtom[i].nAtomNumber) )
                         break;
-                    if ( diff = (int)i2->IsotopicAtom[i].nIsoDifference - (int)i1->IsotopicAtom[i].nIsoDifference )
+                    if ( (diff = (int)i2->IsotopicAtom[i].nIsoDifference - (int)i1->IsotopicAtom[i].nIsoDifference) )
                         break;
                     /* compare isotopic H */
-                    if ( diff = (int)i2->IsotopicAtom[i].nNum_T - (int)i1->IsotopicAtom[i].nNum_T )
+                    if ( (diff = (int)i2->IsotopicAtom[i].nNum_T - (int)i1->IsotopicAtom[i].nNum_T) )
                         break;
-                    if ( diff = (int)i2->IsotopicAtom[i].nNum_D - (int)i1->IsotopicAtom[i].nNum_D )
+                    if ( (diff = (int)i2->IsotopicAtom[i].nNum_D - (int)i1->IsotopicAtom[i].nNum_D) )
                         break;
-                    if ( diff = (int)i2->IsotopicAtom[i].nNum_H - (int)i1->IsotopicAtom[i].nNum_H )
+                    if ( (diff = (int)i2->IsotopicAtom[i].nNum_H - (int)i1->IsotopicAtom[i].nNum_H) )
                         break;
                 }
                 if ( !diff ) {
                     num = i1->nNumberOfIsotopicTGroups;
                     for ( i = 0; i < num; i ++ ) {
-                        if ( diff = (int)i2->IsotopicTGroup[i].nTGroupNumber - (int)i1->IsotopicTGroup[i].nTGroupNumber )
+                        if ( (diff = (int)i2->IsotopicTGroup[i].nTGroupNumber - (int)i1->IsotopicTGroup[i].nTGroupNumber) )
                             break;
-                        if ( diff = (int)i2->IsotopicTGroup[i].nNum_T - (int)i1->IsotopicTGroup[i].nNum_T )
+                        if ( (diff = (int)i2->IsotopicTGroup[i].nNum_T - (int)i1->IsotopicTGroup[i].nNum_T) )
                             break;
-                        if ( diff = (int)i2->IsotopicTGroup[i].nNum_D - (int)i1->IsotopicTGroup[i].nNum_D )
+                        if ( (diff = (int)i2->IsotopicTGroup[i].nNum_D - (int)i1->IsotopicTGroup[i].nNum_D) )
                             return diff;
-                        if ( diff = (int)i2->IsotopicTGroup[i].nNum_H - (int)i1->IsotopicTGroup[i].nNum_H )
+                        if ( (diff = (int)i2->IsotopicTGroup[i].nNum_H - (int)i1->IsotopicTGroup[i].nNum_H) )
                             break;
                     }
                 }
@@ -1165,17 +1186,17 @@ int CompareInchiStereo( INChI_Stereo *Stereo1, INCHI_MODE nFlags1, INChI_Stereo 
         /*  compare stereogenic bonds */
         num = inchi_min( Stereo2->nNumberOfStereoBonds, Stereo1->nNumberOfStereoBonds );
         for ( i = 0; i < num; i ++ ) {
-            if ( ret = (int)Stereo2->nBondAtom1[i] - (int)Stereo1->nBondAtom1[i] )
+            if ( (ret = (int)Stereo2->nBondAtom1[i] - (int)Stereo1->nBondAtom1[i]) )
                 return ret;
-            if ( ret = (int)Stereo2->nBondAtom2[i] - (int)Stereo1->nBondAtom2[i] )
+            if ( (ret = (int)Stereo2->nBondAtom2[i] - (int)Stereo1->nBondAtom2[i]) )
                 return ret;
-            if ( ret = (int)Stereo2->b_parity[i] - (int)Stereo1->b_parity[i] )
+            if ( (ret = (int)Stereo2->b_parity[i] - (int)Stereo1->b_parity[i]) )
                 return ret;
         }
-        if ( ret = (int)Stereo2->nNumberOfStereoBonds - (int)Stereo1->nNumberOfStereoBonds )
+        if ( (ret = (int)Stereo2->nNumberOfStereoBonds - (int)Stereo1->nNumberOfStereoBonds) )
             return ret;
         /*  compare stereogenic atoms */
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
         if ( ((nFlags1 | nFlags2) & (INCHI_FLAG_REL_STEREO | INCHI_FLAG_RAC_STEREO) ) &&
              1 == Stereo2->nNumberOfStereoCenters &&
              1 == Stereo1->nNumberOfStereoCenters ) {
@@ -1185,16 +1206,16 @@ int CompareInchiStereo( INChI_Stereo *Stereo1, INCHI_MODE nFlags1, INChI_Stereo 
         {
             num = inchi_min( Stereo2->nNumberOfStereoCenters, Stereo1->nNumberOfStereoCenters );
             for ( i = 0; i < num; i ++ ) {
-                if ( ret = (int)Stereo2->nNumber[i] - (int)Stereo1->nNumber[i] )
+                if ( (ret = (int)Stereo2->nNumber[i] - (int)Stereo1->nNumber[i]) )
                     return ret;
-                if ( ret = (int)Stereo2->t_parity[i] - (int)Stereo1->t_parity[i] )
+                if ( (ret = (int)Stereo2->t_parity[i] - (int)Stereo1->t_parity[i]) )
                     return ret;
             }
-            if ( ret = (int)Stereo2->nNumberOfStereoCenters - (int)Stereo1->nNumberOfStereoCenters )
+            if ( (ret = (int)Stereo2->nNumberOfStereoCenters - (int)Stereo1->nNumberOfStereoCenters) )
                 return ret;
             /*  compare stereo-abs-is-inverted flags  for non-relative, non-racemic */
             if ( !((nFlags1 | nFlags2) & (INCHI_FLAG_RAC_STEREO | INCHI_FLAG_REL_STEREO)) ) {
-                if ( ret = (Stereo2->nCompInv2Abs < 0) - (Stereo1->nCompInv2Abs < 0) ) {
+                if ( (ret = (Stereo2->nCompInv2Abs < 0) - (Stereo1->nCompInv2Abs < 0)) ) {
                     return ret;
                 }
             }
@@ -1202,7 +1223,7 @@ int CompareInchiStereo( INChI_Stereo *Stereo1, INCHI_MODE nFlags1, INChI_Stereo 
     } else
     if ( Stereo2 && ( Stereo2->nNumberOfStereoBonds > 0 ||
                       Stereo2->nNumberOfStereoCenters > 0
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
                       && /*  do not compare single stereocenters in case of relative stereo */
                       !((nFlags2 & (INCHI_FLAG_REL_STEREO|INCHI_FLAG_RAC_STEREO)) &&
                        1 == Stereo2->nNumberOfStereoCenters
@@ -1213,7 +1234,7 @@ int CompareInchiStereo( INChI_Stereo *Stereo1, INCHI_MODE nFlags1, INChI_Stereo 
     }else
     if ( Stereo1 && ( Stereo1->nNumberOfStereoBonds > 0 || 
                       Stereo1->nNumberOfStereoCenters > 0
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
                       && /*  do not compare single stereocenters in case of relative stereo */
                       !((nFlags1 & (INCHI_FLAG_REL_STEREO|INCHI_FLAG_RAC_STEREO)) &&
                        1 == Stereo1->nNumberOfStereoCenters
@@ -1272,7 +1293,7 @@ int CompINChI2(const INCHI_SORT *p1, const INCHI_SORT *p2, int bTaut, int bCompa
     num_H1 = num_H2 = 0;
     
     /* do not compare terminal H */
-    if ( ret = CompareHillFormulasNoH( i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2 ) ) {
+    if ( (ret = CompareHillFormulasNoH( i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2 )) ) {
         return ret;  /* lexicographic order except the shorter one is greater (last): CH2O < CH2; C3XX < C2XX */
     }
 
@@ -1281,29 +1302,29 @@ int CompINChI2(const INCHI_SORT *p1, const INCHI_SORT *p2, int bTaut, int bCompa
      *********************************************************/
 
     /* compare number of atoms (excluding terminal H) */
-    if ( ret = i2->nNumberOfAtoms - i1->nNumberOfAtoms )
+    if ( (ret = i2->nNumberOfAtoms - i1->nNumberOfAtoms) )
         return ret; /*  more atoms first */
     
     /*  compare elements  (excluding terminal H) */
     num = i1->nNumberOfAtoms;
     for ( i = 0; i < num; i ++ ) { /* should always be equal if Hill formulas are same */
-        if ( ret = (int)i2->nAtom[i] - (int)i1->nAtom[i] )
+        if ( (ret = (int)i2->nAtom[i] - (int)i1->nAtom[i]) )
             return ret; /* greater periodic number first */
     }
     /**********************************************************
         compare connection tables
     ***********************************************************/
-    if ( ret = i2->lenConnTable - i1->lenConnTable )
+    if ( (ret = i2->lenConnTable - i1->lenConnTable) )
         return ret; /* longer connection table first */
     num = i2->lenConnTable; 
     for ( i = 0; i < num; i ++ ) {
-        if ( ret = (int)i2->nConnTable[i] - (int)i1->nConnTable[i] )
+        if ( (ret = (int)i2->nConnTable[i] - (int)i1->nConnTable[i]) )
             return ret; /* greater connection table first */
     }
     /*********************************************************
       compare compare total number of H (inverse: H3 < H2 )
     **********************************************************/
-    if ( ret = num_H2 - num_H1 )
+    if ( (ret = num_H2 - num_H1) )
         return ret;
     /*********************************************************
       compare non-tautomeric num_H: N < NH3 < NH2 < NH
@@ -1319,7 +1340,7 @@ int CompINChI2(const INCHI_SORT *p1, const INCHI_SORT *p2, int bTaut, int bCompa
     /*********************************************************
          compare non-isotopic tautomeric part
      *********************************************************/
-    if ( ret = CompareTautNonIsoPartOfINChI( i1, i2) ) {
+    if ( (ret = CompareTautNonIsoPartOfINChI( i1, i2)) ) {
         return ret;
     }
     /*
@@ -1341,7 +1362,7 @@ int CompINChI2(const INCHI_SORT *p1, const INCHI_SORT *p2, int bTaut, int bCompa
     /*********************************************************
        non-tautomeric "fixed H" specific
      *********************************************************/
-    if ( TAUT_NON == bTaut && (i1n && i1n->nNum_H_fixed || i2n && i2n->nNum_H_fixed) ) {
+    if ( TAUT_NON == bTaut && ((i1n && i1n->nNum_H_fixed) || (i2n && i2n->nNum_H_fixed)) ) {
         /* first, compare non-tautomeric chem. formulas -- they may be different */
         const char *f1 = (i1n /*&& i1n->nNum_H_fixed*/)? i1n->szHillFormula : i1->szHillFormula;
         const char *f2 = (i2n /*&& i2n->nNum_H_fixed*/)? i2n->szHillFormula : i2->szHillFormula;
@@ -1358,7 +1379,7 @@ int CompINChI2(const INCHI_SORT *p1, const INCHI_SORT *p2, int bTaut, int bCompa
                            (int)i2n->nNum_H_fixed[i] - (int)i1n->nNum_H_fixed[i];
                 }
             }
-            if ( ret = (int)i2n->nNumberOfAtoms - (int)i1n->nNumberOfAtoms ) {
+            if ( (ret = (int)i2n->nNumberOfAtoms - (int)i1n->nNumberOfAtoms )) {
                 return ret; /* should not happen <BRKPT> */
             }
         } else
@@ -1422,40 +1443,40 @@ int CompINChI2(const INCHI_SORT *p1, const INCHI_SORT *p2, int bTaut, int bCompa
          compare isotopic non-tautomeric part
      ******************************************************/
     if ( bCompareIsotopic ) {
-        if ( ret = i2->nNumberOfIsotopicAtoms - i1->nNumberOfIsotopicAtoms )
+        if ( (ret = i2->nNumberOfIsotopicAtoms - i1->nNumberOfIsotopicAtoms) )
             return ret;
         num = i1->nNumberOfIsotopicAtoms;
         /*  compare isotopic atoms */
         for ( i = 0; i < num; i ++ ) {
-            if ( ret = (int)i2->IsotopicAtom[i].nAtomNumber - (int)i1->IsotopicAtom[i].nAtomNumber )
+            if ( (ret = (int)i2->IsotopicAtom[i].nAtomNumber - (int)i1->IsotopicAtom[i].nAtomNumber) )
                 return ret;
-            if ( ret = (int)i2->IsotopicAtom[i].nIsoDifference - (int)i1->IsotopicAtom[i].nIsoDifference )
+            if ( (ret = (int)i2->IsotopicAtom[i].nIsoDifference - (int)i1->IsotopicAtom[i].nIsoDifference) )
                 return ret;
         }
         /* compare isotopic H */
         /* if tautomeric comparison mode then here are compared only non-tautomeric H */
         for ( i = 0; i < num; i ++ ) {
-            if ( ret = (int)i2->IsotopicAtom[i].nNum_T - (int)i1->IsotopicAtom[i].nNum_T )
+            if ( (ret = (int)i2->IsotopicAtom[i].nNum_T - (int)i1->IsotopicAtom[i].nNum_T) )
                 return ret;
-            if ( ret = (int)i2->IsotopicAtom[i].nNum_D - (int)i1->IsotopicAtom[i].nNum_D )
+            if ( (ret = (int)i2->IsotopicAtom[i].nNum_D - (int)i1->IsotopicAtom[i].nNum_D) )
                 return ret;
-            if ( ret = (int)i2->IsotopicAtom[i].nNum_H - (int)i1->IsotopicAtom[i].nNum_H )
+            if ( (ret = (int)i2->IsotopicAtom[i].nNum_H - (int)i1->IsotopicAtom[i].nNum_H) )
                 return ret;
         }
         /*****************************************************
              compare isotopic tautomeric part
          *****************************************************/
-        if ( ret = i2->nNumberOfIsotopicTGroups - i1->nNumberOfIsotopicTGroups )
+        if ( (ret = i2->nNumberOfIsotopicTGroups - i1->nNumberOfIsotopicTGroups) )
             return ret;
         num = i1->nNumberOfIsotopicTGroups;
         for ( i = 0; i < num; i ++ ) {
-            if ( ret = (int)i2->IsotopicTGroup[i].nTGroupNumber - (int)i1->IsotopicTGroup[i].nTGroupNumber )
+            if ( (ret = (int)i2->IsotopicTGroup[i].nTGroupNumber - (int)i1->IsotopicTGroup[i].nTGroupNumber) )
                 return ret;
-            if ( ret = (int)i2->IsotopicTGroup[i].nNum_T - (int)i1->IsotopicTGroup[i].nNum_T )
+            if ( (ret = (int)i2->IsotopicTGroup[i].nNum_T - (int)i1->IsotopicTGroup[i].nNum_T) )
                 return ret;
-            if ( ret = (int)i2->IsotopicTGroup[i].nNum_D - (int)i1->IsotopicTGroup[i].nNum_D )
+            if ( (ret = (int)i2->IsotopicTGroup[i].nNum_D - (int)i1->IsotopicTGroup[i].nNum_D) )
                 return ret;
-            if ( ret = (int)i2->IsotopicTGroup[i].nNum_H - (int)i1->IsotopicTGroup[i].nNum_H )
+            if ( (ret = (int)i2->IsotopicTGroup[i].nNum_H - (int)i1->IsotopicTGroup[i].nNum_H) )
                 return ret;
         }
     
@@ -1477,7 +1498,7 @@ int CompINChI2(const INCHI_SORT *p1, const INCHI_SORT *p2, int bTaut, int bCompa
         ret = (int)i1->nTotalCharge - (int)i2->nTotalCharge;
         return ret;
     }
-    if ( ret = (i1->nTotalCharge? 1:0) - (i2->nTotalCharge? 1:0) ) {
+    if ( (ret = (i1->nTotalCharge? 1:0) - (i2->nTotalCharge? 1:0)) ) {
         /*  only one is charged; uncharged first */
         return ret;
     }
@@ -1491,7 +1512,7 @@ int CompINChINonTaut2(const void *p1, const void *p2)
 {
     int ret;
     ret = CompINChI2( (const INCHI_SORT *)p1, (const INCHI_SORT *)p2, TAUT_NON, 1 );
-#if( CANON_FIXH_TRANS == 1 )
+#if ( CANON_FIXH_TRANS == 1 )
     if ( !ret ) {
         /* to obtain canonical transposition 2004-05-10 */
         ret = CompINChI2( (const INCHI_SORT *)p1, (const INCHI_SORT *)p2, TAUT_YES, 1 );
@@ -1508,7 +1529,7 @@ int CompINChITaut2(const void *p1, const void *p2)
 {
     int ret;
     ret = CompINChI2( (const INCHI_SORT *)p1, (const INCHI_SORT *)p2, TAUT_YES, 1 );
-#if( CANON_FIXH_TRANS == 1 )
+#if ( CANON_FIXH_TRANS == 1 )
     if ( !ret ) {
         /* to obtain canonical transposition 2004-05-10 */
         ret = CompINChI2( (const INCHI_SORT *)p1, (const INCHI_SORT *)p2, TAUT_NON, 1 );
@@ -1562,7 +1583,7 @@ static int CompareDfsDescendants4CT( const void *a1, const void *a2 )
         int nDesc2 = nCurDfsNumber > gDfs4CT_nDfsNumber[neigh2]?
                          0 : (int)gDfs4CT_nNumDescendants[neigh2];
         int ret;
-        if ( ret = nDesc1 - nDesc2 ) {
+        if ( (ret = nDesc1 - nDesc2) ) {
             return ret;
         }
         return  (int)neigh1 - (int)neigh2; /*  canon. numbers difference */
@@ -1587,10 +1608,10 @@ AT_NUMB *GetDfsOrder4CT( AT_NUMB *LinearCT, int nLenCT, S_CHAR *nNum_H, int num_
 
 
     /*  allocate arrays */
-    nStackAtom      = (AT_NUMB *)inchi_malloc(num_atoms*sizeof(nStackAtom[0]));
-    nNumDescendants = (AT_NUMB *)inchi_malloc(num_atoms*sizeof(nNumDescendants[0]));
-    nDfsNumber      = (AT_NUMB *)inchi_malloc(num_atoms*sizeof(nDfsNumber[0]));
-    cNeighNumb      = (S_CHAR  *)inchi_malloc(num_atoms*sizeof(cNeighNumb[0]));
+    nStackAtom      = (AT_NUMB *) inchi_malloc(num_atoms*sizeof(nStackAtom[0]));
+    nNumDescendants = (AT_NUMB *) inchi_malloc(num_atoms*sizeof(nNumDescendants[0]));
+    nDfsNumber      = (AT_NUMB *) inchi_malloc(num_atoms*sizeof(nDfsNumber[0]));
+    cNeighNumb      = (S_CHAR  *) inchi_malloc(num_atoms*sizeof(cNeighNumb[0]));
     nl              = CreateNeighListFromLinearCT( LinearCT, nLenCT, num_atoms );
     /*  check allocation */
     if ( !nStackAtom || !nNumDescendants || !nDfsNumber || !cNeighNumb || !nl ) {
@@ -1703,7 +1724,7 @@ AT_NUMB *GetDfsOrder4CT( AT_NUMB *LinearCT, int nLenCT, S_CHAR *nNum_H, int num_
     nTotOutputStringLen = 3*(num_atoms+num_rings+1); /*  last 3 elements are a 'zero termination' */
 
     if ( bCtPredecessors ) {
-        if ( nOutputString = (AT_RANK *)inchi_calloc( nTotOutputStringLen, sizeof(nOutputString[0]) ) ) {
+        if ( (nOutputString = (AT_RANK *)inchi_calloc( nTotOutputStringLen, sizeof(nOutputString[0]) )) ) {
             cDelim = '-';
             for ( u = 0, k = -3 ; u < num_atoms; u ++ ) {
                 k += 3;
@@ -1741,7 +1762,7 @@ AT_NUMB *GetDfsOrder4CT( AT_NUMB *LinearCT, int nLenCT, S_CHAR *nNum_H, int num_
               (num_rings) delimiters for the ring closures
         */
 
-        if ( nOutputString = (AT_RANK *)inchi_calloc( nTotOutputStringLen, sizeof(nOutputString[0]) ) ) {
+        if ( (nOutputString = (AT_RANK *)inchi_calloc( nTotOutputStringLen, sizeof(nOutputString[0]) )) ) {
             u               = start; /*  start atom */
             nTopStackAtom   =-1;
             memset( cNeighNumb, 0, num_atoms*sizeof(cNeighNumb[0]));
@@ -1784,7 +1805,7 @@ AT_NUMB *GetDfsOrder4CT( AT_NUMB *LinearCT, int nLenCT, S_CHAR *nNum_H, int num_
                         if ( j == 1 ) {
                             cDelim = '(';
                         } else
-                        if (  j == nl[i][0] ) {
+                        if ( j == nl[i][0] ) {
                             cDelim = ')';
                         } else {
                             cDelim = ',';
@@ -1843,7 +1864,7 @@ int ProcessStructError( INCHI_IOSTREAM *output_file, INCHI_IOSTREAM *log_file, /
                         int *bXmlStructStarted, long num_inp, INPUT_PARMS *ip, char *pStr, int nStrLen )
 {
     int b_ok;
-#ifdef INCHI_LIB
+#ifdef TARGET_LIB_FOR_WINCHI
     int bPlainText = (ip->bINChIOutputOptions & INCHI_OUT_PLAIN_TEXT) &&
                      (ip->bINChIOutputOptions & INCHI_OUT_WINCHI_WINDOW ) &&
                     !(ip->bINChIOutputOptions & INCHI_OUT_XML);
@@ -1884,7 +1905,7 @@ int ProcessStructError( INCHI_IOSTREAM *output_file, INCHI_IOSTREAM *log_file, /
     
 }
 
-#if( TEST_RENUMB_ATOMS == 1 ) /*  { */
+#if ( TEST_RENUMB_ATOMS == 1 ) /*  { */
 /***************************************************************************************/
 int CompareStereoINChI( INChI_Stereo *s1, INChI_Stereo *s2 )
 {
@@ -1999,7 +2020,7 @@ int CompareINChI( INChI *i1, INChI *i2, INChI_Aux *a1, INChI_Aux *a2 )
     return 0;
 }
 #endif /*  } TEST_RENUMB_ATOMS == 1 */
-#if( READ_INCHI_STRING == 1 ) /*  { */
+#if ( READ_INCHI_STRING == 1 ) /*  { */
 /*************************************************************************************/
 int CompareReversedStereoINChI( INChI_Stereo *s1/* InChI from reversed struct */, INChI_Stereo *s2 /* input InChI */)
 {
@@ -2064,7 +2085,7 @@ int CompareReversedStereoINChI2( INChI_Stereo *s1/* InChI from reversed struct *
     int nNumSb1 = s1? s1->nNumberOfStereoBonds   : 0;
     int nNumSb2 = s2? s2->nNumberOfStereoBonds   : 0;
     
-    if ( (nNumSc1 || nNumSc1) &&
+    if ( (nNumSc1 || nNumSc2) &&
          ( nNumSc1 != nNumSc2 ||
            memcmp( s1->nNumber,  s2->nNumber,  nNumSc1*sizeof(s1->nNumber[0] ) ) ||
            memcmp( s1->t_parity, s2->t_parity, nNumSc1*sizeof(s1->t_parity[0]) ) ) ) {
@@ -2179,7 +2200,7 @@ int CompareReversedStereoINChI2( INChI_Stereo *s1/* InChI from reversed struct *
                 j2 ++;
             } else
             if ( s1->nBondAtom1[j1] <  s2->nBondAtom1[j2] ||
-                 s1->nBondAtom1[j1] == s2->nBondAtom1[j2] && s1->nBondAtom2[j1] <  s2->nBondAtom2[j2]) {
+                 (s1->nBondAtom1[j1] == s2->nBondAtom1[j2] && s1->nBondAtom2[j1] <  s2->nBondAtom2[j2])) {
                 num_in1_only ++;
                 if ( s1->b_parity[j1] == AB_PARITY_UNDF ) {
                     num_extra_undf ++;
@@ -2397,7 +2418,7 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */, INChI *i2 
     }
 */
     /* ret = 20..31 => 40..51 */
-    if ( ret = CompareReversedStereoINChI( i1->Stereo, i2->Stereo ) )
+    if ( (ret = CompareReversedStereoINChI( i1->Stereo, i2->Stereo )) )
         return ret+20;
     /* ret = 40..51 => 60..71 */
 
@@ -2408,7 +2429,7 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */, INChI *i2 
         ;
     } else
 
-    if ( ret = CompareReversedStereoINChI( i1->StereoIsotopic, i2->StereoIsotopic ) ) {
+    if ( (ret = CompareReversedStereoINChI( i1->StereoIsotopic, i2->StereoIsotopic )) ) {
         return ret+40;
     }
 
@@ -2626,8 +2647,8 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */, IN
         /* number of endpoints */
         int num1 = 0, num2 = 0, num_M1=0, num_M2=0;
         int len, num_eq, num_in1_only, num_in2_only;
-        AT_NUMB *pe1 = (AT_NUMB *)inchi_malloc( (i1->lenTautomer+1) * sizeof(pe1[0]) );
-        AT_NUMB *pe2 = (AT_NUMB *)inchi_malloc( (i2->lenTautomer+1) * sizeof(pe2[0]) );
+        AT_NUMB *pe1 = (AT_NUMB *) inchi_malloc( (i1->lenTautomer+1) * sizeof(pe1[0]) );
+        AT_NUMB *pe2 = (AT_NUMB *) inchi_malloc( (i2->lenTautomer+1) * sizeof(pe2[0]) );
         num_H1 = num_H2=0;
         /* collect endpoints, H, (-) */
         if ( !pe1 || !pe2 ) {
@@ -2816,7 +2837,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
                                   | ((TG_FLAG_FIX_SP3_BUG         & *pbTautFlags)? PES_BIT_FIX_SP3_BUG      :0);
     INCHI_MODE bTautFlags         = (*pbTautFlags     & (~(INCHI_MODE)TG_FLAG_ALL_TAUTOMERIC) );
     INCHI_MODE bTautFlagsDone     = (*pbTautFlagsDone /*& (~(INCHI_MODE)TG_FLAG_ALL_TAUTOMERIC) */);
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
     int bExtract = 0; /*  EXTR_HAS_ATOM_WITH_DEFINED_PARITY; */
 #endif
 
@@ -2824,7 +2845,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
     int bFixIsoFixedH = 0;
     int bFixTermHChrg = 0;
 
-#if( TEST_RENUMB_ATOMS == 1 )
+#if ( TEST_RENUMB_ATOMS == 1 )
     long ulNormTime=0;
     long ulCanonTime=0, ulCanonTime2=0;
 
@@ -2847,11 +2868,11 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
     
 
 /*^^^ */
-#if( FIX_ISO_FIXEDH_BUG == 1 )
+#if ( FIX_ISO_FIXEDH_BUG == 1 )
     if (TG_FLAG_FIX_ISO_FIXEDH_BUG & *pbTautFlags)
         bFixIsoFixedH = 1;
 #endif
-#if( FIX_TERM_H_CHRG_BUG == 1 )
+#if ( FIX_TERM_H_CHRG_BUG == 1 )
     if (TG_FLAG_FIX_TERM_H_CHRG_BUG & *pbTautFlags)
         bFixTermHChrg = 1;
 #endif
@@ -2869,14 +2890,14 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
     /*norm_at_fixed_bonds[TAUT_YES] = out_norm_data[TAUT_YES]->at_fixed_bonds;*/
     for ( i = 0; i < TAUT_NUM; i ++ ) {
         if ( out_norm_data[i]->at ) {
-            if ( !(at[i] = (sp_ATOM  *)inchi_malloc( num_inp_at * sizeof(*at[0]) ) ) ) {
+            if ( !(at[i] = (sp_ATOM  *) inchi_malloc( num_inp_at * sizeof(*at[0]) ) ) ) {
                 ret = -1;
             }
         } else {
             at[i] = NULL;
         }
     }
-    if ( !out_norm_data[TAUT_NON]->at && !out_norm_data[TAUT_YES]->at || !inp_at || ret ) {
+    if ( (!out_norm_data[TAUT_NON]->at && !out_norm_data[TAUT_YES]->at) || !inp_at || ret ) {
         ret = -1;
         goto exit_function;
     }
@@ -2912,7 +2933,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
         add_DT_to_num_H( num_atoms, out_at );
     }
     /*fix_odd_things( num_atoms, out_at );*/
-#if( FIND_RING_SYSTEMS == 1 )
+#if ( FIND_RING_SYSTEMS == 1 )
     MarkRingSystemsInp( out_at, num_atoms, 0 );
 #endif
     /*  duplicate the preprocessed structure so that all supplied out_norm_data[]->at buffers are filled */
@@ -2975,7 +2996,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
         ret = set_stereo_parity( out_norm_data[TAUT_YES]->at, at[TAUT_YES], num_taut_at, num_removed_H_taut,
                                  &s[TAUT_YES].nMaxNumStereoAtoms, &s[TAUT_YES].nMaxNumStereoBonds, nUserMode,
                                  bPointedEdgeStereo, vABParityUnknown );
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
         if ( 0 < ret ) {
             bExtract |= EXTR_HAS_ATOM_WITH_DEFINED_PARITY;
         }
@@ -3053,7 +3074,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
         ret = set_stereo_parity( out_norm_data[TAUT_NON]->at, at[TAUT_NON], num_atoms, num_removed_H,
                                  &s[TAUT_NON].nMaxNumStereoAtoms, &s[TAUT_NON].nMaxNumStereoBonds, nUserMode,
                                  bPointedEdgeStereo, vABParityUnknown );
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
         if ( 0 < ret ) {
             bExtract |= EXTR_HAS_ATOM_WITH_DEFINED_PARITY;
         }
@@ -3079,14 +3100,14 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
 /*^^^ */
     if (bFixIsoFixedH)  /* 2008-03-21 DT */
         bHasIsotopicAtoms     = bHasIsotopicAtoms   || 
-                                s[TAUT_YES].nLenLinearCTTautomer > 0 && t_group_info &&
-                                (0 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[0] ||
-                                 1 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[1] ||
-                                 2 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[2]) ;
+                                (s[TAUT_YES].nLenLinearCTTautomer > 0 && t_group_info &&
+                                ((0 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[0]) ||
+                                 (1 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[1]) ||
+                                 (2 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[2]))) ;
 /*^^^ */
     bHasIsotopicAtoms   =   bHasIsotopicAtoms || 
-                            s[TAUT_YES].nLenIsotopicEndpoints > 1 && t_group_info &&
-                            (t_group_info->bTautFlagsDone & (TG_FLAG_FOUND_ISOTOPIC_H_DONE|TG_FLAG_FOUND_ISOTOPIC_ATOM_DONE));
+                            (s[TAUT_YES].nLenIsotopicEndpoints > 1 && t_group_info &&
+                            (t_group_info->bTautFlagsDone & (TG_FLAG_FOUND_ISOTOPIC_H_DONE|TG_FLAG_FOUND_ISOTOPIC_ATOM_DONE)));
 
     /*  default mode */
     if ( !(nUserMode & REQ_MODE_DEFAULT) ) {
@@ -3137,7 +3158,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
         ret = -3;
         goto exit_function; /*  program error: inconsistent nUserMode or missing taut/non-taut allocation */ /*   <BRKPT> */
     }
-#if( TEST_RENUMB_ATOMS == 1 )
+#if ( TEST_RENUMB_ATOMS == 1 )
     ulNormTime = InchiTimeElapsed( &ulNormTimeStart);
 #endif
     /************************************************************
@@ -3145,7 +3166,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
      *       Obtain all non-stereo canonical numberings         *
      *                                                          *
      ************************************************************/
-#if( TEST_RENUMB_ATOMS == 1 )
+#if ( TEST_RENUMB_ATOMS == 1 )
         InchiTimeGet( &ulCanonTimeStart );
 #endif
     if ( (nUserMode & REQ_MODE_NON_ISO) && !(nUserMode & REQ_MODE_ISO) ) {
@@ -3170,13 +3191,13 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
         bHasIsotopicAtoms = 0;
     }
     ret = GetBaseCanonRanking( num_atoms, num_at_tg, at, t_group_info, s, pBCN, ulMaxTime, bFixIsoFixedH );
-#if( TEST_RENUMB_ATOMS == 1 )
+#if ( TEST_RENUMB_ATOMS == 1 )
         ulCanonTime = InchiTimeElapsed( &ulCanonTimeStart );
 #endif
     if ( ret < 0 ) {
         goto exit_function; /*  program error */
     }
-#if( bRELEASE_VERSION == 0 && FIND_CANON_NE_EQUITABLE == 1 )
+#if ( bRELEASE_VERSION == 0 && FIND_CANON_NE_EQUITABLE == 1 )
     /* Debug only: find whether canonical equivalence is different from equitable partition */
     if ( bCanonIsFinerThanEquitablePartition( num_atoms, at[n1], pBCN->ftcn[TAUT_NON].nSymmRankCt ) ) {
         bExtract |= EXTR_CANON_NE_EQUITABLE;
@@ -3221,10 +3242,10 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
                 nMode |= (nUserMode & REQ_MODE_SC_IGN_ALL_UU  )? CMODE_SC_IGN_ALL_UU  : 0;
                 nMode |= (nUserMode & REQ_MODE_SB_IGN_ALL_UU  )? CMODE_SB_IGN_ALL_UU  : 0;
             }
-            if ( ret= AllocateCS( pCS, num_atoms, num_atoms, s[TAUT_NON].nLenCT, s[TAUT_NON].nLenCTAtOnly,
+            if ( (ret= AllocateCS( pCS, num_atoms, num_atoms, s[TAUT_NON].nLenCT, s[TAUT_NON].nLenCTAtOnly,
                              s[TAUT_NON].nLenLinearCTStereoDble, s[TAUT_NON].nMaxNumStereoBonds,
                              s[TAUT_NON].nLenLinearCTStereoCarb, s[TAUT_NON].nMaxNumStereoAtoms,
-                             0, 0, s[TAUT_NON].nLenIsotopic, nMode, pBCN ) ) {
+                             0, 0, s[TAUT_NON].nLenIsotopic, nMode, pBCN )) ) {
                 goto exit_function;
             }
             *pCS2 = *pCS;
@@ -3245,11 +3266,11 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
                 nMode |= (nUserMode & REQ_MODE_SC_IGN_ALL_UU  )? CMODE_SC_IGN_ALL_UU  : 0;
                 nMode |= (nUserMode & REQ_MODE_SB_IGN_ALL_UU  )? CMODE_SB_IGN_ALL_UU  : 0;
             }
-            if ( ret= AllocateCS( pCS, num_atoms, num_at_tg, s[TAUT_YES].nLenCT, s[TAUT_YES].nLenCTAtOnly,
+            if ( (ret= AllocateCS( pCS, num_atoms, num_at_tg, s[TAUT_YES].nLenCT, s[TAUT_YES].nLenCTAtOnly,
                              s[TAUT_YES].nLenLinearCTStereoDble, s[TAUT_YES].nMaxNumStereoBonds,
                              s[TAUT_YES].nLenLinearCTStereoCarb, s[TAUT_YES].nMaxNumStereoAtoms,
                              s[TAUT_YES].nLenLinearCTTautomer, s[TAUT_YES].nLenLinearCTIsotopicTautomer,
-                             s[TAUT_YES].nLenIsotopic, nMode, pBCN ) ) {
+                             s[TAUT_YES].nLenIsotopic, nMode, pBCN )) ) {
                 goto exit_function;
             }
             *pCS2 = *pCS;
@@ -3296,7 +3317,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
          *   '5' S    1|2|4|16   Stereo isotopic canonicalization           
          *   '6' A    1|2|4|8|16 Output All
          */
-#if( TEST_RENUMB_ATOMS == 1 )
+#if ( TEST_RENUMB_ATOMS == 1 )
         InchiTimeGet( &ulCanonTimeStart );
 #endif
         /***************************************
@@ -3349,7 +3370,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
                 /****************************/
                 /* success in FillOutINChI() */
                 /****************************/
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
                 if ( pINChI->Stereo &&
                      (pINChI->Stereo->nCompInv2Abs && !pINChI->Stereo->bTrivialInv) ||
                      pINChI->StereoIsotopic &&
@@ -3361,7 +3382,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
                 if ( pINChI_Aux && s[TAUT_YES].nLenLinearCTTautomer ) {
                     pINChI_Aux->bIsTautomeric = s[TAUT_YES].nLenLinearCTTautomer;
                 }
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
                 pCS->bExtract   |= bExtract;
                 pINChI->bExtract |= pCS->bExtract;
 #endif
@@ -3375,7 +3396,7 @@ int  Create_INChI( INChI **ppINChI, INChI_Aux **ppINChI_Aux, ORIG_ATOM_DATA *ori
                 }
             }
         }
-#if( TEST_RENUMB_ATOMS == 1 )
+#if ( TEST_RENUMB_ATOMS == 1 )
         ulCanonTime2 = InchiTimeElapsed( &ulCanonTimeStart );
         pINChI_Aux->ulCanonTime = ulCanonTime+ulCanonTime2;
         pINChI_Aux->ulNormTime  = ulNormTime;
@@ -3405,7 +3426,7 @@ exit_function:
     free_t_group_info( t_group_info_orig );
     return ret;
 }
-#ifndef INCHI_ANSI_ONLY /* { */
+#ifndef COMPILE_ANSI_ONLY /* { */
 /***************************************************************************************/
 int GetAtomOrdNbrInCanonOrd( inp_ATOM *norm_at, AT_NUMB *nAtomOrdNbr,
                             AT_NUMB *nOrigAtNosInCanonOrd, int num_at )
@@ -3505,7 +3526,7 @@ int FillOutCanonInfAtom(inp_ATOM *norm_at, INF_ATOM_DATA *inf_norm_at_data, int 
                                           pINChI->Stereo;
     bDoDisplaySp3 = (NULL != Stereo) && (Stereo->nNumberOfStereoCenters > 0); 
 
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
     if ( bDoDisplaySp3 && bRelRac && Stereo->nNumberOfStereoCenters < 2 &&
          (Stereo->nCompInv2Abs || ATOM_PARITY_ILL_DEF(Stereo->t_parity[0]) ) ) {
         bDoDisplaySp3 = 0;
@@ -3576,7 +3597,7 @@ int FillOutCanonInfAtom(inp_ATOM *norm_at, INF_ATOM_DATA *inf_norm_at_data, int 
         inf_norm_at[j].nCanonEquNbr = nConstitEquNumbers[i];
 #ifdef DISPLAY_DEBUG_DATA
         inf_norm_at[j].nDebugData = 0;
-#if( DISPLAY_DEBUG_DATA == DISPLAY_DEBUG_DATA_C_POINT )
+#if ( DISPLAY_DEBUG_DATA == DISPLAY_DEBUG_DATA_C_POINT )
         inf_norm_at[j].nDebugData = norm_at[j].c_point;
 #endif
 #endif
@@ -3616,12 +3637,12 @@ int FillOutCanonInfAtom(inp_ATOM *norm_at, INF_ATOM_DATA *inf_norm_at_data, int 
         }
     }
 
-#if( DISPLAY_RING_SYSTEMS == 1 )
+#if ( DISPLAY_RING_SYSTEMS == 1 )
     /*  debug only */
     for ( j = 0; j < num_at; j ++ ) {
         inf_norm_at[j].nCanonNbr          = norm_at[j].nBlockSystem;
         inf_norm_at[j].nCanonEquNbr       = norm_at[j].nRingSystem;
-#if( USE_DISTANCES_FOR_RANKING == 1 )
+#if ( USE_DISTANCES_FOR_RANKING == 1 )
         inf_norm_at[j].nTautGroupCanonNbr   = norm_at[j].nDistanceFromTerminal;
         inf_norm_at[j].nTautGroupEquNbr     = norm_at[j].bCutVertex;
 #else
@@ -3723,7 +3744,7 @@ int FillOutCanonInfAtom(inp_ATOM *norm_at, INF_ATOM_DATA *inf_norm_at_data, int 
             }
         }
         /*
-        if (  str[0] == 'H' && str[1] == 'H' && !str[2] ) {
+        if ( str[0] == 'H' && str[1] == 'H' && !str[2] ) {
             str[1] = '2';
         }
         */
@@ -3808,7 +3829,7 @@ int FillOutCanonInfAtom(inp_ATOM *norm_at, INF_ATOM_DATA *inf_norm_at_data, int 
                 next_atom[len]  = (int)norm_at[j].neighbor[n];
                 next_neigh[len] = n;
                 cur_atom = j;
-                while ( next_atom[len] != k && len < MAX_CUMULENE_LEN && 2 == norm_at[next_atom[len]].valence ) {
+                while ( len < MAX_CUMULENE_LEN && next_atom[len] != k && 2 == norm_at[next_atom[len]].valence ) {
                     next_neigh[len+1] = ((int)norm_at[next_atom[len]].neighbor[0] == cur_atom);
                     next_atom[len+1]  =  (int)norm_at[next_atom[len]].neighbor[next_neigh[len+1]];
                     cur_atom = next_atom[len];
@@ -3993,7 +4014,7 @@ int FillOutOneCanonInfAtom(inp_ATOM *inp_norm_at, INF_ATOM_DATA *inf_norm_at_dat
                                           pINChI->Stereo;
     bDoDisplaySp3 = (NULL != Stereo) && (Stereo->nNumberOfStereoCenters > 0);
 
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
     if ( bDoDisplaySp3 && bRelRac && Stereo->nNumberOfStereoCenters < 2 &&
          (Stereo->nCompInv2Abs || ATOM_PARITY_ILL_DEF(Stereo->t_parity[0]) ) ) {
         bDoDisplaySp3 = 0;
@@ -4066,7 +4087,7 @@ int FillOutOneCanonInfAtom(inp_ATOM *inp_norm_at, INF_ATOM_DATA *inf_norm_at_dat
         inf_norm_at[j].nCanonEquNbr = nConstitEquNumbers[i];
 #ifdef DISPLAY_DEBUG_DATA
         inf_norm_at[j].nDebugData = 0;
-#if( DISPLAY_DEBUG_DATA == DISPLAY_DEBUG_DATA_C_POINT )
+#if ( DISPLAY_DEBUG_DATA == DISPLAY_DEBUG_DATA_C_POINT )
         inf_norm_at[j].nDebugData = norm_at[j].c_point;
 #endif
 #endif
@@ -4105,12 +4126,12 @@ int FillOutOneCanonInfAtom(inp_ATOM *inp_norm_at, INF_ATOM_DATA *inf_norm_at_dat
             }
         }
     }
-#if( DISPLAY_RING_SYSTEMS == 1 )
+#if ( DISPLAY_RING_SYSTEMS == 1 )
     /*  debug only */
     for ( j = 0; j < num_at; j ++ ) {
         inf_norm_at[j].nCanonNbr          = norm_at[j].nBlockSystem;
         inf_norm_at[j].nCanonEquNbr       = norm_at[j].nRingSystem;
-#if( USE_DISTANCES_FOR_RANKING == 1 )
+#if ( USE_DISTANCES_FOR_RANKING == 1 )
         inf_norm_at[j].nTautGroupCanonNbr   = norm_at[j].nDistanceFromTerminal;
         inf_norm_at[j].nTautGroupEquNbr     = norm_at[j].bCutVertex;
 #else
@@ -4292,7 +4313,7 @@ int FillOutOneCanonInfAtom(inp_ATOM *inp_norm_at, INF_ATOM_DATA *inf_norm_at_dat
                 next_atom[len]  = (int)norm_at[j].neighbor[n]-offset;
                 next_neigh[len] = n;
                 cur_atom = j;
-                while ( next_atom[len] != k && len < MAX_CUMULENE_LEN && 2 == norm_at[next_atom[len]].valence ) {
+                while ( len < MAX_CUMULENE_LEN && next_atom[len] != k && 2 == norm_at[next_atom[len]].valence ) {
                     next_neigh[len+1] = ((int)norm_at[next_atom[len]].neighbor[0]-offset == cur_atom);
                     next_atom[len+1]  =  (int)norm_at[next_atom[len]].neighbor[next_neigh[len+1]]-offset;
                     cur_atom = next_atom[len];
@@ -4445,7 +4466,7 @@ int FillOutInputInfAtom(inp_ATOM *inp_at, INF_ATOM_DATA *inf_at_data, int init_n
     MakeRemovedProtonsString( nNumRemovedProtons, nNumRemovedProtonsIsotopic, NULL, bIsotopic, inf_at_data->szRemovedProtons, NULL );
     /*  atom canonical and equivalence numbers > 0 */
     for ( i = 0; i < num_at; i ++ ) {
-#if( DISPLAY_ORIG_AT_NUMBERS == 1 )
+#if ( DISPLAY_ORIG_AT_NUMBERS == 1 )
         inf_at[i].nCanonNbr = inp_at[i].orig_at_number;
 #else
         inf_at[i].nCanonNbr = (AT_NUMB)(i+1);
@@ -4528,7 +4549,7 @@ int FillOutInputInfAtom(inp_ATOM *inp_at, INF_ATOM_DATA *inf_at_data, int init_n
             }
         }
         /*
-        if (  str[0] == 'H' && str[1] == 'H' && !str[2] ) {
+        if ( str[0] == 'H' && str[1] == 'H' && !str[2] ) {
             str[1] = '2';
         }
         */
@@ -4658,7 +4679,7 @@ int FillOutCompositeCanonInfAtom(COMP_ATOM_DATA *composite_norm_data, INF_ATOM_D
     }
     return 1;
 }
-#endif /* } ifndef INCHI_ANSI_ONLY */
+#endif /* } ifndef COMPILE_ANSI_ONLY */
 /**********************************************************************************************/
 int CheckCanonNumberingCorrectness(int num_atoms, int num_at_tg,
                  sp_ATOM *at, CANON_STAT *pCS, int bTautomeric,

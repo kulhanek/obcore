@@ -16,49 +16,6 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-      development status:
-      - src/forcefield.cpp
-      - LineSearch(): finished
-      - SteepestDescent(): finished
-      - ConjugateGradients(): finished
-      - GenerateCoordinates():  removed, use OBBuilder
-      - SystematicRotorSearch(): finished
-      - RandomRotorSearch(): finished
-      - WeightedRotorSearch: finished
-      - DistanceGeometry(): needs matrix operations (Eigen)
-
-      Constraints:
-      - Fix Atom: working
-      - Fix Atom X: working
-      - Fix Atom Y: working
-      - Fix Atom Z: working
-      - Distance: working
-      - Angle: working
-      - Torsion: working
-      - Chirality: TODO
-
-      src/forcefields/forcefieldghemical.cpp
-      - Atom typing: finished
-      - Charges: finished
-      - Energy terms: finished
-      - Analytical gradients: finished
-      - Validation: finished
-
-      src/forcefields/forcefieldmmff94.cpp
-      - Atom typing: done.
-      - Charges: done.
-      - Energy terms: finished (small problems with SSSR
-        algorithm not finding all bridged rings)
-      - Analytical gradients: finished
-      - Validation: http://home.scarlet.be/timvdm/MMFF94_validation_output.gz
-
-      src/forcefields/forcefielduff.cpp
-      - Energy terms: finished
-      - OOP: needs validation
-      - Gradients: need OOP gradient
-      - Validation in progress...
-
-
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
 
@@ -192,7 +149,7 @@ namespace OpenBabel
       }
 
       // Perform the actual minimization, maximum 1000 steps
-      pFF->SteepestDescent(1000);
+      pFF->ConjugateGradients(1000);
       \endcode
 
       Minimize a ligand molecule in a binding pocket.
@@ -238,7 +195,7 @@ namespace OpenBabel
       }
 
       // Perform the actual minimization, maximum 1000 steps
-      pFF->SteepestDescent(1000);
+      pFF->ConjugateGradients(1000);
       \endcode
 
   **/
@@ -376,8 +333,8 @@ namespace OpenBabel
   //////////////////////////////////////////////////////////////////////////////////
 
   OBFFConstraints OBForceField::_constraints = OBFFConstraints(); // define static data variable
-  int OBForceField::_fixAtom = 0; // define static data variable
-  int OBForceField::_ignoreAtom = 0; // define static data variable
+  unsigned int OBForceField::_fixAtom = 0; // define static data variable
+  unsigned int OBForceField::_ignoreAtom = 0; // define static data variable
 
   OBFFConstraints& OBForceField::GetConstraints()
   {
@@ -698,7 +655,7 @@ namespace OpenBabel
 
   int OBFFConstraints::GetConstraintType(int index) const
   {
-    if (index >= (int)_constraints.size())
+    if (index >= _constraints.size())
       return 0;
 
     return _constraints[index].type;
@@ -706,7 +663,7 @@ namespace OpenBabel
 
   double OBFFConstraints::GetConstraintValue(int index) const
   {
-    if (index >= (int)_constraints.size())
+    if (index >= _constraints.size())
       return 0;
 
     return _constraints[index].constraint_value;
@@ -714,7 +671,7 @@ namespace OpenBabel
 
   int OBFFConstraints::GetConstraintAtomA(int index) const
   {
-    if (index >= (int)_constraints.size())
+    if (index >= _constraints.size())
       return 0;
 
     return _constraints[index].ia;
@@ -722,7 +679,7 @@ namespace OpenBabel
 
   int OBFFConstraints::GetConstraintAtomB(int index) const
   {
-    if (index >= (int)_constraints.size())
+    if (index >= _constraints.size())
       return 0;
 
     return _constraints[index].ib;
@@ -730,7 +687,7 @@ namespace OpenBabel
 
   int OBFFConstraints::GetConstraintAtomC(int index) const
   {
-    if (index >= (int)_constraints.size())
+    if (index >= _constraints.size())
       return 0;
 
     return _constraints[index].ic;
@@ -738,7 +695,7 @@ namespace OpenBabel
 
   int OBFFConstraints::GetConstraintAtomD(int index) const
   {
-    if (index >= (int)_constraints.size())
+    if (index >= _constraints.size())
       return 0;
 
     return _constraints[index].id;
@@ -779,10 +736,11 @@ namespace OpenBabel
   {
     IF_OBFF_LOGLVL_LOW {
       OBFFLog("\nA T O M   T Y P E S\n\n");
-      OBFFLog("IDX\tTYPE\n");
+      OBFFLog("IDX\tTYPE\tRING\n");
 
       FOR_ATOMS_OF_MOL (a, _mol) {
-        snprintf(_logbuf, BUFF_SIZE, "%d\t%s\n", a->GetIdx(), a->GetType());
+        snprintf(_logbuf, BUFF_SIZE, "%d\t%s\t%s\n", a->GetIdx(), a->GetType(),
+          (a->IsInRing() ? (a->IsAromatic() ? "AR" : "AL") : "NO"));
         OBFFLog(_logbuf);
       }
     }
@@ -888,8 +846,8 @@ namespace OpenBabel
     } else {
       if (_validSetup) {
         PrintTypes();
-	PrintFormalCharges();
-	PrintPartialCharges();
+        PrintFormalCharges();
+        PrintPartialCharges();
         SetCoordinates(mol);
         return true;
       } else {
@@ -997,9 +955,9 @@ namespace OpenBabel
       if (bond->GetBO() != (mol.GetBond(bond->GetIdx()))->GetBO())
         return true;
       if (bond->GetBeginAtom()->GetAtomicNum()
-        != (mol.GetBond(bond->GetIdx()))->GetBeginAtom()->GetAtomicNum()
-	|| bond->GetEndAtom()->GetAtomicNum()
-	!= (mol.GetBond(bond->GetIdx()))->GetEndAtom()->GetAtomicNum())
+          != (mol.GetBond(bond->GetIdx()))->GetBeginAtom()->GetAtomicNum()
+          || bond->GetEndAtom()->GetAtomicNum()
+          != (mol.GetBond(bond->GetIdx()))->GetEndAtom()->GetAtomicNum())
         return true;
     }
 
@@ -1203,7 +1161,7 @@ namespace OpenBabel
   //
   //////////////////////////////////////////////////////////////////////////////////
 
-  int OBForceField::SystematicRotorSearchInitialize(unsigned int geomSteps)
+  int OBForceField::SystematicRotorSearchInitialize(unsigned int geomSteps, bool sampleRingBonds)
   {
     if (!_validSetup)
       return 0;
@@ -1217,7 +1175,7 @@ namespace OpenBabel
 
     OBBitVec fixed = _constraints.GetFixedBitVec();
     rl.SetFixAtoms(fixed);
-    rl.Setup(_mol);
+    rl.Setup(_mol, sampleRingBonds);
     rotamers.SetBaseCoordinateSets(_mol);
     rotamers.Setup(_mol, rl);
 
@@ -1235,6 +1193,8 @@ namespace OpenBabel
       OBFFLog(_logbuf);
     }
 
+    _current_conformer = 0;
+
     if (!rl.Size()) { // only one conformer
       IF_OBFF_LOGLVL_LOW
         OBFFLog("  GENERATED ONLY ONE CONFORMER\n\n");
@@ -1246,7 +1206,7 @@ namespace OpenBabel
 
     OBRotorKeys rotorKeys;
     rotor = rl.BeginRotor(ri);
-    for (int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) // foreach rotor
+    for (unsigned int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) // foreach rotor
       rotorKeys.AddRotor(rotor->GetResolution().size());
 
     rotamers.AddRotamer(rotorKeys.GetKey());
@@ -1262,7 +1222,6 @@ namespace OpenBabel
       OBFFLog("--------------------\n");
     }
 
-    _current_conformer = 0;
     _energies.clear();
 
     return _mol.NumConformers();
@@ -1311,13 +1270,157 @@ namespace OpenBabel
     return true;
   }
 
-  void OBForceField::SystematicRotorSearch(unsigned int geomSteps)
+  void OBForceField::SystematicRotorSearch(unsigned int geomSteps, bool sampleRingBonds)
   {
-    if (SystematicRotorSearchInitialize(geomSteps))
+    if (SystematicRotorSearchInitialize(geomSteps, sampleRingBonds))
       while (SystematicRotorSearchNextConformer(geomSteps)) {}
   }
 
-  void OBForceField::RandomRotorSearchInitialize(unsigned int conformers, unsigned int geomSteps)
+  int OBForceField::FastRotorSearch(bool permute)
+  {
+    if (_mol.NumRotors() == 0)
+      return 0;
+
+    int origLogLevel = _loglvl;
+
+    // Remove all conformers (e.g. from previous conformer generators) except for current conformer
+    double *initialCoord = new double [_mol.NumAtoms() * 3]; // initial state
+    double *store_initial = new double [_mol.NumAtoms() * 3]; // store the initial state
+    memcpy((char*)initialCoord,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
+    memcpy((char*)store_initial,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
+    std::vector<double *> newConfs(1, initialCoord);
+    _mol.SetConformers(newConfs);
+
+    _energies.clear(); // Wipe any energies from previous conformer generators
+
+    OBRotorList rl;
+    OBBitVec fixed = _constraints.GetFixedBitVec();
+    rl.SetFixAtoms(fixed);
+    rl.SetQuiet();
+    rl.Setup(_mol);
+
+    OBRotorIterator ri;
+    OBRotamerList rotamerlist;
+    rotamerlist.SetBaseCoordinateSets(_mol);
+    rotamerlist.Setup(_mol, rl);
+
+    // Start with all of the rotors in their 0 position
+    // (perhaps instead I should set them randomly?)
+    std::vector<int> init_rotorKey(rl.Size() + 1, 0);
+    std::vector<int> rotorKey(init_rotorKey);
+
+    unsigned int j, minj;
+    double currentE, minE, best_minE;
+
+    double *verybestconf = new double [_mol.NumAtoms() * 3]; // store the best conformer to date
+    double *bestconf = new double [_mol.NumAtoms() * 3]; // store the best conformer to date in the current permutation
+    double *minconf = new double [_mol.NumAtoms() * 3];  // store the best conformer for the current rotor
+    memcpy((char*)bestconf,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
+
+    double energy_offset;
+    // Can take shortcut later, as 4 components of the energy will be constant
+    rotamerlist.SetCurrentCoordinates(_mol, rotorKey);
+    SetupPointers();
+    energy_offset = E_Bond(false) + E_Angle(false) + E_StrBnd(false) + E_OOP(false);
+
+    // This function relies on the fact that Rotors are ordered from the most
+    // central to the most peripheral (due to CompareRotors in rotor.cpp)
+    std::vector<OBRotor *> vrotors;
+    OBRotor *rotor;
+    for (rotor = rl.BeginRotor(ri); rotor; rotor = rl.NextRotor(ri))
+      vrotors.push_back(rotor);
+
+    // The permutations are ordered so that the first 2 permutations cover the
+    // combinations of 2, and the first 6 permutations cover the combinations of 3
+    const char permutations[24*4] = {0,1,2,3, 1,0,2,3, 0,2,1,3, 1,2,0,3, 2,0,1,3, 2,1,0,3,
+                                     0,1,3,2, 0,2,3,1, 0,3,1,2, 0,3,2,1, 1,0,3,2, 1,2,3,0,
+                                     1,3,0,2, 1,3,2,0, 2,0,3,1, 2,1,3,0, 2,3,0,1, 2,3,1,0,
+                                     3,0,1,2, 3,0,2,1, 3,1,0,2, 3,1,2,0, 3,2,0,1, 3,2,1,0};
+    const char factorial[5] = {0, 1, 2, 6, 24};
+
+    char num_rotors_to_permute, num_permutations;
+    if (permute)
+      num_rotors_to_permute = std::min<size_t> (4, vrotors.size());
+    else
+      num_rotors_to_permute = 1; // i.e. just use the original order
+    num_permutations = factorial[num_rotors_to_permute];
+
+    // Initialize reordered_rotors - the order in which to test rotors
+    std::vector<unsigned int> reordered_rotors(vrotors.size());
+    for (int i=0; i<vrotors.size(); ++i)
+      reordered_rotors[i] = i;
+
+    std::set<unsigned int> seen;
+    best_minE = DBL_MAX;
+    for (int N=0; N<num_permutations; ++N) {
+      for (int i=0; i<num_rotors_to_permute; ++i)
+        reordered_rotors.at(i) = *(permutations + N*4 + i);
+
+      rotorKey = init_rotorKey;
+      _mol.SetCoordinates(store_initial);
+      bool quit = false;
+
+      for (int i=0; i<reordered_rotors.size(); ++i) {
+        unsigned int idx = reordered_rotors[i];
+        rotor = vrotors.at(idx);
+
+        minE = DBL_MAX;
+
+        for (j = 0; j < rotor->GetResolution().size(); j++) { // For each rotor position
+          // Note: we could do slightly better by skipping the rotor position we already
+          //       tested in the last loop (position 0 at the moment). Note that this
+          //       isn't as simple as just changing the loop starting point to j = 1.
+          _mol.SetCoordinates(bestconf);
+          rotorKey[idx + 1] = j;
+          rotamerlist.SetCurrentCoordinates(_mol, rotorKey);
+          SetupPointers();
+
+          currentE = E_VDW(false) + E_Torsion(false) + E_Electrostatic(false);
+
+          if (currentE < minE) {
+            minE = currentE;
+            minj = j;
+            memcpy((char*)minconf,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
+          }
+        } // Finished testing all positions of this rotor
+        rotorKey[idx + 1] = minj;
+
+        if (i==4) { // Check whether this rotorKey has already been chosen
+          // Create a hash of the rotorKeys (given that the max value of any rotorKey is 11 from torlib.txt)
+          unsigned int hash = rotorKey[1] + rotorKey[2]*12 + rotorKey[3]*12*12 + rotorKey[4]*12*12*12;
+
+          if (seen.find(hash) == seen.end()) // Not seen before
+            seen.insert(hash);
+          else { // Already seen - no point continuing
+            quit = true;
+            break;
+          }
+        }
+
+        memcpy((char*)bestconf,(char*)minconf,sizeof(double)*3*_mol.NumAtoms());
+      } // end of this permutation
+      if (!quit) {
+          if (minE < best_minE) {
+            best_minE = minE;
+            memcpy((char*)verybestconf,(char*)bestconf,sizeof(double)*3*_mol.NumAtoms());
+          }
+      }
+
+    } // end of final permutation
+
+    _mol.SetCoordinates(verybestconf);
+    SetupPointers();
+
+    delete [] store_initial;
+    delete [] bestconf;
+    delete [] verybestconf;
+    delete [] minconf;
+
+    return true;
+  }
+
+  void OBForceField::RandomRotorSearchInitialize(unsigned int conformers, unsigned int geomSteps,
+                                                 bool sampleRingBonds)
   {
     if (!_validSetup)
       return;
@@ -1336,7 +1439,7 @@ namespace OpenBabel
 
     OBBitVec fixed = _constraints.GetFixedBitVec();
     rl.SetFixAtoms(fixed);
-    rl.Setup(_mol);
+    rl.Setup(_mol, sampleRingBonds);
     rotamers.SetBaseCoordinateSets(_mol);
     rotamers.Setup(_mol, rl);
 
@@ -1353,6 +1456,8 @@ namespace OpenBabel
       snprintf(_logbuf, BUFF_SIZE, "  NUMBER OF POSSIBLE ROTAMERS: %lu\n", combinations);
       OBFFLog(_logbuf);
     }
+
+    _current_conformer = 0;
 
     if (!rl.Size()) { // only one conformer
       IF_OBFF_LOGLVL_LOW
@@ -1385,7 +1490,6 @@ namespace OpenBabel
       OBFFLog("--------------------\n");
     }
 
-    _current_conformer = 0;
     _energies.clear();
   }
 
@@ -1432,9 +1536,10 @@ namespace OpenBabel
     return true;
   }
 
-  void OBForceField::RandomRotorSearch(unsigned int conformers, unsigned int geomSteps)
+  void OBForceField::RandomRotorSearch(unsigned int conformers, unsigned int geomSteps,
+                                       bool sampleRingBonds)
   {
-    RandomRotorSearchInitialize(conformers, geomSteps);
+    RandomRotorSearchInitialize(conformers, geomSteps, sampleRingBonds);
     while (RandomRotorSearchNextConformer(geomSteps)) {}
   }
 
@@ -1444,7 +1549,7 @@ namespace OpenBabel
     double fraction, minWeight, maxWeight;
     bool improve = (bonus > 0.0);
 
-    for (int i = 1; i < (int)rotorWeights.size() - 1; ++i) {
+    for (unsigned int i = 1; i < rotorWeights.size() - 1; ++i) {
 			if (rotorKey[i] == -1)
 				continue; // don't rotate
 
@@ -1484,7 +1589,8 @@ namespace OpenBabel
   }
 
 
-  void OBForceField::WeightedRotorSearch(unsigned int conformers, unsigned int geomSteps)
+  void OBForceField::WeightedRotorSearch(unsigned int conformers, unsigned int geomSteps,
+                                         bool sampleRingBonds)
   {
     if (!_validSetup)
       return;
@@ -1511,7 +1617,7 @@ namespace OpenBabel
 
     OBBitVec fixed = _constraints.GetFixedBitVec();
     rl.SetFixAtoms(fixed);
-    rl.Setup(_mol);
+    rl.Setup(_mol, sampleRingBonds);
     rotamers.SetBaseCoordinateSets(_mol);
     rotamers.Setup(_mol, rl);
 
@@ -1562,14 +1668,14 @@ namespace OpenBabel
     // So each rotor is considered in isolation
     IF_OBFF_LOGLVL_LOW
       OBFFLog("  INITIAL WEIGHTING OF ROTAMERS...\n\n");
+
     rotor = rl.BeginRotor(ri);
     for (unsigned int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) {
       rotorKey[i] = -1; // no rotation (new in 2.2)
     }
 
     rotor = rl.BeginRotor(ri);
-    //int confCount = 0;
-    //    int settings;
+
     for (unsigned int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) {
       // foreach rotor
       energies.clear();
@@ -1581,7 +1687,7 @@ namespace OpenBabel
         SetupPointers(); // update pointers to atom positions in the OBFFCalculation objects
 
         _loglvl = OBFF_LOGLVL_NONE;
-        SteepestDescent(geomSteps); // energy minimization for conformer
+        ConjugateGradients(geomSteps); // energy minimization for conformer
         _loglvl = origLogLevel;
         currentE = Energy(false);
 
@@ -1634,7 +1740,8 @@ namespace OpenBabel
     }
 
     double defaultRotor = 1.0/sqrt((double)rl.Size());
-    for (unsigned int c = 0; c < conformers; ++c) {
+    unsigned c = 0;
+    while (c < conformers) {
       _mol.SetCoordinates(initialCoord);
 
       // Choose the rotor key based on current weightings
@@ -1657,11 +1764,15 @@ namespace OpenBabel
             total += rotorWeights[i][j];
         }
       }
+
+      //FIXME: for now, allow even invalid ring conformers
       rotamers.SetCurrentCoordinates(_mol, rotorKey);
+      ++c;
+
       SetupPointers(); // update pointers to atom positions in the OBFFCalculation objects
 
       _loglvl = OBFF_LOGLVL_NONE;
-      SteepestDescent(geomSteps); // energy minimization for conformer
+      ConjugateGradients(geomSteps); // energy minimization for conformer
       _loglvl = origLogLevel;
       currentE = Energy(false);
       _energies.push_back(currentE);
@@ -1714,7 +1825,7 @@ namespace OpenBabel
       }
     }
 
-    _current_conformer = best_conformer + 1; // Initial coords are stored in _vconf[0]
+    _current_conformer = best_conformer; // Initial coords are stored in _vconf[0]
     _mol.SetConformer(_current_conformer);
     SetupPointers(); // update pointers to atom positions in the OBFFCalculation objects
   }
@@ -2042,19 +2153,54 @@ namespace OpenBabel
 
   void OBForceField::UpdatePairsSimple()
   {
-    unsigned int i = 0;
-
     _vdwpairs.Clear();
     _elepairs.Clear();
+
+    const unsigned int numAtoms = _mol.NumAtoms();
+    const unsigned int numPairs = numAtoms * (numAtoms - 1) / 2;
+    _vdwpairs.Resize(numPairs);
+    _elepairs.Resize(numPairs);
 
     //! \todo set the criteria as squared values
     //  from what the user supplies
     double rvdwSquared = SQUARE(_rvdw);
     double releSquared = SQUARE(_rele);
 
+    unsigned int pairIndex = -1;
     FOR_PAIRS_OF_MOL(p, _mol) {
+      ++pairIndex;
+
       OBAtom *a = _mol.GetAtom((*p)[0]);
       OBAtom *b = _mol.GetAtom((*p)[1]);
+
+      // Check whether or not this interaction is included
+      if (HasGroups()) {
+        bool isIncludedPair = false;
+        for (size_t i=0; i < _interGroup.size(); ++i) {
+          if (_interGroup[i].BitIsOn(a->GetIdx()) &&
+              _interGroup[i].BitIsOn(b->GetIdx())) {
+            isIncludedPair = true;
+            break;
+          }
+        }
+        if (!isIncludedPair) {
+          for (size_t i=0; i < _interGroups.size(); ++i) {
+            if (_interGroups[i].first.BitIsOn(a->GetIdx()) &&
+                _interGroups[i].second.BitIsOn(b->GetIdx())) {
+              isIncludedPair = true;
+              break;
+            }
+            if (_interGroups[i].first.BitIsOn(b->GetIdx()) &&
+                _interGroups[i].second.BitIsOn(a->GetIdx())) {
+              isIncludedPair = true;
+              break;
+            }
+          }
+        }
+        if (!isIncludedPair) {
+          continue;
+        }
+      }
 
       // Get the distance squared btwn a and b
       // Not currently a method and this can be vectorized
@@ -2067,25 +2213,24 @@ namespace OpenBabel
 
       // update vdw pairs
       if (rabSq < rvdwSquared) {
-        _vdwpairs.SetBitOn(i);
+        _vdwpairs.SetBitOn(pairIndex);
       } else {
-        _vdwpairs.SetBitOff(i);
+        _vdwpairs.SetBitOff(pairIndex);
       }
       // update electrostatic pairs
       if (rabSq < releSquared) {
-        _elepairs.SetBitOn(i);
+        _elepairs.SetBitOn(pairIndex);
       } else {
-        _elepairs.SetBitOff(i);
+        _elepairs.SetBitOff(pairIndex);
       }
-
-      i++;
     }
+
     /*
-       IF_OBFF_LOGLVL_LOW {
-       snprintf(_logbuf, BUFF_SIZE, "UPDATE VDW PAIRS: %d --> %d (VDW), %d (ELE) \n", i+1,
-       _vdwpairs.CountBits(), _elepairs.CountBits());
-       OBFFLog(_logbuf);
-       }
+      IF_OBFF_LOGLVL_LOW {
+      snprintf(_logbuf, BUFF_SIZE, "UPDATE VDW PAIRS: %d --> %d (VDW), %d (ELE) \n", i+1,
+      _vdwpairs.CountBits(), _elepairs.CountBits());
+      OBFFLog(_logbuf);
+      }
     */
   }
 
@@ -2096,6 +2241,16 @@ namespace OpenBabel
       i++;
 
     return i;
+  }
+
+  unsigned int OBForceField::GetNumElectrostaticPairs()
+  {
+    return _elepairs.CountBits();
+  }
+
+  unsigned int OBForceField::GetNumVDWPairs()
+  {
+    return _vdwpairs.CountBits();
   }
 
   //////////////////////////////////////////////////////////////////////////////////
@@ -2246,7 +2401,7 @@ namespace OpenBabel
     double opt_step = 0.0;
     double opt_e = _e_n1; // get energy calculated by sd or cg
     const double def_step = 0.025; // default step
-    const double max_step = 5.0; // don't move further than 0.3 Angstroms
+    const double max_step = 4.5; // don't go too far
 
     double sum = 0.0;
     for (unsigned int c = 0; c < _ncoords; ++c) {
@@ -2260,7 +2415,7 @@ namespace OpenBabel
 
     double scale = sqrt(sum);
     if (IsNearZero(scale)) {
-      cout << "WARNING: too small \"scale\" at Newton2NumLineSearch" << endl;
+      //      cout << "WARNING: too small \"scale\" at Newton2NumLineSearch" << endl;
       scale = 1.0e-70; // try to avoid "division by zero" conditions
     }
 
@@ -2297,7 +2452,7 @@ namespace OpenBabel
       if (denom != 0.0) {
         step = fabs(step - delta * (e_n2 - e_n1) / denom);
         if (step > max_scl) {
-          cout << "WARNING: damped steplength " << step << " to " << max_scl << endl;
+          //          cout << "WARNING: damped steplength " << step << " to " << max_scl << endl;
           step = max_scl;
         }
       } else {
@@ -2322,6 +2477,10 @@ namespace OpenBabel
     // Take optimal step
     LineSearchTakeStep(origCoords, direction, opt_step);
 
+    //    cout << " scale: " << scale << " step: " << opt_step*scale << " maxstep " << max_scl*scale << endl;
+
+    delete [] origCoords;
+
     return opt_step * scale;
   }
 
@@ -2338,13 +2497,13 @@ namespace OpenBabel
 
   double OBForceField::LineSearch(double *currentCoords, double *direction)
   {
-    int numCoords = _mol.NumAtoms() * 3;
+    unsigned int numCoords = _mol.NumAtoms() * 3;
     double e_n1, e_n2, step, alpha, tempStep;
     double *lastStep = new double [numCoords];
 
     alpha = 0.0; // Scale factor along direction vector
     step = 0.2;
-    double trustRadius = 0.3; // don't move further than 0.3 Angstroms
+    double trustRadius = 0.75; // don't move too far at once
 
     // The initial energy should be precomputed
     e_n1 = _e_n1; // Energy(false) + _constraints.GetConstraintEnergy();
@@ -2356,17 +2515,17 @@ namespace OpenBabel
 
       // Vectorizing this would be a big benefit
       // Need to look up using BLAS or Eigen or whatever
-      for (int c = 0; c < numCoords; ++c) {
+      for (unsigned int c = 0; c < numCoords; ++c) {
         if (isfinite(direction[c])) {
           // make sure we don't have NaN or infinity
           tempStep = direction[c] * step;
 
           if (tempStep > trustRadius) // positive big step
             currentCoords[c] += trustRadius;
-          else if (tempStep < -1.0 * trustRadius) // negative big step
+          else if (tempStep < -trustRadius) // negative big step
             currentCoords[c] -= trustRadius;
           else
-            currentCoords[c] += direction[c] * step;
+            currentCoords[c] += tempStep;
         }
       }
 
@@ -2374,8 +2533,10 @@ namespace OpenBabel
 
       // convergence criteria: A higher precision here
       // only takes longer with the same result.
-      if (IsNear(e_n2, e_n1, 1.0e-3))
+      if (IsNear(e_n2, e_n1, 1.0e-3)) {
+        alpha += step;
         break;
+      }
 
       if (e_n2 > e_n1) { // decrease stepsize
         step *= 0.1;
@@ -2390,7 +2551,6 @@ namespace OpenBabel
       }
 
     }
-    //cout << "LineSearch steps: " << i << endl;
 
     delete [] lastStep;
 
@@ -2502,6 +2662,8 @@ namespace OpenBabel
 
     IF_OBFF_LOGLVL_LOW
       OBFFLog("\n");
+
+    delete atom;
   }
 
   void OBForceField::ValidateConjugateGradients(int steps)
@@ -2566,6 +2728,8 @@ namespace OpenBabel
         e_n1 = e_n2;
       }
     }
+
+    delete atom;
   }
 
   void OBForceField::SteepestDescentInitialize(int steps, double econv, int method)
@@ -2576,6 +2740,7 @@ namespace OpenBabel
     _nsteps = steps;
     _cstep = 0;
     _econv = econv;
+    _gconv = 1.0e-2; // gradient convergence (0.1) squared
 
     if (_cutoff)
       UpdatePairsSimple(); // Update the non-bonded pairs (Cut-off)
@@ -2599,12 +2764,14 @@ namespace OpenBabel
     if (!_validSetup)
       return 0;
 
-    int _ncoords = _mol.NumAtoms() * 3;
-    double e_n2, alpha;
+    _ncoords = _mol.NumAtoms() * 3;
+    double e_n2;
     vector3 dir;
+    double maxgrad; // for convergence
 
     for (int i = 1; i <= n; i++) {
       _cstep++;
+      maxgrad = 1.0e20;
 
       FOR_ATOMS_OF_MOL (a, _mol) {
         unsigned int idx = a->GetIdx();
@@ -2622,6 +2789,10 @@ namespace OpenBabel
             // use analytical gradients
             dir = GetGradient(&*a) + _constraints.GetGradient(a->GetIdx());
           }
+
+          // check to see how large the gradients are
+          if (dir.length_2() > maxgrad)
+            maxgrad = dir.length_2();
 
           if (!_constraints.IsXFixed(idx))
             _gradientPtr[coordIdx] = dir.x();
@@ -2642,11 +2813,11 @@ namespace OpenBabel
       // perform a linesearch
       switch (_linesearch) {
       case LineSearchType::Newton2Num:
-        alpha = Newton2NumLineSearch(_gradientPtr);
+        Newton2NumLineSearch(_gradientPtr);
         break;
       default:
       case LineSearchType::Simple:
-        alpha = LineSearch(_mol.GetCoordinates(), _gradientPtr);
+        LineSearch(_mol.GetCoordinates(), _gradientPtr);
         break;
       }
       e_n2 = Energy() + _constraints.GetConstraintEnergy();
@@ -2661,7 +2832,8 @@ namespace OpenBabel
         }
       }
 
-      if (IsNear(e_n2, _e_n1, _econv)) {
+      if (IsNear(e_n2, _e_n1, _econv)
+          && (maxgrad < _gconv)) { // gradient criteria (0.1) squared
         IF_OBFF_LOGLVL_LOW
           OBFFLog("    STEEPEST DESCENT HAS CONVERGED\n");
         return false;
@@ -2677,234 +2849,6 @@ namespace OpenBabel
     return true;  // no convergence reached
   }
 
-  // ---------------------------------------------------------------------------
-
-  void OBForceField::SteepestDescentInitializeNemesis(int steps, double econv, int method)
-  {
-    if (!_validSetup)
-      return;
-
-    _nsteps = steps;
-    _cstep = 0;
-    _econv = econv;
-  }
-
- // ---------------------------------------------------------------------------
-
-  bool OBForceField::SteepestDescentNemesis(double* rstgrd,double rstene)
-  {
-    if(!_validSetup) {
-        return(false);
-    }
-
-  if ((_cstep % _pairfreq == 0) && _cutoff)
-    UpdatePairsSimple(); // Update the non-bonded pairs (Cut-off)
-
-    double e_n2;
-    e_n2 = Energy() + _constraints.GetConstraintEnergy() + rstene;
-
-    if( _cstep > 0 ){
-        if (IsNear(e_n2, _e_n1, _econv)) {
-            return(false);
-        }
-    }
-
-    if (_nsteps == _cstep) {
-        return(false);
-    }
-
-    _e_n1 = e_n2;
-
-    double alpha;
-    vector3 dir;
-
-    _cstep++;
-
-    FOR_ATOMS_OF_MOL (a, _mol) {
-        unsigned int idx = a->GetIdx();
-        unsigned int coordIdx = (idx - 1) * 3;
-
-        if (_constraints.IsFixed(idx) || (_fixAtom == idx) || (_ignoreAtom == idx)) {
-          _gradientPtr[coordIdx] = 0.0;
-          _gradientPtr[coordIdx+1] = 0.0;
-          _gradientPtr[coordIdx+2] = 0.0;
-        } else {
-          if (!HasAnalyticalGradients()) {
-            // use numerical gradients
-            dir = NumericalDerivative(&*a) + _constraints.GetGradient(a->GetIdx());
-          } else {
-            // use analytical gradients
-            dir = GetGradient(&*a) + _constraints.GetGradient(a->GetIdx());
-          }
-
-          if (!_constraints.IsXFixed(idx))
-            _gradientPtr[coordIdx] = dir.x();
-          else
-            _gradientPtr[coordIdx] = 0.0;
-
-          if (!_constraints.IsYFixed(idx))
-            _gradientPtr[coordIdx+1] = dir.y();
-          else
-            _gradientPtr[coordIdx+1] = 0.0;
-
-          if (!_constraints.IsZFixed(idx))
-            _gradientPtr[coordIdx+2] = dir.z();
-          else
-            _gradientPtr[coordIdx+2] = 0.0;
-
-          if( rstgrd ){
-            _gradientPtr[coordIdx+0] -=  rstgrd[coordIdx+0];
-            _gradientPtr[coordIdx+1] -=  rstgrd[coordIdx+1];
-            _gradientPtr[coordIdx+2] -=  rstgrd[coordIdx+2];
-          }
-        }
-    }
-
-    // perform a linesearch
-    switch (_linesearch) {
-      case LineSearchType::Newton2Num:
-        alpha = Newton2NumLineSearch(_gradientPtr);
-        break;
-      default:
-      case LineSearchType::Simple:
-        alpha = LineSearch(_mol.GetCoordinates(), _gradientPtr);
-        break;
-    }
-
-    return true;  // no convergence reached
-  }
-
-  // ---------------------------------------------------------------------------
-
-void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, int method)
-  {
-    if (!_validSetup || steps==0)
-      return;
-
-    _cstep = 0;
-    _nsteps = steps;
-    _econv = econv;
-    _ncoords = _mol.NumAtoms() * 3;
-
-    if (_grad1 != NULL)
-      delete [] _grad1;
-    _grad1 = new double[_ncoords];
-    memset(_grad1, '\0', sizeof(double)*_ncoords);
-  }
-
-  // ---------------------------------------------------------------------------
-
-  bool OBForceField::ConjugateGradientsNemesis(double* rstgrd,double rstene)
-  {
-    if (!_validSetup)
-      return false;
-
-    if ((_cstep % _pairfreq == 0) && _cutoff)
-        UpdatePairsSimple(); // Update the non-bonded pairs (Cut-off)
-
-    double e_n2;
-    e_n2 = Energy() + _constraints.GetConstraintEnergy() + rstene;
-
-    if( _cstep > 0 ){
-        if (IsNear(e_n2, _e_n1, _econv)) {
-            return false;
-        }
-    }
-
-    if (_nsteps == _cstep)
-        return false;
-
-    _e_n1 = e_n2;
-
-    double  g2g2, g1g1, beta, alpha;
-    vector3 grad2;
-    vector3 grad1; // temporaries to perform dot product, etc.
-
-    if (_ncoords != _mol.NumAtoms() * 3)
-      return false;
-
-    e_n2 = 0.0;
-
-    _cstep++;
-
-    FOR_ATOMS_OF_MOL (a, _mol) {
-        unsigned int idx = a->GetIdx();
-        unsigned int coordIdx = (a->GetIdx() - 1) * 3;
-
-        if (_constraints.IsFixed(idx) || (_fixAtom == idx) || (_ignoreAtom == idx)) {
-          _grad1[coordIdx] = 0.0;
-          _grad1[coordIdx+1] = 0.0;
-          _grad1[coordIdx+2] = 0.0;
-        } else {
-          if (!HasAnalyticalGradients()) {
-            // use numerical gradients
-            grad2 = NumericalDerivative(&*a) + _constraints.GetGradient(a->GetIdx());
-          } else {
-            // use analytical gradients
-            grad2 = GetGradient(&*a) + _constraints.GetGradient(a->GetIdx());
-          }
-
-          // Fletcher-Reeves formula for Beta
-          // http://en.wikipedia.org/wiki/Nonlinear_conjugate_gradient_method
-          // NOTE: We make sure to reset and use the steepest descent direction
-          //   after NumAtoms steps
-          if ( (_cstep % _mol.NumAtoms() != 0) && (_cstep > 1) ) {
-            g2g2 = dot(grad2, grad2);
-            grad1 = vector3(_grad1[coordIdx], _grad1[coordIdx+1], _grad1[coordIdx+2]);
-            g1g1 = dot(grad1, grad1);
-            beta = g2g2 / g1g1;
-            grad2 += beta * grad1;
-          }
-
-          if (!_constraints.IsXFixed(idx))
-            _grad1[coordIdx] = grad2.x();
-          else
-            _grad1[coordIdx] = 0.0;
-
-          if (!_constraints.IsYFixed(idx))
-            _grad1[coordIdx+1] = grad2.y();
-          else
-            _grad1[coordIdx+1] = 0.0;
-
-          if (!_constraints.IsZFixed(idx))
-            _grad1[coordIdx+2] = grad2.z();
-          else
-            _grad1[coordIdx+2] = 0.0;
-
-          if( rstgrd ){
-            _grad1[coordIdx+0] -=  rstgrd[coordIdx+0];
-            _grad1[coordIdx+1] -=  rstgrd[coordIdx+1];
-            _grad1[coordIdx+2] -=  rstgrd[coordIdx+2];
-          }
-        }
-    }
-
-    // perform a linesearch
-    switch (_linesearch) {
-      case LineSearchType::Newton2Num:
-        alpha = Newton2NumLineSearch(_grad1);
-        break;
-      default:
-      case LineSearchType::Simple:
-        alpha = LineSearch(_mol.GetCoordinates(), _grad1);
-        break;
-    }
-
-    // save the direction
-    memcpy(_grad1, _gradientPtr, sizeof(double)*_ncoords);
-
-    return true; // no convergence reached
-  }
-
-  // ---------------------------------------------------------------------------
-
-  double  OBForceField::GetLastEnergy(void)
-  {
-    return(_e_n1);
-  }
-
-  // ---------------------------------------------------------------------------
-
   void OBForceField::SteepestDescent(int steps, double econv, int method)
   {
     if (steps > 0) {
@@ -2919,12 +2863,13 @@ void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, 
     if (!_validSetup || steps==0)
       return;
 
-    double e_n2, alpha;
+    double e_n2;
     vector3 dir;
 
     _cstep = 0;
     _nsteps = steps;
     _econv = econv;
+    _gconv = 1.0e-2; // gradient convergence (0.1) squared
     _ncoords = _mol.NumAtoms() * 3;
 
     if (_cutoff)
@@ -2983,11 +2928,11 @@ void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, 
     // perform a linesearch
     switch (_linesearch) {
     case LineSearchType::Newton2Num:
-      alpha = Newton2NumLineSearch(_gradientPtr);
+      Newton2NumLineSearch(_gradientPtr);
       break;
     default:
     case LineSearchType::Simple:
-      alpha = LineSearch(_mol.GetCoordinates(), _gradientPtr);
+      LineSearch(_mol.GetCoordinates(), _gradientPtr);
       break;
     }
     e_n2 = Energy() + _constraints.GetConstraintEnergy();
@@ -3008,9 +2953,10 @@ void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, 
       return 0;
 
     double e_n2;
-    double g2g2, g1g1, beta, alpha;
+    double g2g2, g1g1, beta;
     vector3 grad2, dir2;
     vector3 grad1, dir1; // temporaries to perform dot product, etc.
+    double maxgrad; // for convergence
 
     if (_ncoords != _mol.NumAtoms() * 3)
       return false;
@@ -3019,6 +2965,7 @@ void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, 
 
     for (int i = 1; i <= n; i++) {
       _cstep++;
+      maxgrad = 1.0e20;
 
       FOR_ATOMS_OF_MOL (a, _mol) {
         unsigned int idx = a->GetIdx();
@@ -3049,6 +2996,10 @@ void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, 
             grad2 += beta * grad1;
           }
 
+          // check to see how large the gradients are
+          if (grad2.length_2() > maxgrad)
+            maxgrad = grad2.length_2();
+
           if (!_constraints.IsXFixed(idx))
             _grad1[coordIdx] = grad2.x();
           else
@@ -3068,22 +3019,23 @@ void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, 
       // perform a linesearch
       switch (_linesearch) {
       case LineSearchType::Newton2Num:
-        alpha = Newton2NumLineSearch(_grad1);
+        Newton2NumLineSearch(_grad1);
         break;
       default:
       case LineSearchType::Simple:
-        alpha = LineSearch(_mol.GetCoordinates(), _grad1);
+        LineSearch(_mol.GetCoordinates(), _grad1);
         break;
       }
       // save the direction
-      memcpy(_grad1, _gradientPtr, sizeof(double)*_ncoords);
+      memcpy(_gradientPtr, _grad1, sizeof(double)*_ncoords);
 
       e_n2 = Energy() + _constraints.GetConstraintEnergy();
 
       if ((_cstep % _pairfreq == 0) && _cutoff)
         UpdatePairsSimple(); // Update the non-bonded pairs (Cut-off)
 
-      if (IsNear(e_n2, _e_n1, _econv)) {
+      if (IsNear(e_n2, _e_n1, _econv)
+          && (maxgrad < _gconv)) { // gradient criteria (0.1) squared
         IF_OBFF_LOGLVL_LOW {
           snprintf(_logbuf, BUFF_SIZE, " %4d    %8.3f    %8.3f\n", _cstep, e_n2, _e_n1);
           OBFFLog(_logbuf);
@@ -3565,7 +3517,6 @@ void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, 
     int coordIdx;
     double timestep2;
     vector3 force, pos, accel;
-    double kB = 0.00831451 / KCAL_TO_KJ; // kcal/(mol*K)
     _timestep = timestep;
     _temp = T;
 
@@ -4090,7 +4041,7 @@ void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, 
     VectorSelfMultiply(temp, sin_dl);
     VectorDivide(temp, sin_theta, temp);
     VectorAdd(cn, temp, force_k);
-    VectorSelfMultiply(force_k, (sin_theta/length_ji));
+    VectorSelfMultiply(force_k, (sin_theta/length_jk));
     /* j = -(i + k + l); */
     VectorAdd(force_i, force_k, temp);
     VectorAdd(force_l, temp, temp);
@@ -4362,10 +4313,10 @@ void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, 
     vector<OBRing*>::iterator i;
     vector<int>::iterator j;
 
-    for (i = vr.begin();i != vr.end();i++) {
+    for (i = vr.begin();i != vr.end();++i) {
       a_in = false;
       b_in = false;
-      for(j = (*i)->_path.begin();j != (*i)->_path.end();j++) {
+      for(j = (*i)->_path.begin();j != (*i)->_path.end();++j) {
         if ((unsigned)(*j) == a->GetIdx())
           a_in = true;
         if ((unsigned)(*j) == b->GetIdx())

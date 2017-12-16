@@ -8,7 +8,9 @@ namespace OpenBabel
 {
 
   // Class definition of CairoPainter
-  CairoPainter::CairoPainter() : m_surface(0), m_cairo(0), m_fontPointSize(12)
+  CairoPainter::CairoPainter() : m_surface(0), m_cairo(0),
+    m_fontPointSize(12), m_width(0), m_height(0), m_pen_width(1), m_title(""), m_index(1),
+    m_fillcolor("white"), m_bondcolor("black"), m_transparent(false)
   {
   }
 
@@ -22,18 +24,61 @@ namespace OpenBabel
 
   void CairoPainter::NewCanvas(double width, double height)
   {
-    // clean up
-    if (m_cairo)
-      cairo_destroy(m_cairo);
-    if (m_surface)
-      cairo_surface_destroy(m_surface);
-    // create new surface to paint on
-    m_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, static_cast<int> (width), static_cast<int> (height));
-    m_cairo = cairo_create(m_surface);
-    cairo_set_source_rgb (m_cairo, 255, 255, 255);
-    cairo_paint (m_cairo);
+    double titleheight = m_title.empty() ? 0.0 : 16.0;
+    if (m_index == 1) {
+      // create new surface to paint on
+      if(m_cropping) {
+        double ratio = width / height;
+        if(ratio > 1.0)
+          m_height = m_height / ratio;
+        else
+          m_width = m_width * ratio;
+      }
+      m_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, static_cast<int> (m_width), static_cast<int> (m_height));
+      m_cairo = cairo_create(m_surface);
+      if(m_transparent)
+        cairo_set_source_rgba (m_cairo, 0.0, 0.0, 0.0, 0.0);
+      else {
+        OBColor bg = OBColor(m_fillcolor);
+        cairo_set_source_rgb (m_cairo, bg.red, bg.green, bg.blue);
+      }
+
+      cairo_paint (m_cairo);
+      cairo_set_line_width(m_cairo, m_pen_width);
+    }
+    else {
+      // reset transformation matrix
+      cairo_identity_matrix(m_cairo);
+    }
+
+    // Work out some things!
+    double cellwidth = m_width/m_ncols;
+    double cellheight = m_height/m_nrows;
+    int row = (m_index - 1)/m_ncols + 1;
+    int col = m_index - ((row-1)*m_ncols);
+
+    // Work out the scaling factor
+    double scale_x = cellwidth / (double) width;
+    double scale_y = (cellheight-titleheight) / (double) height; // Leave some extra space for the title if present
+    double scale = std::min(scale_x, scale_y);
+
+    // Add the title
+    if (!m_title.empty()) {
+      this->SetPenColor(OBColor(m_bondcolor));
+      this->SetFontSize(static_cast<int>(16.0));
+      OBFontMetrics fm = this->GetFontMetrics(m_title);
+      this->DrawText(cellwidth/2.0 - fm.width/2.0 + cellwidth*(col-1),
+                     cellheight - fm.height * 0.25 + cellheight*(row-1), m_title);
+    }
+
+    // Translate the over-scaled dimension into the centre
+    if (scale < scale_y)
+      cairo_translate(m_cairo, 0 + cellwidth*(col-1), cellheight/2.0 - scale*height/2.0 + cellheight*(row-1));
+    else
+      cairo_translate(m_cairo, cellwidth/2.0 - scale*width/2.0 + cellwidth*(col-1), 0 + cellheight*(row-1));
+    cairo_scale(m_cairo, scale, scale); // Set a scaling transformation
   }
-  
+
   bool CairoPainter::IsGood() const
   {
     if (!m_cairo)
@@ -42,7 +87,7 @@ namespace OpenBabel
       return false;
     return true;
   }
-      
+
   void CairoPainter::SetFontSize(int pointSize)
   {
     m_fontPointSize = pointSize;
@@ -54,18 +99,31 @@ namespace OpenBabel
     cairo_set_source_rgb(m_cairo, color.red, color.green, color.blue);
   }
 
+  void CairoPainter::SetFillRadial(const OBColor &start, const OBColor &end)
+  {
+    cairo_set_source_rgb(m_cairo, end.red, end.green, end.blue);
+  }
+
   void CairoPainter::SetPenColor(const OBColor &color)
   {
     cairo_set_source_rgb(m_cairo, color.red, color.green, color.blue);
   }
-      
+
   void CairoPainter::SetPenWidth(double width)
   {
-    cairo_set_line_width(m_cairo, width);
+    m_pen_width = width;
   }
 
-  void CairoPainter::DrawLine(double x1, double y1, double x2, double y2)
+  double CairoPainter::GetPenWidth()
   {
+    return m_pen_width;
+  }
+
+  void CairoPainter::DrawLine(double x1, double y1, double x2, double y2, const std::vector<double>& dashes)
+  {
+    cairo_set_line_width(m_cairo, m_pen_width);
+    cairo_set_line_cap(m_cairo, CAIRO_LINE_CAP_ROUND);
+    cairo_set_dash(m_cairo, (dashes.size()?&dashes[0]:NULL), dashes.size(), 0.0);
     cairo_move_to(m_cairo, x1, y1);
     cairo_line_to(m_cairo, x2, y2);
     cairo_stroke(m_cairo);
@@ -75,8 +133,8 @@ namespace OpenBabel
   {
     std::vector<std::pair<double,double> >::const_iterator i;
     for (i = points.begin(); i != points.end(); ++i)
-      cairo_line_to(m_cairo, i->first, i->second); // note: when called without previous point, 
-                                                   //       this function behaves like cairo_move_to 
+      cairo_line_to(m_cairo, i->first, i->second); // note: when called without previous point,
+                                                   //       this function behaves like cairo_move_to
     cairo_line_to(m_cairo, points.begin()->first, points.begin()->second);
     cairo_fill(m_cairo);
   }
@@ -104,75 +162,40 @@ namespace OpenBabel
     metrics.fontSize = m_fontPointSize;
     metrics.ascent = fe.ascent;
     metrics.descent = -fe.descent;
-    metrics.width = te.width;
-    metrics.height = fe.height;
+    metrics.width = te.x_advance;//te.width;
+    metrics.height = te.height;
     return metrics;
   }
-      
+
   void CairoPainter::WriteImage(const std::string &filename)
   {
     if (!m_cairo || !m_surface)
       return;
-    
+
     cairo_surface_write_to_png(m_surface, filename.c_str());
   }
 
   static cairo_status_t writeFunction(void* closure, const unsigned char* data, unsigned int length)
   {
     vector<char>* in = reinterpret_cast<vector<char>*>(closure);
-    for(int i=0;i<length;++i)
+    for (unsigned int i = 0; i < length; ++i)
       in->push_back(data[i]);
     return CAIRO_STATUS_SUCCESS;
   }
 
-  static cairo_surface_t *
-  scale_surface (cairo_surface_t *old_surface, 
-                int old_width, int old_height,
-                int new_width, int new_height)
+  void CairoPainter::DrawBall(double x, double y, double r, double opacity)
   {
-    cairo_surface_t *new_surface = cairo_surface_create_similar(old_surface, CAIRO_CONTENT_COLOR_ALPHA, new_width, new_height);
-    cairo_t *cr = cairo_create (new_surface);
 
-    // Draw white background
-    cairo_set_source_rgb (cr, 255, 255, 255);
-    cairo_rectangle (cr, 0, 0, new_width, new_height);
-    cairo_fill (cr);
-
-    // Work out the scaling factor
-    double scale_x = new_width / (double) old_width;
-    double scale_y = new_height / (double) old_height;
-    double scale = std::min(scale_x, scale_y);
-
-    // Translate the over-scaled dimension into the centre
-    if (scale < scale_y)
-      cairo_translate(cr, 0, new_height/2.0 - scale*old_height/2.0);
-    else
-      cairo_translate(cr, new_width/2.0 - scale*old_width/2.0, 0);
-
-    cairo_scale(cr, scale, scale); // Scale the drawing
-
-    cairo_set_source_surface(cr, old_surface, 0, 0); // Redraw the old surface onto the new
-
-    cairo_paint(cr); // Do the actual drawing
-
-    cairo_destroy(cr);
-
-    return new_surface;
   }
 
-  void CairoPainter::WriteImage(std::ostream& ofs, int newWidth, int newHeight)
+  void CairoPainter::WriteImage(std::ostream& ofs)
   {
     if (!m_cairo || !m_surface)
       return;
     vector<char> in;
-    int width = cairo_image_surface_get_width(m_surface);
-    int height = cairo_image_surface_get_height(m_surface);
-    cairo_surface_t *new_surface = scale_surface (m_surface, width, height, newWidth, newHeight);
-    cairo_surface_write_to_png_stream(new_surface, writeFunction, &in);
-    cairo_surface_destroy(new_surface);
-    for(int i=0; i<in.size(); ++i)
+    cairo_surface_write_to_png_stream(m_surface, writeFunction, &in);
+    for (unsigned int i = 0; i < in.size(); ++i)
       ofs << in.at(i);
   }
 
 }
-

@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -134,10 +155,10 @@ total_restart:
 next_canon_ranks:
 
         /*  Save time: avoid calling Next_SB_At_CanonRanks2() */
-        if ( !pCS->bStereoIsBetter /* ??? && !pCS->bFirstCT ???*/ &&
-              at_rank_canon1 >  pCS->LinearCTStereoDble[nNumMappedBonds].at_num1 ||
-              at_rank_canon1 == pCS->LinearCTStereoDble[nNumMappedBonds].at_num1 &&
-              at_rank_canon2 >= pCS->LinearCTStereoDble[nNumMappedBonds].at_num2  ) {
+        if ( (!pCS->bStereoIsBetter /* ??? && !pCS->bFirstCT ???*/ &&
+              at_rank_canon1 >  pCS->LinearCTStereoDble[nNumMappedBonds].at_num1) ||
+              (at_rank_canon1 == pCS->LinearCTStereoDble[nNumMappedBonds].at_num1 &&
+              at_rank_canon2 >= pCS->LinearCTStereoDble[nNumMappedBonds].at_num2)  ) {
 
             if ( !nTotSuccess ) {
                 pCS->LinearCTStereoDble[nNumMappedBonds] = prevBond;
@@ -163,12 +184,12 @@ bypass_next_canon_ranks_check:
                 /* all stereobond have been processed; try to find allene to continue */
                 AT_RANK at_rank_canon1_Allene = 0, canon_min1_Allene = 0;
                 AT_RANK at_rank_canon2_Allene = 0, canon_min2_Allene = 0;
-                if ( ret1 = Next_SB_At_CanonRanks2( &at_rank_canon1_Allene, &at_rank_canon2_Allene,
+                if ( (ret1 = Next_SB_At_CanonRanks2( &at_rank_canon1_Allene, &at_rank_canon2_Allene,
                                               &canon_min1_Allene, &canon_min2_Allene,
                                               &bFirstCanonRank, pCS->bAtomUsedForStereo,
                                               pRankStack1, pRankStack2,
                                               nCanonRankFrom, nAtomNumberCanonFrom,
-                                              at, num_atoms, 1 ) ) {
+                                              at, num_atoms, 1 )) ) {
                     at_rank_canon1 = at_rank_canon1_Allene;
                     at_rank_canon2 = at_rank_canon2_Allene;
                     canon_min1     = canon_min1_Allene;
@@ -178,10 +199,10 @@ bypass_next_canon_ranks_check:
             }
         }
         
-        if ( !ret1 || !pCS->bStereoIsBetter &&
+        if ( !ret1 || (!pCS->bStereoIsBetter &&
              (at_rank_canon1 >  pCS->LinearCTStereoDble[nNumMappedBonds].at_num1 ||
-              at_rank_canon1 == pCS->LinearCTStereoDble[nNumMappedBonds].at_num1 &&
-              at_rank_canon2 >  pCS->LinearCTStereoDble[nNumMappedBonds].at_num2 ) ) {
+              (at_rank_canon1 == pCS->LinearCTStereoDble[nNumMappedBonds].at_num1 &&
+              at_rank_canon2 >  pCS->LinearCTStereoDble[nNumMappedBonds].at_num2) )) ) {
             /* new ranks provide greater pCS->LinearCTStereoDble[nNumMappedBonds] and therefore rejected */
             if ( !nTotSuccess ) {
                 pCS->LinearCTStereoDble[nNumMappedBonds] = prevBond; /* restore stereo bond CT for the current bond */
@@ -758,7 +779,7 @@ repeat_all:
                         c = CompareLinCtStereoDoubleToValues( pCS->LinearCTStereoDble+nNumMappedBonds,
                                                   at_rank_canon1, at_rank_canon2, (U_CHAR)bond_parity );
                         if ( sb_parity_calc != bond_parity ||
-                             c < 0 && !pCS->bStereoIsBetter ) {
+                             (c < 0 && !pCS->bStereoIsBetter) ) {
                             /*  reject */
                             pCS->lNumRejectedCT ++;
                             /*  remove failed atom2 from the tree */
@@ -843,7 +864,7 @@ repeat_all:
                     }
                          
                 } /*  end choices in mapping neighbors of the 1st half-bond */
-                if (  tpos1 < CurTreeGetPos( cur_tree ) &&
+                if ( tpos1 < CurTreeGetPos( cur_tree ) &&
                       1 == CurTreeIsLastRank( cur_tree, at_rank_canon_n1 ) ) {
                      CurTreeRemoveLastRank( cur_tree );
                 }
@@ -1004,8 +1025,8 @@ bypass_next_canon_rank_check:
         if ( !Next_SC_At_CanonRank2( &at_rank_canon1, &canon_rank1_min, &bFirstTime,
                           pCS->bAtomUsedForStereo, pRankStack1, pRankStack2,
                           nAtomNumberCanonFrom, num_atoms ) ||
-              !pCS->bStereoIsBetter && 
-              at_rank_canon1 > pCS->LinearCTStereoCarb[nNumMappedAtoms].at_num) {
+              (!pCS->bStereoIsBetter &&
+              at_rank_canon1 > pCS->LinearCTStereoCarb[nNumMappedAtoms].at_num)) {
             /*  cannot find next available canonical number */
             if ( !nTotSuccess ) {
                 pCS->LinearCTStereoCarb[nNumMappedAtoms] = prevAtom; /*  restore because of failure */
@@ -1228,7 +1249,7 @@ repeat_all:
             /***********************************************************************
              * no need to map the neighbors: parity is known or has been calculated
              */
-            if ( stereo_center_parity == sb_parity_calc && !EN[istk].num_to ||
+            if ( (stereo_center_parity == sb_parity_calc && !EN[istk].num_to) ||
                  /*  now well-defined, but unknown in advance atom parity  OR   */
                  stereo_center_parity != sb_parity_calc )
                  /*  known in advance parity = stereo_center_parity */
@@ -1259,7 +1280,7 @@ repeat_all:
                     pCS->LinearCTStereoCarb[nNumMappedAtoms].parity = parity1;
                     pCS->LinearCTStereoCarb[nNumMappedAtoms].at_num = at_rank_canon1;
                     pCS->bRankUsedForStereo[at_from1] = 3;
-#if( FIX_ChCh_STEREO_CANON_BUG == 1 )
+#if ( FIX_ChCh_STEREO_CANON_BUG == 1 )
                     if ( !bAllParitiesIdentical )
 #endif
                         pCS->bAtomUsedForStereo[at_to1] -= STEREO_AT_MARK;
@@ -1270,7 +1291,7 @@ repeat_all:
                                        pCS, cur_tree, nNumMappedAtoms+1 ,
                                        vABParityUnknown);
                     pCS->bRankUsedForStereo[at_from1] = 0;
-#if( FIX_ChCh_STEREO_CANON_BUG == 1 )
+#if ( FIX_ChCh_STEREO_CANON_BUG == 1 )
                     if ( !bAllParitiesIdentical )
 #endif
                         pCS->bAtomUsedForStereo[at_to1] += STEREO_AT_MARK;
@@ -1410,7 +1431,7 @@ next_j:
                 c = CompareLinCtStereoAtomToValues( pCS->LinearCTStereoCarb+nNumMappedAtoms,
                                             at_rank_canon1, (U_CHAR)parity1 );
                 if ( sb_parity_calc != parity1 ||
-                     c < 0 && !pCS->bStereoIsBetter ) {
+                     (c < 0 && !pCS->bStereoIsBetter) ) {
                     pCS->lNumRejectedCT ++;
                     bLastLvlFailed = 1;
                 }  else
@@ -1531,8 +1552,8 @@ done:;      /*  at this point lvl=0. */
          *
          ****************************************************/
 
-        if ( UserAction && USER_ACTION_QUIT == (*UserAction)()  ||
-             ConsoleQuit && (*ConsoleQuit)() ) {
+        if ( (UserAction && USER_ACTION_QUIT == (*UserAction)())  ||
+             (ConsoleQuit && (*ConsoleQuit)()) ) {
             return CT_USER_QUIT_ERR;
         }
 
@@ -1581,7 +1602,7 @@ done:;      /*  at this point lvl=0. */
             pCS->bStereoIsBetter = 0; /*  prepare to start over */
             nTotSuccess = 1;
             pCS->bFirstCT = 0;
-#if( REMOVE_CALC_NONSTEREO == 1 ) /* { */
+#if ( REMOVE_CALC_NONSTEREO == 1 ) /* { */
             if ( !(pCS->nMode & CMODE_REDNDNT_STEREO ) ) {
                 i1 = RemoveCalculatedNonStereo( at, num_atoms, num_at_tg,
                                   pRankStack1, pRankStack2, nTempRank, NeighList,
@@ -1591,7 +1612,7 @@ done:;      /*  at this point lvl=0. */
                     return i1;
                 }
                 if ( i1 < 0 ) {
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
                     pCS->bExtract |= EXTR_REMOVE_PARITY_WARNING;
 #endif
                     i1 = -(1+i1);

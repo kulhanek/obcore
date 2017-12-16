@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -55,16 +76,16 @@ extern int bLibInchiSemaphore;
 EXPIMP_TEMPLATE INCHI_API int INCHI_DECL Get_std_inchi_Input_FromAuxInfo
             ( char *szInchiAuxInfo, 
             int bDoNotAddH,
-			InchiInpData *pInchiInp )
+            InchiInpData *pInchiInp )
 {
-	int bDiffUnkUndfStereo = 0;
-	return Get_inchi_Input_FromAuxInfo( szInchiAuxInfo, bDoNotAddH, bDiffUnkUndfStereo,
+    int bDiffUnkUndfStereo = 0;
+    return Get_inchi_Input_FromAuxInfo( szInchiAuxInfo, bDoNotAddH, bDiffUnkUndfStereo,
                                         pInchiInp );
 }
 
-EXPIMP_TEMPLATE INCHI_API INCHI_DECL Get_inchi_Input_FromAuxInfo(char *szInchiAuxInfo, 
-												  int bDoNotAddH, int bDiffUnkUndfStereo,
-												  InchiInpData *pInchiInp )
+EXPIMP_TEMPLATE INCHI_API int INCHI_DECL Get_inchi_Input_FromAuxInfo(char *szInchiAuxInfo, 
+                                                  int bDoNotAddH, int bDiffUnkUndfStereo,
+                                                  InchiInpData *pInchiInp )
 {
     INCHI_IOSTREAM inp;
     int num_at, nRet = inchi_Ret_OKAY, err = 0;
@@ -74,15 +95,15 @@ EXPIMP_TEMPLATE INCHI_API INCHI_DECL Get_inchi_Input_FromAuxInfo(char *szInchiAu
     char         szHeader[MAX_SDF_HEADER];  /* stucture label header HHH from the input */
     char         szLabel[MAX_SDF_VALUE];    /* stucture label VVV from the input */
 
-	/* vABParityUnknown holds actual value of an internal constant signifying       */
+    /* vABParityUnknown holds actual value of an internal constant signifying       */
     /* unknown parity: either the same as for undefined parity (default==standard)  */
     /*  or a specific one (non-std; requested by SLUUD switch).                     */
     int vABParityUnknown = AB_PARITY_UNDF;
     if ( 0 != bDiffUnkUndfStereo ) 
-	{
+    {
         /* Make labels for unknown and undefined stereo different */
-		vABParityUnknown = AB_PARITY_UNKN;
-	}
+        vABParityUnknown = AB_PARITY_UNKN;
+    }
 
 
     if ( bLibInchiSemaphore ) {  /* does not work properly under sufficient stress */
@@ -146,7 +167,7 @@ EXPIMP_TEMPLATE INCHI_API INCHI_DECL Get_inchi_Input_FromAuxInfo(char *szInchiAu
 /*****************************************************************************************************/
 void INCHI_DECL Free_std_inchi_Input( inchi_Input *pInp )
 {
-	Free_inchi_Input( pInp );
+    Free_inchi_Input( pInp );
 }
 
 void INCHI_DECL Free_inchi_Input( inchi_Input *pInp )
@@ -160,8 +181,8 @@ void INCHI_DECL Free_inchi_Input( inchi_Input *pInp )
 
 /*#endif*/ /* INCHI_MAIN */
 
-#ifndef INCHI_LIBRARY
-#error "INCHI_LIBRARY MUST be defined here"
+#ifndef TARGET_API_LIB
+#error "TARGET_API_LIB MUST be defined here"
 #endif
 
 
@@ -227,7 +248,7 @@ int INChIToInchi_Input( INCHI_IOSTREAM *inp_molfile, inchi_Input *orig_at_data, 
                 orig_at_data->stereo0D     = stereo0D_new;      stereo0D_new      = NULL;
                 orig_at_data->num_stereo0D = num_inp_0D_new;    num_inp_0D_new    = 0;
             } else
-            if ( orig_at_data->atom = CreateInchi_Atom( nNumAtoms ) ) {
+            if ( (orig_at_data->atom = CreateInchi_Atom( nNumAtoms )) ) {
                 /*  switch at_new <--> orig_at_data->at; */
                 if ( orig_at_data->num_atoms ) {
                     memcpy( orig_at_data->atom, at_old, orig_at_data->num_atoms * sizeof(orig_at_data->atom[0]) );
@@ -245,7 +266,7 @@ int INChIToInchi_Input( INCHI_IOSTREAM *inp_molfile, inchi_Input *orig_at_data, 
                         num_inp_atoms_new * sizeof(orig_at_data->atom[0]) );
                 /*  copy newly read 0D stereo */
                 if ( num_inp_0D_new > 0 && stereo0D_new ) {
-                    if ( orig_at_data->stereo0D = CreateInchi_Stereo0D( nNumStereo0D ) ) {
+                    if ( (orig_at_data->stereo0D = CreateInchi_Stereo0D( nNumStereo0D )) ) {
                         memcpy( orig_at_data->stereo0D, stereo0D_old, orig_at_data->num_stereo0D * sizeof(orig_at_data->stereo0D[0]) );
                         /*  adjust numbering in the newly read structure */
                         for ( i = 0; i < num_inp_0D_new; i ++ ) {
@@ -323,4 +344,3 @@ int INChIToInchi_Input( INCHI_IOSTREAM *inp_molfile, inchi_Input *orig_at_data, 
     }
     return orig_at_data? orig_at_data->num_atoms : nNumAtoms;
 }
-

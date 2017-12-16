@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -35,7 +56,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     int           nReleaseMode = nMode | (REQ_MODE_BASIC | REQ_MODE_TAUT | REQ_MODE_ISO | REQ_MODE_STEREO);
 
 
-#if( MIN_SB_RING_SIZE > 0 )
+#if ( MIN_SB_RING_SIZE > 0 )
     int           nMinDbRinSize = MIN_SB_RING_SIZE, mdbr=0;
 #endif
 
@@ -52,20 +73,20 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     int           bReconnectCoord        = (RECONNECT_METALS==1);
     int           bDisconnectCoord       = (DISCONNECT_METALS==1);
 
-	
+    
 
-#ifdef INCHI_LIB
+#ifdef TARGET_LIB_FOR_WINCHI
 /*	int           bVer1Options           = 0; 
     int           bReconnectCoord        = 1;
     int           bDisconnectCoord       = 1; */
-	int			  is_gui				 = 1;
+    int			  is_gui				 = 1;
     int           bINChIOutputOptions    = INCHI_OUT_EMBED_REC; /* embed reconnected & output full aux info */
     int           bCompareComponents     = CMP_COMPONENTS;
 #else
 /*  int           bVer1Options           = 1;
     int           bReconnectCoord        = (RECONNECT_METALS==1);
     int           bDisconnectCoord       = (DISCONNECT_METALS==1); */
-	int			  is_gui				 = 0;
+    int			  is_gui				 = 0;
     int           bINChIOutputOptions     = ((EMBED_REC_METALS_INCHI==1)? INCHI_OUT_EMBED_REC   : 0);
                                             /*| INCHI_OUT_NO_AUX_INFO INCHI_OUT_SHORT_AUX_INFO*/
     int           bCompareComponents     = 0;
@@ -94,11 +115,11 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     int           bOutputMolfileSplit = 0;
     int           bForcedChiralFlag = 0;
 
-#if( READ_INCHI_STRING == 1 )
+#if ( READ_INCHI_STRING == 1 )
     int           bDisplayIfRestoreWarnings = 0;
 #endif
 
-#ifdef INCHI_LIB
+#ifdef TARGET_LIB_FOR_WINCHI
     int           bXml = INCHI_OUT_XML;
 #else
     int           bXml = INCHI_OUT_PLAIN_TEXT;
@@ -108,7 +129,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
 #ifdef STEREO_WEDGE_ONLY
     int bPointedEdgeStereo = STEREO_WEDGE_ONLY; /*   NEWPS TG_FLAG_POINTED_EDGE_STEREO*/
 #endif
-#if( FIX_ADJ_RAD == 1 )
+#if ( FIX_ADJ_RAD == 1 )
     int bFixAdjacentRad = 0;
 #endif
     int bAddPhosphineStereo = 1;
@@ -128,7 +149,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     ext[3] = ".prb";
     ext[4] = "";
 
-#if( MAX_NUM_PATHS < 4 )
+#if ( MAX_NUM_PATHS < 4 )
   #error Wrong initialization
 #endif
 
@@ -145,7 +166,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     
 
 
-#ifndef INCHI_ANSI_ONLY
+#ifndef COMPILE_ANSI_ONLY
     strcpy( ip->tdp.ReqShownFoundTxt[ilSHOWN], "Shown" );
     ip->dp.sdp.tdp = &ip->tdp;
     ip->dp.pdp     = &ip->pdp;
@@ -158,7 +179,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     bMergeAllInputStructures = 0;
 
     *ulDisplTime  = 0;
-#ifdef INCHI_LIBRARY
+#ifdef TARGET_API_LIB
     ip->msec_MaxTime = 0;      /*  milliseconds, default = unlimited in libinchi */
 #else
     ip->msec_MaxTime = 60000;  /*  milliseconds, default = 60 sec */
@@ -197,9 +218,9 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     {
     
         /* if ( !(bVer1Options & 1) && INCHI_OPTION_PREFX == argv[i][0] && INCHI_OPTION_PREFX != argv[i][1] ) */
-		if ( is_gui && INCHI_OPTION_PREFX == argv[i][0] && INCHI_OPTION_PREFX != argv[i][1] ) 
+        if ( is_gui && INCHI_OPTION_PREFX == argv[i][0] && INCHI_OPTION_PREFX != argv[i][1] ) 
         {
-        /*=== parsing INCHI_LIB GUI (and v. 0.9xx Beta)options ===*/
+        /*=== parsing TARGET_LIB_FOR_WINCHI GUI (and v. 0.9xx Beta)options ===*/
 
             pArg = argv[i]+1;
             
@@ -239,7 +260,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             {
                 ip->nInputType = INPUT_MOLFILE;
             }             
-#if( ADD_CMLPP == 1 )
+#if ( ADD_CMLPP == 1 )
             else if ( INPUT_NONE == ip->nInputType && !stricmp( pArg, "CML" )  ) {
                  /* CMLfile label */
                 ip->nInputType = INPUT_CMLFILE;
@@ -254,7 +275,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             {
                 ip->last_struct_number = strtol(pArg+4, NULL, 10);
             }
-#ifdef ENABLE_ENGINEERING_OPTIONS
+#ifdef BUILD_WITH_ENG_OPTIONS
             else if ( !memicmp( pArg, "RSB:", 4 ) ) 
             {
                 mdbr = (int)strtol(pArg+4, NULL, 10);
@@ -288,7 +309,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
 #endif 
 
             /*--- Output options ---*/
-#if( !defined(INCHI_LIBRARY) && !defined(INCHI_LIB) )
+#if ( !defined(TARGET_API_LIB) && !defined(TARGET_LIB_FOR_WINCHI) )
             else if ( !stricmp( pArg, "Tabbed" ) ) 
             {
                 bXml |=  INCHI_OUT_TABBED_OUTPUT;
@@ -310,7 +331,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             } 
 
 
-#if( defined(ENABLE_ENGINEERING_OPTIONS) || defined(INCHI_LIB) )
+#if ( defined(BUILD_WITH_ENG_OPTIONS) || defined(TARGET_LIB_FOR_WINCHI) )
             else if ( !stricmp( pArg, "SDFID" ) ) 
             {
                 ip->bGetSdfileId = 1;
@@ -385,7 +406,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             {
                  bTgFlagVariableProtons = 0;
             } 
-#endif /* ENABLE_ENGINEERING_OPTIONS */
+#endif /* BUILD_WITH_ENG_OPTIONS */
 
 
             /*--- All modes (std and non-std InChI) structure perception options ---*/
@@ -525,7 +546,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
 
 
             /*--- (engineering) Undo bug/draw fixes options ---*/
-#ifdef ENABLE_ENGINEERING_OPTIONS
+#ifdef BUILD_WITH_ENG_OPTIONS
             else if ( !stricmp( pArg, "FixSp3bugOFF" ) ) 
             {
                  bFixSp3bug = 0;
@@ -571,21 +592,21 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                 bStdFormat = 0;
             } 
 
-#if( FIX_ADJ_RAD == 1 )
+#if ( FIX_ADJ_RAD == 1 )
             else if ( !stricmp( pArg, "FixRad" ) ) 
             {
                 bFixAdjacentRad = 1;
                 bStdFormat = 0;
             } 
 #endif
-#if( UNDERIVATIZE == 1 )
+#if ( UNDERIVATIZE == 1 )
             else if ( !stricmp( pArg, "DoDRV" ) ) 
             {
                 ip->bUnderivatize = 1;
                 bStdFormat = 0;
             } 
 #endif
-#if( RING2CHAIN == 1 )
+#if ( RING2CHAIN == 1 )
             else if ( !stricmp( pArg, "DoR2C" ) ) 
             {
                 ip->bRing2Chain = 1;
@@ -682,7 +703,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                 ip->bSaveWarningStructsAsProblem = 1;
             }
 
-#endif /* ENABLE_ENGINEERING_OPTIONS */
+#endif /* BUILD_WITH_ENG_OPTIONS */
 
 
             else 
@@ -715,7 +736,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                             k ++;
                         }
                         t = strtod( pArg+k+1, (char**)&q ); /*  cast deliberately discards 'const' qualifier */
-                        if ( q > pArg+k+1 && errno == ERANGE || t < 0.0 || t*1000.0 > (double)ULONG_MAX) 
+                        if ( (q > pArg+k+1 && errno == ERANGE) || t < 0.0 || t*1000.0 > (double)ULONG_MAX)
                         {
                             ul = 0;
                         } 
@@ -787,7 +808,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                                     bStdFormat = 0;
                                 }
                                 break;
-#ifndef INCHI_LIB
+#ifndef TARGET_LIB_FOR_WINCHI
                             default:
                                 inchi_ios_eprint(log_file, "Unrecognized option: \"%c\".\n", c);
 
@@ -796,7 +817,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                         } 
 
 
-#ifndef INCHI_LIB
+#ifndef TARGET_LIB_FOR_WINCHI
                         else 
                         {
                             inchi_ios_eprint(log_file, "Unrecognized option: \"%c\".\n", c);
@@ -822,7 +843,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             */
 
         } 
-        /*=== end of parsing INCHI_LIB GUI (and v. 0.9xx Beta)options ===*/
+        /*=== end of parsing TARGET_LIB_FOR_WINCHI GUI (and v. 0.9xx Beta)options ===*/
 
 
                 
@@ -879,7 +900,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                 }
             }
 
-#if( ADD_CMLPP == 1 )
+#if ( ADD_CMLPP == 1 )
             else if ( INPUT_NONE == ip->nInputType && !stricmp( pArg, "CML" )  ) 
             {
                 /* CMLfile label */
@@ -894,7 +915,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             {
                 ip->last_struct_number = strtol(pArg+4, NULL, 10);
             }             
-#ifdef ENABLE_ENGINEERING_OPTIONS
+#ifdef BUILD_WITH_ENG_OPTIONS
             else if ( !memicmp( pArg, "RSB:", 4 )) 
             {
                 mdbr = (int)strtol(pArg+4, NULL, 10);
@@ -903,7 +924,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
 
 
             /*--- Output options ---*/
-#if( !defined(INCHI_LIBRARY) && !defined(INCHI_LIB) )
+#if ( !defined(TARGET_API_LIB) && !defined(TARGET_LIB_FOR_WINCHI) )
             else if ( !stricmp( pArg, "Tabbed" ) ) 
             {
                 bXml |=  INCHI_OUT_TABBED_OUTPUT;
@@ -1088,7 +1109,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             /*--- Conversion modes ---*/           
 
 
-#if( READ_INCHI_STRING == 1 )
+#if ( READ_INCHI_STRING == 1 )
             else if ( !stricmp( pArg, "InChI2InChI" )  ) 
             {
                  /* Read InChI Identifiers and output InChI Identifiers */
@@ -1103,7 +1124,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                 ip->bReadInChIOptions &= ~READ_INCHI_OUTPUT_INCHI;
                 ip->nInputType = INPUT_INCHI;
             } 
-#ifdef ENABLE_ENGINEERING_OPTIONS
+#ifdef BUILD_WITH_ENG_OPTIONS
             else if ( !stricmp( pArg, "KeepBalanceP" )  ) 
             {
                  /* When spliting InChI Identifiers into components: */
@@ -1119,7 +1140,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
           
             
             /*--- (engineering) Undo bug/draw fixes options ---*/
-#ifdef ENABLE_ENGINEERING_OPTIONS
+#ifdef BUILD_WITH_ENG_OPTIONS
             else if ( !stricmp( pArg, "FixSp3bugOFF" ) ) 
             {
                  bFixSp3bug = 0;
@@ -1152,21 +1173,21 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             } 
 
             /*--- (engineering) Old structure-perception and InChI creation options ---*/
-#if( FIX_ADJ_RAD == 1 )
+#if ( FIX_ADJ_RAD == 1 )
             else if ( !stricmp( pArg, "FixRad" ) ) 
             {
                 bFixAdjacentRad = 1;
                 bStdFormat = 0;
             } 
 #endif
-#if( UNDERIVATIZE == 1 )
+#if ( UNDERIVATIZE == 1 )
             else if ( !stricmp( pArg, "DoDRV" ) ) 
             {
                 ip->bUnderivatize = 1;
                 bStdFormat = 0;
             } 
 #endif
-#if( RING2CHAIN == 1 )
+#if ( RING2CHAIN == 1 )
             else if ( !stricmp( pArg, "DoR2C" ) ) 
             {
                 ip->bRing2Chain = 1;
@@ -1180,6 +1201,13 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                 bStdFormat = 0;
             } 
 #endif
+
+            else if ( !memicmp( pArg, "MOVEPOS:", 8 ) ) 
+            {
+                bMovePositiveCharges = (0 != strtol(pArg+8, NULL, 10));
+                bStdFormat = 0;
+            }             
+
             else if ( !stricmp( pArg, "NoADP" ) ) 
             {
                  bTgFlagHardAddRenProtons = 0;
@@ -1243,7 +1271,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                 bINChIOutputOptions &= ~INCHI_OUT_NO_AUX_INFO; /* include short aux info */
                 bINChIOutputOptions |= INCHI_OUT_SHORT_AUX_INFO;
             } 
-#if( READ_INCHI_STRING == 1 )
+#if ( READ_INCHI_STRING == 1 )
             else if ( !stricmp( pArg, "DDSRC" ) ) 
             {
                 bDisplayIfRestoreWarnings = 1;  /* InChI->Structure debugging: Display Debug Structure Restore Components */
@@ -1281,7 +1309,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                 ip->bCtPredecessors = 1;             /* compressed output */
             } 
 
-#if( READ_INCHI_STRING == 1 )
+#if ( READ_INCHI_STRING == 1 )
             else if ( !stricmp( pArg, "InChI2InChI" )  ) 
             {
                  /* Read InChI Identifiers and output InChI Identifiers */
@@ -1342,7 +1370,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             if ( !memicmp( pArg, "MOVEPOS:", 8 ) ) {   /* added -- 2010-03-01 DT */
                 bMovePositiveCharges = (0 != strtol(pArg+8, NULL, 10));
             } else 
-	        if ( !memicmp( pArg, "RSB:", 4 )) {
+            if ( !memicmp( pArg, "RSB:", 4 )) {
                 mdbr = (int)strtol(pArg+4, NULL, 10);
             } else
             if ( !stricmp( pArg, "EQU" ) ) {
@@ -1357,7 +1385,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
                 bOutputPath = 1;
                 strncpy(szOutputPath, pArg+3, sizeof(szOutputPath)-1);
             }                         
-#endif /* ENABLE_ENGINEERING_OPTIONS */            
+#endif /* BUILD_WITH_ENG_OPTIONS */            
 
 
 
@@ -1365,7 +1393,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             else
             {
                 bRecognizedOption = 0;
-#ifndef INCHI_LIB
+#ifndef TARGET_LIB_FOR_WINCHI
                 inchi_ios_eprint(log_file, "Unrecognized option: \"%s\".\n", pArg);
 #endif
             }    
@@ -1382,7 +1410,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             char *sz;
             if ( argv[i] && argv[i][0] ) 
             {
-                if ( sz = (char*)inchi_malloc( (strlen(argv[i]) + 1)*sizeof(sz[0])) ) 
+                if ( (sz = (char*) inchi_malloc( (strlen(argv[i]) + 1)*sizeof(sz[0]))) )
                 {
                     strcpy( sz, argv[i] );
                 }
@@ -1406,7 +1434,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
 
         if ( (ip->bAbcNumbers ==1) && (ip->bCtPredecessors == 1) )
         {
-#ifndef INCHI_LIB
+#ifndef TARGET_LIB_FOR_WINCHI
             inchi_ios_eprint(log_file, "Terminating: generation of InChIKey is not available with 'Compress' option\n");
             return -1;
 #endif
@@ -1414,7 +1442,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
         }
         if ( ip->nInputType == INPUT_INCHI )
         {
-#ifndef INCHI_LIB
+#ifndef TARGET_LIB_FOR_WINCHI
             inchi_ios_eprint(log_file, "Terminating: generation of InChIKey is not available in InChI conversion mode\n");
             return -1;
 #endif
@@ -1423,7 +1451,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
         else 
         if ( bOutputMolfileOnly == 1 )
         {
-#ifndef INCHI_LIB
+#ifndef TARGET_LIB_FOR_WINCHI
             inchi_ios_eprint(log_file, "Terminating: generation of InChIKey is not available with 'OutputSDF' option\n");
             return -1;
 #endif
@@ -1472,7 +1500,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
             if ( !ip->path[i] || !ip->path[i][0] ) 
             {
                 len = strlen( p ) + strlen(szNameSuffix) + strlen( ext[i] );
-                if ( sz = (char*)inchi_malloc( (len+1)*sizeof(sz[0]) ) ) 
+                if ( (sz = (char*) inchi_malloc( (len+1)*sizeof(sz[0]) )) )
                 {
                     strcpy( sz, p );
                     strcat( sz, szNameSuffix );
@@ -1492,12 +1520,12 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
 
 
 
-#if( READ_INCHI_STRING == 1 )
+#if ( READ_INCHI_STRING == 1 )
     if ( INPUT_INCHI == ip->nInputType ) 
     {
         bCompareComponents                 = 0;
         /*bDisplayCompositeResults           = 0;*/
-#if( I2S_MODIFY_OUTPUT == 1 )
+#if ( I2S_MODIFY_OUTPUT == 1 )
         if ( !(ip->bReadInChIOptions & READ_INCHI_TO_STRUCTURE ) )
 #endif
         {
@@ -1516,7 +1544,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
               INCHI_OUT_PLAIN_TEXT_COMMENTS  |    /* not in bINChIOutputOptions yet */
               INCHI_OUT_XML_TEXT_COMMENTS         /* not in bINChIOutputOptions yet */
                                              ) )
-#if( I2S_MODIFY_OUTPUT == 1 )
+#if ( I2S_MODIFY_OUTPUT == 1 )
               && !bOutputMolfileOnly
               && !(bXml & (INCHI_OUT_XML | INCHI_OUT_XML_TEXT_COMMENTS | INCHI_OUT_PLAIN_TEXT | INCHI_OUT_XML_TEXT_COMMENTS))
 #endif
@@ -1536,18 +1564,18 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
         nMode |= nReleaseMode;
     }
 
-#if( defined(INCHI_ANSI_ONLY) || defined(INCHI_LIB) )
+#if ( defined(COMPILE_ANSI_ONLY) || defined(TARGET_LIB_FOR_WINCHI) )
     if ( bCompareComponents && !(bDisplay & 1) ) {
         bCompareComponents = 0;
     }
 #endif
     /*  Save original options */
     /* nOrigMode = nMode; */
-#ifndef INCHI_ANSI_ONLY
+#ifndef COMPILE_ANSI_ONLY
     ip->dp.sdp.nFontSize         = nFontSize;
     ip->dp.sdp.ulDisplTime       = *ulDisplTime;
     ip->bDisplay                 = bDisplay;
-#ifdef INCHI_LIB
+#ifdef TARGET_LIB_FOR_WINCHI
     ip->bDisplayCompositeResults = bDisplay;
 #else
     ip->bDisplayCompositeResults = bDisplayCompositeResults;
@@ -1574,7 +1602,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     if ( nMode & REQ_MODE_ISO ) {
         nMode |= REQ_MODE_NON_ISO;
     }
-#if( MIN_SB_RING_SIZE > 0 )
+#if ( MIN_SB_RING_SIZE > 0 )
     if ( mdbr ) {
         nMinDbRinSize = mdbr;
     }
@@ -1583,7 +1611,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     /*  input file */
     if ( ip->nInputType == INPUT_NONE && ip->num_paths > 0 ) {
         ip->nInputType = INPUT_MOLFILE; /*  default */
-#if( ADD_CMLPP == 1 )
+#if ( ADD_CMLPP == 1 )
         {
             const char *p;
             if ( ip->path[0] && ( p = strrchr(ip->path[0], '.' ) ) &&
@@ -1603,7 +1631,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     if ( bOutputMolfileOnly ) {
         bXml &= ~(INCHI_OUT_XML                 | INCHI_OUT_PLAIN_TEXT |
                   INCHI_OUT_PLAIN_TEXT_COMMENTS | INCHI_OUT_XML_TEXT_COMMENTS | INCHI_OUT_TABBED_OUTPUT);
-#if( SDF_OUTPUT_DT == 1 )
+#if ( SDF_OUTPUT_DT == 1 )
         ip->bINChIOutputOptions |= bOutputMolfileDT?    INCHI_OUT_SDFILE_ATOMS_DT : 0;
         ip->bINChIOutputOptions |= bOutputMolfileSplit? INCHI_OUT_SDFILE_SPLIT : 0;
 #endif
@@ -1611,9 +1639,9 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
     if ( bXml & INCHI_OUT_XML ) {
         bXml &= ~(INCHI_OUT_PLAIN_TEXT | INCHI_OUT_XML_TEXT_COMMENTS | INCHI_OUT_TABBED_OUTPUT);
     }
-#ifdef INCHI_LIB
+#ifdef TARGET_LIB_FOR_WINCHI
     if ( !(bDisplay & 1) ) {
-        bXml &= ~(INCHI_OUT_PLAIN_TEXT_COMMENTS | INCHI_OUT_XML_TEXT_COMMENTS); /* do not ouput comments in wINChI text file results */
+        bXml &= ~(INCHI_OUT_PLAIN_TEXT_COMMENTS | INCHI_OUT_XML_TEXT_COMMENTS); /* do not output comments in wINChI text file results */
     } else {
         bXml |= INCHI_OUT_WINCHI_WINDOW;
     }
@@ -1658,7 +1686,7 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
 #ifdef STEREO_WEDGE_ONLY
     ip->bTautFlags  |= bPointedEdgeStereo?      TG_FLAG_POINTED_EDGE_STEREO  : 0;
 #endif
-#if( FIX_ADJ_RAD == 1 )
+#if ( FIX_ADJ_RAD == 1 )
     ip->bTautFlags  |= bFixAdjacentRad?         TG_FLAG_FIX_ADJ_RADICALS : 0;
 #endif
     ip->bTautFlags  |= bAddPhosphineStereo?     TG_FLAG_PHOSPHINE_STEREO : 0;
@@ -1668,13 +1696,13 @@ int ReadCommandLineParms(int argc, const char *argv[], INPUT_PARMS *ip,
 
     if (bFixFB2)
     {
-#if( FIX_ISO_FIXEDH_BUG == 1 )
+#if ( FIX_ISO_FIXEDH_BUG == 1 )
         ip->bTautFlags  |= TG_FLAG_FIX_ISO_FIXEDH_BUG; /* accomodate FIX_ISO_FIXEDH_BUG */
 #endif
-#if( FIX_TERM_H_CHRG_BUG == 1 )
+#if ( FIX_TERM_H_CHRG_BUG == 1 )
         ip->bTautFlags  |= TG_FLAG_FIX_TERM_H_CHRG_BUG; /* accomodate FIX_TERM_H_CHRG_BUG */
 #endif
-#if( FIX_TRANSPOSITION_CHARGE_BUG == 1 )
+#if ( FIX_TRANSPOSITION_CHARGE_BUG == 1 )
         ip->bINChIOutputOptions |= INCHI_OUT_FIX_TRANSPOSITION_CHARGE_BUG;
 #endif
     }
@@ -1740,7 +1768,7 @@ int bStdFormat = 1;
 int first=1;
            
      
-#ifdef INCHI_LIB
+#ifdef TARGET_LIB_FOR_WINCHI
     int bInChI2Struct = 0; /* as of December 2008, winchi-1 does not convert InChI to structure */
 #else
     int bInChI2Struct = (ip->bReadInChIOptions & READ_INCHI_TO_STRUCTURE) && ip->nInputType == INPUT_INCHI;
@@ -1783,7 +1811,7 @@ int first=1;
         if ( !(ip->bINChIOutputOptions & INCHI_OUT_SDFILE_ONLY) && !bInChI2Struct )
             inchi_ios_eprint( log_file, "Generating standard InChI\n" );
 
-#if( !defined(INCHI_LIBRARY) && !defined(INCHI_LIB) && !defined(INCHI_MAIN) )
+#if ( !defined(TARGET_API_LIB) && !defined(TARGET_LIB_FOR_WINCHI) && !defined(TARGET_EXE_USING_API) )
         /* effective only in command line program InChI or stdInChI */
         else if ( bInChI2Struct )             
             inchi_ios_eprint( log_file, "Converting InChI(s) to structure(s) in %s\n",
@@ -1821,7 +1849,7 @@ int first=1;
          if ( !(ip->bTautFlags & TG_FLAG_HARD_ADD_REM_PROTONS) ) 
             inchi_ios_eprint( log_file, "  Disabled Aggressive (De)protonation\n" );
 
-#if( FIND_RING_SYSTEMS != 1 )
+#if ( FIND_RING_SYSTEMS != 1 )
         inchi_ios_eprint( log_file, "  %s5-, 6-, 7-memb. ring taut. ignored\n", i?"; ":"");
 #endif
 
@@ -1844,7 +1872,7 @@ int first=1;
             inchi_ios_eprint( log_file, "  Isotopic OFF\n");
         */
 
-#if( FIX_ADJ_RAD == 1 )
+#if ( FIX_ADJ_RAD == 1 )
     if ( ip->bTautFlags & TG_FLAG_FIX_ADJ_RADICALS ) 
         inchi_ios_eprint( log_file, "Fix Adjacent Radicals\n" );
 #endif
@@ -1876,7 +1904,7 @@ int first=1;
             }
 
 
-#if( defined(MIN_SB_RING_SIZE) && MIN_SB_RING_SIZE > 0 )
+#if ( defined(MIN_SB_RING_SIZE) && MIN_SB_RING_SIZE > 0 )
             k = (ip->nMode & REQ_MODE_MIN_SB_RING_MASK) >> REQ_MODE_MIN_SB_RING_SHFT;
             if ( bRELEASE_VERSION != 1 || k != MIN_SB_RING_SIZE ) 
             {
@@ -1902,7 +1930,7 @@ int first=1;
             inchi_ios_eprint( log_file, "  Account for 1,5-tautomerism\n");
         else
             inchi_ios_eprint( log_file, "  Do not account for 1,5-tautomerism\n");
-#ifdef ENABLE_ENGINEERING_OPTIONS
+#ifdef BUILD_WITH_ENG_OPTIONS
         if ( TG_FLAG_PHOSPHINE_STEREO & ip->bTautFlags ) 
             inchi_ios_eprint( log_file, "  Include phosphine stereochemistry\n");
         else
@@ -1917,6 +1945,8 @@ int first=1;
             inchi_ios_eprint( log_file, "  Turned OFF bug-fixes found after v.1.02b release\n");
         if ( !(ip->bFixNonUniformDraw) ) 
             inchi_ios_eprint( log_file, "  Turned OFF fixes of non-uniform drawing issues\n");
+        if ( ! (TG_FLAG_MOVE_POS_CHARGES & ip->bTautFlags) ) 
+                inchi_ios_eprint( log_file, "  MovePos turned OFF\n");
 #endif
     } /* !bStdFormat */
 
@@ -1962,7 +1992,7 @@ int first=1;
             ip->nInputType == INPUT_MOLFILE?     "MOLfile"       :
             ip->nInputType == INPUT_SDFILE?      "SDfile"        :
             ip->nInputType == INPUT_CMLFILE?     "CMLfile"       :
-#if( READ_INCHI_STRING == 1 )
+#if ( READ_INCHI_STRING == 1 )
             ip->nInputType == INPUT_INCHI?       "InChI (plain identifier)" :
 #endif
             ip->nInputType == INPUT_INCHI_XML?   "InChI AuxInfo (xml)"   :
@@ -1987,7 +2017,7 @@ int first=1;
         ((ip->bINChIOutputOptions & INCHI_OUT_PLAIN_TEXT) &&
         (ip->bINChIOutputOptions & INCHI_OUT_TABBED_OUTPUT))? ", tabbed":"");
 
-#if( bRELEASE_VERSION == 1 )
+#if ( bRELEASE_VERSION == 1 )
     if ( ip->bCtPredecessors || ip->bAbcNumbers ) 
     {
         if ( ip->bCtPredecessors && ip->bAbcNumbers ) 
@@ -2036,12 +2066,12 @@ int first=1;
     if ( ip->bSaveAllGoodStructsAsProblem && ip->path[3] && ip->path[3][0] ) 
         inchi_ios_eprint( log_file, "Saving only all good structures into the problem file\n");
     /*  Report debug modes */
-#if( bRELEASE_VERSION != 1 )
+#if ( bRELEASE_VERSION != 1 )
     inchi_ios_eprint( log_file, "Release version = NO\n");
 #endif
 
 
-#if( TRACE_MEMORY_LEAKS == 1 && defined(_DEBUG) )
+#if ( TRACE_MEMORY_LEAKS == 1 && defined(_DEBUG) )
     inchi_ios_eprint( log_file, "Tracing memory leaks (SLOW)\n");
 #endif
 
@@ -2049,8 +2079,8 @@ int first=1;
 
 
 
-#if( bRELEASE_VERSION != 1 )
-#if( FIND_RING_SYSTEMS == 1 )
+#if ( bRELEASE_VERSION != 1 )
+#if ( FIND_RING_SYSTEMS == 1 )
     inchi_ios_eprint( log_file, "Find ring systems=Y\nTautomers:\n" );
     inchi_ios_eprint( log_file, " 4-pyridinol=%s\n", TAUT_4PYRIDINOL_RINGS==1? "Y":"N");
     inchi_ios_eprint( log_file, " pyrazole=%s\n", TAUT_PYRAZOLE_RINGS==1? "Y":"N");
@@ -2074,7 +2104,7 @@ int first=1;
                                   0==(ip->bTautFlags&TG_FLAG_ALLOW_NO_NEGTV_O),
                                   0!=(ip->bTautFlags&TG_FLAG_MERGE_TAUT_SALTS));
     inchi_ios_eprint( log_file, "     DISCONNECT_COORD=%d\n", 0!=(ip->bTautFlags&TG_FLAG_DISCONNECT_COORD) );
-#if( TEST_RENUMB_ATOMS == 1 )
+#if ( TEST_RENUMB_ATOMS == 1 )
     inchi_ios_eprint( log_file, "\nDbg: TEST_RENUMB_ATOMS=%d; TEST_RENUMB_NEIGH=%d; TEST_RENUMB_SWITCH=%d\n",
                                   TEST_RENUMB_ATOMS,    TEST_RENUMB_NEIGH,    TEST_RENUMB_SWITCH );
     inchi_ios_eprint( log_file, "     TEST_RENUMB_ATOMS_SAVE_LONGEST=%d\n",
@@ -2097,35 +2127,40 @@ void HelpCommandLineParms( INCHI_IOSTREAM *f )
 
 #if ( bRELEASE_VERSION == 1 )
 
-     inchi_ios_print_nodisplay( f, 
-#ifdef INCHI_MAIN
-         "%s ver %s%s.\n\nUsage:\ninchi_main inputFile [outputFile [logFile [problemFile]]] [%coption[ %coption...]]\n", 
-         INCHI_NAME, INCHI_VERSION, BUILD_INFO, 
-         INCHI_OPTION_PREFX, INCHI_OPTION_PREFX); 
+    inchi_ios_print_nodisplay( f, 
+#ifdef TARGET_EXE_USING_API
+        "%s ver %s%s.\n\nUsage:\ninchi_main inputFile [outputFile [logFile [problemFile]]] [%coption[ %coption...]]\n", 
+        INCHI_NAME, INCHI_VERSION, TARGET_ID_STRING, 
+        INCHI_OPTION_PREFX, INCHI_OPTION_PREFX); 
 #else
-         "%s ver %s%s.\n\nUsage:\ninchi-%s inputFile [outputFile [logFile [problemFile]]] [%coption[ %coption...]]\n", 	     
-         INCHI_NAME, INCHI_VERSION, BUILD_INFO, 
-         INCHI_VERSION, INCHI_OPTION_PREFX, INCHI_OPTION_PREFX); 
+        "%s ver %s%s.\n\nUsage:\ninchi-%s inputFile [outputFile [logFile [problemFile]]] [%coption [%coption...]]\n", 	     
+        INCHI_NAME, INCHI_VERSION, TARGET_ID_STRING, 
+        INCHI_VERSION, INCHI_OPTION_PREFX, INCHI_OPTION_PREFX); 
+#if ( BUILD_WITH_AMI == 1 )
+    inchi_ios_print_nodisplay( f, 
+        "inchi-%s inputFiles... %cAMI [%coption[ %coption...]]\n", 	     
+        INCHI_VERSION, INCHI_OPTION_PREFX, INCHI_OPTION_PREFX, INCHI_OPTION_PREFX); 
+#endif
 #endif
          
     inchi_ios_print_nodisplay( f, "\nOptions:\n");
     
     inchi_ios_print_nodisplay( f, "\nInput\n");
     inchi_ios_print_nodisplay( f, "  STDIO       Use standard input/output streams\n");
-    /*^^^ post-1.02bv */
     inchi_ios_print_nodisplay( f, "  InpAux      Input structures in %s default aux. info format\n              (for use with STDIO)\n", INCHI_NAME);
     inchi_ios_print_nodisplay( f, "  SDF:DataHeader Read from the input SDfile the ID under this DataHeader\n");
-#if( ADD_CMLPP == 1 )
+#if ( ADD_CMLPP == 1 )
     inchi_ios_print_nodisplay( f, "  CML         Input in CML format (default for input file .CML extension)\n");
 #endif
 /*
     inchi_ios_print_nodisplay( f, "  START:n     Skip structures up to n-th one\n");
     inchi_ios_print_nodisplay( f, "  END:m       Skip structures after m-th one\n");
 */
+#if ( BUILD_WITH_AMI == 1 )
+    inchi_ios_print_nodisplay( f, "  AMI         Allow multiple input files (wildcards supported)\n");
+#endif
 
     inchi_ios_print_nodisplay( f, "Output\n");
-    
-    
     inchi_ios_print_nodisplay( f, "  AuxNone     Omit auxiliary information (default: Include)\n");
     inchi_ios_print_nodisplay( f, "  SaveOpt     Save custom InChI creation options (non-standard InChI)\n");
     inchi_ios_print_nodisplay( f, "  NoLabels    Omit structure number, DataHeader and ID from %s output\n", INCHI_NAME);
@@ -2134,7 +2169,7 @@ void HelpCommandLineParms( INCHI_IOSTREAM *f )
     /*inchi_ios_print_nodisplay( f, "  Compress    Compressed output\n"); */
     /*inchi_ios_print_nodisplay( f, "    FULL        Standard set of options for Full Verbose Output\n");*/
     /*inchi_ios_print_nodisplay( f, "    MIN         Standard set of options for Minimal Concise Output\n");*/
-#if( defined(_WIN32) && defined(_MSC_VER) && !defined(INCHI_ANSI_ONLY) && !defined(INCHI_LIBRARY) )
+#if ( defined(_WIN32) && defined(_MSC_VER) && !defined(COMPILE_ANSI_ONLY) && !defined(TARGET_API_LIB) )
     inchi_ios_print_nodisplay( f, "  D           Display the structures\n");
     inchi_ios_print_nodisplay( f, "  EQU         Display sets of identical components\n");
     inchi_ios_print_nodisplay( f, "  Fnumber     Set display Font size in number of points\n");
@@ -2144,7 +2179,11 @@ void HelpCommandLineParms( INCHI_IOSTREAM *f )
 #if ( SDF_OUTPUT_DT == 1 )
     inchi_ios_print_nodisplay( f, "  SdfAtomsDT  Output Hydrogen Isotopes to SDfile as Atoms D and T\n");
 #endif
-
+#if ( BUILD_WITH_AMI == 1 )
+    inchi_ios_print_nodisplay( f, "  AMIOutStd   Write output to stdout (in AMI mode)\n");
+    inchi_ios_print_nodisplay( f, "  AMILogStd   Write log to stderr (in AMI mode)\n");
+    inchi_ios_print_nodisplay( f, "  AMIPrbNone  Suppress creation of problem files (in AMI mode)\n");
+#endif
     inchi_ios_print_nodisplay( f, "Structure perception\n");
     inchi_ios_print_nodisplay( f, "  SNon        Exclude stereo (default: include absolute stereo)\n");
     inchi_ios_print_nodisplay( f, "  NEWPSOFF    Both ends of wedge point to stereocenters (default: a narrow end)\n");
@@ -2174,7 +2213,7 @@ void HelpCommandLineParms( INCHI_IOSTREAM *f )
 
 
     inchi_ios_print_nodisplay( f, "Conversion\n");
-#ifdef INCHI_MAIN
+#ifdef TARGET_EXE_USING_API
     inchi_ios_print_nodisplay( f, "  InChI2InChI  Test mode: Mol/SDfile->%s->%s\n", INCHI_NAME, INCHI_NAME);
     inchi_ios_print_nodisplay( f, "  InChI2Struct Test mode: Mol/SDfile->%s->Structure->(%s+AuxInfo)\n", INCHI_NAME, INCHI_NAME);
 #else
@@ -2182,11 +2221,11 @@ void HelpCommandLineParms( INCHI_IOSTREAM *f )
     inchi_ios_print_nodisplay( f, "  InChI2Struct Convert InChI string(s) to structure(s) in InChI aux.info format\n");
 #endif
 
-#ifdef ENABLE_ENGINEERING_OPTIONS
+#ifdef BUILD_WITH_ENG_OPTIONS
 #if 0
     inchi_ios_print_nodisplay( f, "Engineering options (for testing only)\n");
     inchi_ios_print_nodisplay( f, "  NoADP       Disable Aggressive Deprotonation\n");
-#if( FIX_ADJ_RAD == 1 )
+#if ( FIX_ADJ_RAD == 1 )
     inchi_ios_print_nodisplay( f, "  FixRad      Fix Adjacent Radicals\n");
 #endif
     inchi_ios_print_nodisplay( f, "  SPXYZOFF    Do not include Phosphines Stereochemistry\n");
@@ -2264,13 +2303,13 @@ void HelpCommandLineParmsReduced( INCHI_IOSTREAM *f )
 
     /*^^^ */
      inchi_ios_print_nodisplay( f, 
-#ifdef INCHI_MAIN
+#ifdef TARGET_EXE_USING_API
          "%s ver %s%s.\n\nUsage:\ninchi_main inputFile [outputFile [logFile [problemFile]]] [%coption[ %coption...]]\n", 
-         INCHI_NAME, INCHI_VERSION, BUILD_INFO, 
+         INCHI_NAME, INCHI_VERSION, TARGET_ID_STRING, 
          INCHI_OPTION_PREFX, INCHI_OPTION_PREFX); 
 #else
          "%s ver %s%s.\n\nUsage:\nc%s-%s inputFile [outputFile [logFile [problemFile]]] [%coption[ %coption...]]\n", 
-         INCHI_NAME, INCHI_VERSION, BUILD_INFO, 
+         INCHI_NAME, INCHI_VERSION, TARGET_ID_STRING, 
          INCHI_NAME, INCHI_VERSION, INCHI_OPTION_PREFX, INCHI_OPTION_PREFX); 		 
 #endif
     /*^^^ */    
@@ -2280,16 +2319,18 @@ void HelpCommandLineParmsReduced( INCHI_IOSTREAM *f )
 
     inchi_ios_print_nodisplay( f, "\nInput\n");
     inchi_ios_print_nodisplay( f, "  STDIO       Use standard input/output streams\n");
-    /*^^^ post-1.02bv */
     inchi_ios_print_nodisplay( f, "  InpAux      Input structures in %s default aux. info format\n              (for use with STDIO)\n", INCHI_NAME);
     inchi_ios_print_nodisplay( f, "  SDF:DataHeader Read from the input SDfile the ID under this DataHeader\n");
-#if( ADD_CMLPP == 1 )
+#if ( ADD_CMLPP == 1 )
     inchi_ios_print_nodisplay( f, "  CML         Input in CML format (default for input file .CML extension)\n");
 #endif
 /*
     inchi_ios_print_nodisplay( f, "  START:n     Skip structures up to n-th one\n");
     inchi_ios_print_nodisplay( f, "  END:m       Skip structures after m-th one\n");
 */
+#if ( BUILD_WITH_AMI == 1 )
+    inchi_ios_print_nodisplay( f, "  AMI         Allow multiple input files (wildcards supported)\n");
+#endif
 
     inchi_ios_print_nodisplay( f, "Output\n");
     inchi_ios_print_nodisplay( f, "  AuxNone     Omit auxiliary information (default: Include)\n");
@@ -2297,7 +2338,7 @@ void HelpCommandLineParmsReduced( INCHI_IOSTREAM *f )
     inchi_ios_print_nodisplay( f, "  NoLabels    Omit structure number, DataHeader and ID from %s output\n", INCHI_NAME);
     inchi_ios_print_nodisplay( f, "  Tabbed      Separate structure number, %s, and AuxInfo with tabs\n", INCHI_NAME);
     /* inchi_ios_print_nodisplay( f, "  Compress    Compressed output\n"); */
-#if( defined(_WIN32) && defined(_MSC_VER) && !defined(INCHI_ANSI_ONLY) && !defined(INCHI_LIBRARY) )
+#if ( defined(_WIN32) && defined(_MSC_VER) && !defined(COMPILE_ANSI_ONLY) && !defined(TARGET_API_LIB) )
     inchi_ios_print_nodisplay( f, "  D           Display the structures\n");
     inchi_ios_print_nodisplay( f, "  EQU         Display sets of identical components\n");
     inchi_ios_print_nodisplay( f, "  Fnumber     Set display Font size in number of points\n");
@@ -2306,8 +2347,11 @@ void HelpCommandLineParmsReduced( INCHI_IOSTREAM *f )
 #if ( SDF_OUTPUT_DT == 1 )
     inchi_ios_print_nodisplay( f, "  SdfAtomsDT  Output Hydrogen Isotopes to SDfile as Atoms D and T\n");
 #endif
-
-    
+#if ( BUILD_WITH_AMI == 1 )
+    inchi_ios_print_nodisplay( f, "  AMIOutStd   Write output to stdout (in AMI mode)\n");
+    inchi_ios_print_nodisplay( f, "  AMILogStd   Write log to stderr (in AMI mode)\n");
+    inchi_ios_print_nodisplay( f, "  AMIPrbNone  Suppress creation of problem files (in AMI mode)\n");
+#endif
     inchi_ios_print_nodisplay( f, "Structure perception\n");
     inchi_ios_print_nodisplay( f, "  SNon        Exclude stereo (default: include absolute stereo)\n");
     inchi_ios_print_nodisplay( f, "  NEWPSOFF    Both ends of wedge point to stereocenters (default: a narrow end)\n");
@@ -2335,11 +2379,11 @@ void HelpCommandLineParmsReduced( INCHI_IOSTREAM *f )
     inchi_ios_print_nodisplay( f, "  XHash1      Generate hash extension (to 256 bits) for 1st block of InChIKey\n");
     inchi_ios_print_nodisplay( f, "  XHash2      Generate hash extension (to 256 bits) for 2nd block of InChIKey\n");
 
-#ifdef ENABLE_ENGINEERING_OPTIONS
+#ifdef BUILD_WITH_ENG_OPTIONS
 #if 0
     inchi_ios_print_nodisplay( f, "Engineering options (for testing only)\n");
     inchi_ios_print_nodisplay( f, "  NoADP       Disable Aggressive Deprotonation\n");
-#if( FIX_ADJ_RAD == 1 )
+#if ( FIX_ADJ_RAD == 1 )
     inchi_ios_print_nodisplay( f, "  FixRad      Fix Adjacent Radicals\n");
 #endif
     inchi_ios_print_nodisplay( f, "  SPXYZOFF    Do not include Phosphines Stereochemistry\n");
@@ -2360,7 +2404,7 @@ void HelpCommandLineParmsReduced( INCHI_IOSTREAM *f )
 
 #define fprintf2 inchi_fprintf
 
-#ifndef INCHI_LIBRARY
+#ifndef TARGET_API_LIB
 /************************************************************************************/
 int OpenFiles( FILE **inp_file, FILE **output_file, FILE **log_file, FILE **prb_file, INPUT_PARMS *ip )
 {
@@ -2375,16 +2419,16 @@ int OpenFiles( FILE **inp_file, FILE **output_file, FILE **log_file, FILE **prb_
 */
     /*  logfile -- open as early as possible */
     if ( !ip->path[2] || !ip->path[2][0] ) {
-        fprintf2( stderr, "%s version %s%s%s\n", INCHI_NAME, INCHI_VERSION, BUILD_INFO, bRELEASE_VERSION? "":""); /* (Pre-release, for evaluation purposes only)" ); */
+        fprintf2( stderr, "%s version %s%s%s\n", INCHI_NAME, INCHI_VERSION, TARGET_ID_STRING, bRELEASE_VERSION? "":""); /* (Pre-release, for evaluation purposes only)" ); */
         fprintf2( stderr, "Log file not specified. Using standard error output.\n");
         *log_file = stderr;
     } else
     if ( !(*log_file = fopen( ip->path[2], "w" ) ) ) {
-        fprintf2( stderr, "%s version %s%s%s\n", INCHI_NAME, INCHI_VERSION, BUILD_INFO, bRELEASE_VERSION? "":""); /* (Pre-release, for evaluation purposes only)" );*/
+        fprintf2( stderr, "%s version %s%s%s\n", INCHI_NAME, INCHI_VERSION, TARGET_ID_STRING, bRELEASE_VERSION? "":""); /* (Pre-release, for evaluation purposes only)" );*/
         fprintf2( stderr, "Cannot open log file '%s'. Using standard error output.\n", ip->path[2] );
         *log_file = stderr;
     } else {
-        fprintf2( *log_file, "%s version %s%s%s\n", INCHI_NAME, INCHI_VERSION, BUILD_INFO, bRELEASE_VERSION? "":""); /* (Pre-release, for evaluation purposes only)" );*/
+        fprintf2( *log_file, "%s version %s%s%s\n", INCHI_NAME, INCHI_VERSION, TARGET_ID_STRING, bRELEASE_VERSION? "":""); /* (Pre-release, for evaluation purposes only)" );*/
         fprintf2( *log_file, "Opened log file '%s'\n", ip->path[2] );
     }
     /* input file */
@@ -2393,7 +2437,7 @@ int OpenFiles( FILE **inp_file, FILE **output_file, FILE **log_file, FILE **prb_
          ip->nInputType == INPUT_INCHI_PLAIN ) && ip->num_paths > 0 ) 
     {
         const char *fmode = NULL;
-#if( defined(_MSC_VER)&&defined(_WIN32) || defined(__BORLANDC__)&&defined(__WIN32__) || defined(__GNUC__)&&defined(__MINGW32__)&&defined(_WIN32) )
+#if ( defined(_MSC_VER)&&defined(_WIN32) || defined(__BORLANDC__)&&defined(__WIN32__) || defined(__GNUC__)&&defined(__MINGW32__)&&defined(_WIN32) )
         /* compilers that definitely allow fopen "rb" (binary read) mode */
         fmode = "rb";
         if ( !ip->path[0] || !ip->path[0][0] || !(*inp_file = fopen( ip->path[0], "rb" ) ) ) 
@@ -2483,12 +2527,12 @@ int OpenFiles( FILE **inp_file, FILE **output_file, FILE **log_file, FILE **prb_
     /*  problem file */
     if ( ip->path[3] && ip->path[3][0] ) {
         const char *fmode = "w";
-#if( defined(_MSC_VER)&&defined(_WIN32) || defined(__BORLANDC__)&&defined(__WIN32__) || defined(__GNUC__)&&defined(__MINGW32__)&&defined(_WIN32) )
+#if ( defined(_MSC_VER)&&defined(_WIN32) || defined(__BORLANDC__)&&defined(__WIN32__) || defined(__GNUC__)&&defined(__MINGW32__)&&defined(_WIN32) )
         if ( ip->nInputType != INPUT_CMLFILE ) {
             fmode = "wb";
         }
 #endif
-        if (  !(*prb_file = fopen( ip->path[3], fmode ) ) ) {
+        if ( !(*prb_file = fopen( ip->path[3], fmode ) ) ) {
             fprintf2( *log_file, "Cannot open problem file '%s'. Terminating.\n", ip->path[3] );
             goto exit_function;
         } else {
@@ -2610,4 +2654,4 @@ int DetectInputINChIFileType( FILE **inp_file, INPUT_PARMS *ip, const char *fmod
 #undef NUM_VERSIONS
 #undef LEN_VERSIONS
 
-#endif /* INCHI_LIBRARY */
+#endif /* TARGET_API_LIB */

@@ -23,6 +23,7 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/data.h>
+#include <openbabel/data_utilities.h>
 #include <openbabel/mol.h>
 #include <openbabel/locale.h>
 
@@ -104,7 +105,7 @@ namespace OpenBabel
 
     if (buffer[0] != '#') // skip comment line (at the top)
       {
-        sscanf(buffer,"%d %4s %lf %lf %*f %lf %d %lf %lf %lf %lf %lf %lf %lf %255s",
+        sscanf(buffer,"%d %3s %lf %lf %*f %lf %d %lf %lf %lf %lf %lf %lf %lf %255s",
                &num,
                symbol,
                &ARENeg,
@@ -326,9 +327,10 @@ namespace OpenBabel
       if (!strncasecmp(identifier,(*i)->GetSymbol(),3))
         return((*i)->GetAtomicNum());
 
-    // Compare to IUPAC name
+    // Compare to IUPAC name (an abbreviated name will also work if 5 letters or more)
+    int numCharsToTest = std::max<int>(strlen(identifier), 5);
     for (i = _element.begin();i != _element.end();++i)
-      if (strncasecmp(identifier,(*i)->GetName().c_str(),5) == 0)
+      if (strncasecmp(identifier,(*i)->GetName().c_str(),numCharsToTest) == 0)
         return((*i)->GetAtomicNum());
 
     if (strcasecmp(identifier, "D") == 0 ||
@@ -381,7 +383,6 @@ namespace OpenBabel
 
   void OBIsotopeTable::ParseLine(const char *buffer)
   {
-    unsigned int atomicNum;
     unsigned int i;
     vector<string> vs;
 
@@ -393,7 +394,6 @@ namespace OpenBabel
         tokenize(vs,buffer);
         if (vs.size() > 3) // atomic number, 0, most abundant mass (...)
           {
-            atomicNum = atoi(vs[0].c_str());
             for (i = 1; i < vs.size() - 1; i += 2) // make sure i+1 still exists
               {
                 entry.first = atoi(vs[i].c_str()); // isotope
@@ -424,6 +424,150 @@ namespace OpenBabel
         return _isotopes[ele][iso].second;
 
     return 0.0;
+  }
+
+  OBAtomicHeatOfFormationTable::OBAtomicHeatOfFormationTable(void)
+  {
+    _init = false;
+    _dir = BABEL_DATADIR;
+    _envvar = "BABEL_DATADIR";
+    _filename = "atomization-energies.txt";
+    _subdir = "data";
+    Init();
+  }
+
+  static double UnitNameToConversionFactor(const char* unit) {
+    const char* p = unit;
+    switch(p[0]) {
+    case 'e':
+      if (p[1]=='V' && p[2]=='\0')
+        return ELECTRONVOLT_TO_KCALPERMOL; // eV
+      if (p[1]=='l' && p[2]=='e' && p[3]=='c' && p[4]=='t' && p[5]=='r' && p[6]=='o' && p[7]=='n' &&
+          p[8]=='v' && p[9]=='o' && p[10]=='l' && p[11]=='t' && p[12]=='\0')
+        return ELECTRONVOLT_TO_KCALPERMOL; // electronvolt
+      break;
+    case 'k':
+      if (p[1]=='J' && p[2]=='/' && p[3]=='m' && p[4]=='o' && p[5]=='l' && p[6]=='\0')
+        return KJPERMOL_TO_KCALPERMOL; // kJ/mol
+      if (p[1]=='c' && p[2]=='a' && p[3]=='l' && p[4]=='/' && p[5]=='m' && p[6]=='o' && p[7]=='l' && p[8]=='\0')
+        return 1.0; // kcal/mol
+      break;
+    case 'H':
+      if (p[1]=='a' && p[2]=='r' && p[3]=='t' && p[4]=='r' && p[5]=='e' && p[6]=='e' && p[7]=='\0')
+        return HARTEE_TO_KCALPERMOL; // Hartree
+      break;
+    case 'J':
+      if (p[1]=='/' && p[2]=='m' && p[3]=='o' && p[4]=='l' && p[5]==' ' && p[6]=='K' && p[7]=='\0')
+        return KJPERMOL_TO_KCALPERMOL; // J/mol K
+      break;
+    case 'R':
+      if (p[1]=='y' && p[2]=='d' && p[3]=='b' && p[4]=='e' && p[5]=='r' && p[6]=='g' && p[7]=='\0')
+        return RYDBERG_TO_KCALPERMOL; // Rydberg
+      break;
+    }
+
+    std::stringstream errorMsg;
+    errorMsg << "WARNING: Unknown energy unit in thermochemistry file\n";
+    obErrorLog.ThrowError(__FUNCTION__, errorMsg.str() , obWarning);
+
+    return 1.0;
+  }
+
+  void OBAtomicHeatOfFormationTable::ParseLine(const char *line)
+  {
+    char *ptr;
+    vector<string> vs;
+    OBAtomHOF *oba;
+
+    ptr = const_cast<char*>( strchr(line,'#'));
+    if (NULL != ptr)
+      ptr[0] = '\0';
+    if (strlen(line) > 0)
+      {
+        tokenize(vs,line,"|");
+        if (vs.size() >= 8)
+          {
+              oba = new OBAtomHOF(vs[0],
+                                  atoi(vs[1].c_str()),
+                                  vs[2],
+                                  vs[3],
+                                  atof(vs[4].c_str()),
+                                  atof(vs[5].c_str()),
+                                  atoi(vs[6].c_str()),
+                                  vs[7]);
+            _atomhof.push_back(*oba);
+          }
+      }
+  }
+
+  int OBAtomicHeatOfFormationTable::GetHeatOfFormation(std::string elem,
+                                                       int charge,
+                                                       std::string meth,
+                                                       double T,
+                                                       double *dhof0,
+                                                       double *dhofT,
+                                                       double *S0T)
+  {
+    int    found;
+    double Ttol = 0.05; /* Kelvin */
+    double Vmodel, Vdhf, S0, HexpT;
+    std::vector<OBAtomHOF>::iterator it;
+    char desc[128];
+
+    found = 0;
+    Vmodel = Vdhf = S0 = HexpT = 0;
+    snprintf(desc,sizeof(desc),"%s(0K)",meth.c_str());
+
+    for(it = _atomhof.begin(); it != _atomhof.end(); ++it)
+    {
+        if ((0 == it->Element().compare(elem)) &&
+            (it->Charge() == charge))
+        {
+            double eFac = UnitNameToConversionFactor(it->Unit().c_str());
+            if (fabs(T - it->T()) < Ttol)
+            {
+                if (0 == it->Method().compare("exp"))
+                {
+                    if (0 == it->Desc().compare("H(0)-H(T)"))
+                    {
+                        HexpT += it->Value()*eFac;
+                        found++;
+                    }
+                    else if (0 == it->Desc().compare("S0(T)"))
+                    {
+                        S0 += it->Value();
+                        found++;
+                    }
+                }
+            }
+            else if (0 == it->T()) 
+            {
+                if ((0 == it->Method().compare(meth)) &&
+                    (0 == it->Desc().compare(desc)))
+                {
+                    Vmodel += it->Value()*eFac;
+                    found++;
+                }
+                if (0 == it->Method().compare("exp"))
+                {
+                    if (0 == it->Desc().compare("DHf(T)"))
+                    {
+                        Vdhf += it->Value()*eFac;
+                        found++;
+                    }
+                }
+            }
+        }
+    }
+
+    if (found == 4)
+    {
+        *dhof0 = Vdhf-Vmodel;
+        *dhofT = Vdhf-Vmodel-HexpT;
+        *S0T   = -S0/4.184;
+        return 1;
+    }
+    return 0;
   }
 
   /** \class OBTypeTable data.h <openbabel/data.h>
@@ -473,7 +617,6 @@ namespace OpenBabel
       - XED (XED format)
       - DOK (Dock)
       - M3D (Molecular Arts M3D)
-      - IDX (Index -- i.e., line number in the file)
       - SBN (Sybyl descriptor types for MPD files)
       - PCM (PC Model)
   */
@@ -495,10 +638,10 @@ namespace OpenBabel
     if (buffer[0] == '#')
       return; // just a comment line
 
-    if (_linecount == 0)
-      sscanf(buffer,"%d%d",&_nrows,&_ncols);
-    else if (_linecount == 1)
+    if (_linecount == 0) {
       tokenize(_colnames,buffer);
+      _ncols = _colnames.size();
+    }
     else
       {
         vector<string> vc;
@@ -569,8 +712,8 @@ namespace OpenBabel
     string sto,sfrom;
     sfrom = from;
     rval = Translate(sto,sfrom);
-    strncpy(to,(char*)sto.c_str(), sizeof(to) - 1);
-    to[sizeof(to) - 1] = '\0';
+    strncpy(to,(char*)sto.c_str(), OBATOM_TYPE_LEN - 1);
+    to[OBATOM_TYPE_LEN - 1] = '\0';
 
     return(rval);
   }
@@ -888,9 +1031,9 @@ namespace OpenBabel
     for (i = _resatoms[_resnum].begin();i != _resatoms[_resnum].end();i+=3)
       if (atmid == *i)
         {
-          i++;
+          ++i;
           type = *i;
-          i++;
+          ++i;
           hyb = atoi((*i).c_str());
           return(true);
         }
@@ -913,6 +1056,10 @@ namespace OpenBabel
     // Check return value from OpenDatafile
     // Suggestion from Zhiguo Liu
     string fn_open = OpenDatafile(ifs, _filename, _envvar);
+    
+    // Check _subdir directory
+    if (fn_open == "")
+      string fn_open = OpenDatafile(ifs, _filename, _subdir);
 
     if (fn_open != "" && (ifs))
       {
@@ -955,7 +1102,7 @@ namespace OpenBabel
         string s = "Cannot initialize database '";
         s += _filename;
         s += "' which may cause further errors.";
-        obErrorLog.ThrowError(__FUNCTION__, "Cannot initialize database", obWarning);
+        obErrorLog.ThrowError(__FUNCTION__, s, obWarning);
       }
 
   }

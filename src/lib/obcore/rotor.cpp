@@ -21,6 +21,10 @@ GNU General Public License for more details.
 
 #include <openbabel/mol.h>
 #include <openbabel/rotor.h>
+#include <openbabel/graphsym.h>
+
+#include <set>
+#include <assert.h>
 
 // private data headers with default parameters
 #include "torlib.h"
@@ -30,7 +34,7 @@ namespace OpenBabel
 {
 
   //! Default step resolution for a dihedral angle (in degrees)
-#define OB_DEFAULT_DELTA 10.0
+#define OB_DEFAULT_DELTA 15.0
   static bool GetDFFVector(OBMol&,vector<int>&,OBBitVec&);
   static bool CompareRotor(const pair<OBBond*,int>&,const pair<OBBond*,int>&);
 
@@ -39,11 +43,11 @@ namespace OpenBabel
   //**** OBRotorList Member Functions ****
   //**************************************
 
-  bool OBRotorList::Setup(OBMol &mol)
+  bool OBRotorList::Setup(OBMol &mol, bool sampleRingBonds)
   {
     Clear();
     // find the rotatable bonds
-    FindRotors(mol);
+    FindRotors(mol, sampleRingBonds);
     if (!Size())
       return(false);
 
@@ -64,13 +68,16 @@ namespace OpenBabel
           obErrorLog.ThrowError(__FUNCTION__, buffer, obDebug);
         }
 
+    // Reduce the number of torsions to be checked through symmetry considerations
+    if (_removesym)
+      RemoveSymVals(mol);
+
     return(true);
   }
 
-  bool OBRotorList::FindRotors(OBMol &mol)
+  bool OBRotorList::FindRotors(OBMol &mol, bool sampleRingBonds)
   {
-    // Find ring atoms & bonds, ring bonds are not rotatable
-    // and will be ignored.
+    // Find ring atoms & bonds
     // This function will set OBBond::IsRotor().
     mol.FindRingAtomsAndBonds();
 
@@ -91,13 +98,19 @@ namespace OpenBabel
     vector<OBBond*>::iterator i;
     vector<pair<OBBond*,int> > vtmp;
     for (OBBond *bond = mol.BeginBond(i);bond;bond = mol.NextBond(i)) {
-      // check if the bond is in a ring
-      if (bond->IsRotor()) {
+      // check if the bond is "rotatable"
+      if (bond->IsRotor(sampleRingBonds)) {
         // check if the bond is fixed (using deprecated fixed atoms or new fixed bonds)
         if ((HasFixedAtoms() || HasFixedBonds()) && IsFixedBond(bond))
           continue;
-        // compute the GTD bond score as sum of atom GTD scores
+
+        if (bond->IsInRing()) {
+          //otherwise mark that we have them and add it to the pile
+          _ringRotors = true;
+        }
+
         int score = gtd[bond->GetBeginAtomIdx()-1] + gtd[bond->GetEndAtomIdx()-1];
+        // compute the GTD bond score as sum of atom GTD scores
         vtmp.push_back(pair<OBBond*,int> (bond,score));
       }
     }
@@ -215,163 +228,53 @@ namespace OpenBabel
     return(true);
   }
 
-
-  static double MinimumPairRMS(OBMol&,double*,double*,bool &);
-
   void OBRotorList::RemoveSymVals(OBMol &mol)
   {
-    double *c,*c1,*c2;
-    c1 = new double [mol.NumAtoms()*3];
-    c2 = new double [mol.NumAtoms()*3];
-    c = mol.GetCoordinates();
-    bool one2one;
-    double cutoff = 0.20;
+    OBGraphSym gs(&mol);
+    vector<unsigned int> sym_classes;
+    gs.GetSymmetry(sym_classes);
 
     OBRotor *rotor;
     vector<OBRotor*>::iterator i;
-    for (rotor = BeginRotor(i);rotor;rotor = NextRotor(i))
-      {
-        //look for 2-fold symmetry about a bond
-        memcpy(c1,c,sizeof(double)*mol.NumAtoms()*3);
-        memcpy(c2,c,sizeof(double)*mol.NumAtoms()*3);
-        rotor->SetToAngle(c1,(double)(0.0*DEG_TO_RAD));
-        rotor->SetToAngle(c2,(double)(180.0*DEG_TO_RAD));
+    std::set<unsigned int> syms;
+    for (rotor = BeginRotor(i);rotor;rotor = NextRotor(i)) {
+      OBBond* bond = rotor->GetBond();
+      OBAtom* end = bond->GetEndAtom();
+      OBAtom* begin = bond->GetBeginAtom();
+      int N_fold_symmetry = 1;
+      for (int here=0; here <= 1; ++here) { // Try each side of the bond in turn
 
-        if (MinimumPairRMS(mol,c1,c2,one2one) <cutoff && !one2one)
-          {
-            rotor->RemoveSymTorsionValues(2);
-            OBBond *bond = rotor->GetBond();
+        OBAtom *this_side, *other_side;
+        if (here == 0) {
+          this_side = begin; other_side = end;
+        }
+        else {
+          this_side = end; other_side = begin;
+        }
 
-            if (!_quiet)
-              {
-                stringstream errorMsg;
-                errorMsg << "symmetry found = " << ' ';
-                errorMsg << bond->GetBeginAtomIdx() << ' ' << bond->GetEndAtomIdx() << ' ' ;
-                errorMsg << "rms = " << ' ';
-                errorMsg << MinimumPairRMS(mol,c1,c2,one2one) << endl;
-                obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obDebug);
-              }
-            continue;
-          }
-
-        //look for 3-fold symmetry about a bond
-        memcpy(c1,c,sizeof(double)*mol.NumAtoms()*3);
-        memcpy(c2,c,sizeof(double)*mol.NumAtoms()*3);
-        rotor->SetToAngle(c1,(double)(0.0*DEG_TO_RAD));
-        rotor->SetToAngle(c2,(double)(120.0*DEG_TO_RAD));
-
-        if (MinimumPairRMS(mol,c1,c2,one2one) <cutoff && !one2one)
-          {
-            rotor->RemoveSymTorsionValues(3);
-            OBBond *bond = rotor->GetBond();
-
-            if (!_quiet)
-              {
-                stringstream errorMsg;
-                errorMsg << "3-fold symmetry found = " << ' ';
-                errorMsg << bond->GetBeginAtomIdx() << ' ' << bond->GetEndAtomIdx() << ' ' ;
-                errorMsg << "rms = " << ' ';
-                errorMsg << MinimumPairRMS(mol,c1,c2,one2one) << endl;
-                obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obDebug);
-              }
-          }
-      }
-
-    delete [] c1;
-    delete [] c2;
-
-    //pattern based duplicate removal
-    int ref[4];
-    vector<vector<int> > mlist;
-    vector<vector<int> >::iterator k;
-    vector<pair<OBSmartsPattern*,pair<int,int> > >::iterator j;
-    for (j = _vsym2.begin();j != _vsym2.end();++j)
-      if (j->first->Match(mol))
-        {
-          mlist = j->first->GetUMapList();
-
-          for (k = mlist.begin();k != mlist.end();++k)
-            for (rotor = BeginRotor(i);rotor;rotor = NextRotor(i))
-              {
-                rotor->GetDihedralAtoms(ref);
-                if (((*k)[j->second.first] == ref[1] && (*k)[j->second.second] == ref[2]) ||
-                    ((*k)[j->second.first] == ref[2] && (*k)[j->second.second] == ref[1]))
-                  {
-                    rotor->RemoveSymTorsionValues(2);
-                    if (!_quiet)
-                      {
-                        stringstream errorMsg;
-                        errorMsg << "2-fold pattern-based symmetry found = " << ' ';
-                        errorMsg << ref[1] << ' ' << ref[2] << endl;
-                        obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obDebug);
+        for (int hyb=2; hyb<=3; ++hyb) { // sp2 and sp3 carbons, with explicit Hs
+          if (this_side->GetAtomicNum() == 6 && this_side->GetHyb() == hyb && this_side->GetValence() == (hyb + 1) ) {
+            syms.clear();
+            FOR_NBORS_OF_ATOM(nbr, this_side) {
+              if ( &(*nbr) == other_side ) continue;
+              syms.insert(sym_classes[nbr->GetIdx() - 1]);
+            }
+            if (syms.size() == 1) // All of the rotated atoms have the same symmetry class
+              N_fold_symmetry *= hyb;
                       }
                   }
               }
-        }
 
-    for (j = _vsym3.begin();j != _vsym3.end();++j)
-      if (j->first->Match(mol))
-        {
-          mlist = j->first->GetUMapList();
-
-          for (k = mlist.begin();k != mlist.end();++k)
-            for (rotor = BeginRotor(i);rotor;rotor = NextRotor(i))
-              {
-                rotor->GetDihedralAtoms(ref);
-                if (((*k)[j->second.first] == ref[1] && (*k)[j->second.second] == ref[2]) ||
-                    ((*k)[j->second.first] == ref[2] && (*k)[j->second.second] == ref[1]))
-                  {
-                    rotor->RemoveSymTorsionValues(3);
-                    if (!_quiet)
-                      {
-                        stringstream errorMsg;
-                        errorMsg << "3-fold pattern-based symmetry found = " << ' ';
-                        errorMsg << ref[1] << ' ' << ref[2] << endl;
-                        obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obDebug);
-                      }
+      if (N_fold_symmetry  > 1) {
+        size_t old_size = rotor->Size();
+        rotor->RemoveSymTorsionValues(N_fold_symmetry);
+        if (!_quiet) {
+          cout << "...." << N_fold_symmetry << "-fold symmetry at rotor between " <<
+                 begin->GetIdx() << " and " << end->GetIdx();
+          cout << " - reduced from " << old_size << " to " << rotor->Size() << endl;
                   }
               }
-        }
-  }
-
-  static double MinimumPairRMS(OBMol &mol,double *a,double *b,bool &one2one)
-  {
-    unsigned int i,j,k=0;
-    double min,tmp,d_2 = 0.0;
-    OBBitVec bset;
-    one2one = true;
-    vector<OBAtom*> _atom;
-    _atom.resize(mol.NumAtoms());
-    for (i = 0;i < mol.NumAtoms();++i)
-      _atom[i] = mol.GetAtom(i+1);
-
-    for (i = 0;i < mol.NumAtoms();++i)
-      {
-        min = 10E10;
-        for (j = 0;j < mol.NumAtoms();++j)
-          if ((_atom[i])->GetAtomicNum() == (_atom[j])->GetAtomicNum() &&
-              (_atom[i])->GetHyb()       == (_atom[j])->GetHyb())
-            if (!bset[j])
-              {
-                tmp = SQUARE(a[3*i]-b[3*j]) +
-                  SQUARE(a[3*i+1]-b[3*j+1]) +
-                  SQUARE(a[3*i+2]-b[3*j+2]);
-                if (tmp < min)
-                  {
-                    k = j;
-                    min = tmp;
-                  }
-              }
-
-        if (i != j)
-          one2one = false;
-        bset.SetBitOn(k);
-        d_2 += min;
       }
-
-    d_2 /= (double)mol.NumAtoms();
-
-    return(sqrt(d_2));
   }
 
   bool OBRotorList::SetEvalAtoms(OBMol &mol)
@@ -402,7 +305,7 @@ namespace OpenBabel
                 a1 = mol.GetAtom(j);
                 for (a2 = a1->BeginNbrAtom(k);a2;a2 = a1->NextNbrAtom(k))
                   if (!eval[a2->GetIdx()])
-                    if (!((OBBond*)*k)->IsRotor()||((HasFixedAtoms()||HasFixedBonds())&&IsFixedBond((OBBond*)*k)))
+                    if (!((OBBond*)*k)->IsRotor(_ringRotors)||((HasFixedAtoms()||HasFixedBonds())&&IsFixedBond((OBBond*)*k)))
                       {
                         next.SetBitOn(a2->GetIdx());
                         eval.SetBitOn(a2->GetIdx());
@@ -544,25 +447,9 @@ namespace OpenBabel
   OBRotorList::OBRotorList()
   {
     _rotor.clear();
-    _quiet=false;
-    _removesym=true;
-
-    //para-disub benzene
-    OBSmartsPattern *sp;
-    sp = new OBSmartsPattern;
-    sp->Init("*c1[cD2][cD2]c(*)[cD2][cD2]1");
-    _vsym2.push_back(pair<OBSmartsPattern*,pair<int,int> > (sp,pair<int,int> (0,1)));
-
-    //piperidine amide
-    sp = new OBSmartsPattern;
-    sp->Init("O=CN1[CD2][CD2][CD2][CD2][CD2]1");
-    _vsym2.push_back(pair<OBSmartsPattern*,pair<int,int> > (sp,pair<int,int> (1,2)));
-
-    //terminal phosphate
-    sp = new OBSmartsPattern;
-    sp->Init("[#8D2][#15,#16](~[#8D1])(~[#8D1])~[#8D1]");
-    _vsym3.push_back(pair<OBSmartsPattern*,pair<int,int> > (sp,pair<int,int> (0,1)));
-
+    _quiet = true;
+    _removesym = true;
+    _ringRotors = false;
   }
 
   OBRotorList::~OBRotorList()
@@ -570,13 +457,6 @@ namespace OpenBabel
     vector<OBRotor*>::iterator i;
     for (i = _rotor.begin();i != _rotor.end();++i)
       delete *i;
-
-    vector<pair<OBSmartsPattern*,pair<int,int> > >::iterator j;
-    for (j = _vsym2.begin();j != _vsym2.end();++j)
-      delete j->first;
-
-    for (j = _vsym3.begin();j != _vsym3.end();++j)
-      delete j->first;
   }
 
   void OBRotorList::Clear()
@@ -585,6 +465,7 @@ namespace OpenBabel
     for (i = _rotor.begin();i != _rotor.end();++i)
       delete *i;
     _rotor.clear();
+    _ringRotors = false;
     //_fix.Clear();
   }
 
@@ -600,6 +481,27 @@ namespace OpenBabel
 
   OBRotor::OBRotor()
   {
+  }
+
+  void OBRotor::SetRings(OBBond *bond)
+  {
+    _rings.clear();
+    if (_bond == NULL)
+      return; // nothing to do
+
+    vector<OBRing*> rlist;
+    vector<OBRing*>::iterator i;
+
+    OBMol *mol = _bond->GetParent();
+
+    if (mol == NULL)
+      return; // nothing to do
+
+    rlist = mol->GetSSSR();
+    for (i = rlist.begin();i != rlist.end();++i) {
+      if ((*i)->IsMember(_bond))
+        _rings.push_back(*i);
+    }
   }
 
   double OBRotor::CalcTorsion(double *c)
@@ -735,7 +637,7 @@ namespace OpenBabel
     tx = coordinates[_torsion[1]];
     ty = coordinates[_torsion[1]+1];
     tz = coordinates[_torsion[1]+2];
-    int i,j;
+    unsigned int i, j;
     for (i = 0; i < _rotatoms.size(); ++i)
       {
         j = _rotatoms[i];
@@ -815,7 +717,7 @@ namespace OpenBabel
     tx = c[_torsion[1]];
     ty = c[_torsion[1]+1];
     tz = c[_torsion[1]+2];
-    int i,j;
+    unsigned int i, j;
     for (i = 0; i < _rotatoms.size(); ++i)
       {
         j = _rotatoms[i];
@@ -831,6 +733,7 @@ namespace OpenBabel
       }
   }
 
+  //! Remove all torsions angles between 0 and 360/fold
   void OBRotor::RemoveSymTorsionValues(int fold)
   {
     vector<double>::iterator i;
@@ -839,13 +742,8 @@ namespace OpenBabel
       return;
 
     for (i = _torsionAngles.begin();i != _torsionAngles.end();++i)
-      if (*i >= 0.0)
-        {
-          if (fold == 2 && *i < DEG_TO_RAD*180.0)
+      if (*i >= 0.0 && *i < 2.0*M_PI / fold)
             tv.push_back(*i);
-          if (fold == 3 && *i < DEG_TO_RAD*120.0)
-            tv.push_back(*i);
-        }
 
     if (tv.empty())
       return;
@@ -920,7 +818,8 @@ namespace OpenBabel
     if (EQn(buffer,"SP3-SP3",7))
       {
         _sp3sp3.clear();
-        for (j = vs.begin(),j++;j != vs.end();++j)
+        //        assert (vs.size() > 1);
+        for (j = vs.begin(),++j;j != vs.end();++j)
           _sp3sp3.push_back(DEG_TO_RAD*atof(j->c_str()));
         return;
       }
@@ -928,7 +827,8 @@ namespace OpenBabel
     if (EQn(buffer,"SP3-SP2",7))
       {
         _sp3sp2.clear();
-        for (j = vs.begin(),j++;j != vs.end();++j)
+        //        assert(vs.size() > 1);
+        for (j = vs.begin(),++j;j != vs.end();++j)
           _sp3sp2.push_back(DEG_TO_RAD*atof(j->c_str()));
         return;
       }
@@ -936,12 +836,13 @@ namespace OpenBabel
     if (EQn(buffer,"SP2-SP2",7))
       {
         _sp2sp2.clear();
-        for (j = vs.begin(),j++;j != vs.end();++j)
+        //        assert(vs.size() > 1);
+        for (j = vs.begin(),++j;j != vs.end();++j)
           _sp2sp2.push_back(DEG_TO_RAD*atof(j->c_str()));
         return;
       }
 
-    if (!vs.empty() && vs.size() > 5)
+    if (vs.size() > 5)
       {
         strncpy(temp_buffer,vs[0].c_str(), sizeof(temp_buffer) - 1);
         temp_buffer[sizeof(temp_buffer) - 1] = '\0';

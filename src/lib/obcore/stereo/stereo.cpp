@@ -30,7 +30,7 @@ namespace OpenBabel {
     if (refs1.size() != refs2.size())
       return false;
 
-    int count = 0;
+    unsigned int count = 0;
     for (ConstRefIter i = refs1.begin(); i != refs1.end(); ++i)
       for (ConstRefIter j = refs2.begin(); j != refs2.end(); ++j)
         if (*i == *j) {
@@ -74,9 +74,9 @@ namespace OpenBabel {
 
   void OBStereo::Permutate(OBStereo::Refs &refs, int i, int j)
   {
-    if (i < 0 || i >= (int)refs.size())
+    if (i < 0 || i >= refs.size())
       return;
-    if (j < 0 || j >= (int)refs.size())
+    if (j < 0 || j >= refs.size())
       return;
     unsigned long id = refs.at(i);
     refs[i] = refs.at(j);
@@ -85,9 +85,9 @@ namespace OpenBabel {
 
   OBStereo::Refs OBStereo::Permutated(const OBStereo::Refs &refs, int i, int j)
   {
-    if (i < 0 || i >= (int)refs.size())
+    if (i < 0 || i >= refs.size())
       return refs;
-    if (j < 0 || j >= (int)refs.size())
+    if (j < 0 || j >= refs.size())
       return refs;
     OBStereo::Refs result(refs);
     result[i] = refs.at(j);

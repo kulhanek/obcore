@@ -995,10 +995,11 @@ namespace OpenBabel
 
     IF_OBFF_LOGLVL_LOW {
       OBFFLog("\nA T O M   T Y P E S\n\n");
-      OBFFLog("IDX\tTYPE\n");
+      OBFFLog("IDX\tTYPE\tRING\n");
 
       FOR_ATOMS_OF_MOL (a, _mol) {
-        snprintf(_logbuf, BUFF_SIZE, "%d\t%s\n", a->GetIdx(), a->GetType());
+        snprintf(_logbuf, BUFF_SIZE, "%d\t%s\t%s\n", a->GetIdx(), a->GetType(),
+	  (a->IsInRing() ? (a->IsAromatic() ? "AR" : "AL") : "NO"));
         OBFFLog(_logbuf);
       }
 
@@ -1113,8 +1114,8 @@ namespace OpenBabel
       for (unsigned int idx=0; idx < parameter.size(); ++idx) {
         if ( ((_a == parameter[idx]._a) && (_b == parameter[idx]._b) &&
               (type == parameter[idx]._ipar[0])) ||
-             ((_a == parameter[idx]._b) && (_b == parameter[idx]._a)) &&
-             (type == parameter[idx]._ipar[0]) ) {
+             (((_a == parameter[idx]._b) && (_b == parameter[idx]._a)) &&
+             (type == parameter[idx]._ipar[0])) ) {
           par = &parameter[idx];
           return par;
         }

@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -71,7 +92,7 @@ typedef enum tagINCHIBondStereo2D {
  * The only exception is INCHI_BOND_STEREO_SINGLE_?EITHER marking which  *
  * always assigns to the atom an "unknown" parity (u).                   *
  *                                                                       *
- * Note the behavior which is default for InChI software v. 1.03/1.02std *
+ * Note the behavior which is default for InChI software v.1.04/03/02std *
  * (at -NEWPSOFF option is not supplied) 2D stereo interpretation:       *
  * only bonds that have sharp end pointing to the stereogenic atom are   *
  * considered as being out of plane and only sharp ends of               *
@@ -530,7 +551,7 @@ typedef struct tagINCHI_OutputStruct {
  *
  *************************************************/
 
-#if (defined( _WIN32 ) && defined( _MSC_VER ) && defined(INCHI_LINK_AS_DLL) )
+#if (defined( _WIN32 ) && defined( _MSC_VER ) && defined(BUILD_LINK_AS_DLL) )
     /* Win32 & MS VC ++, compile and link as a DLL */
     #ifdef _USRDLL
         /* InChI library dll */
@@ -555,8 +576,8 @@ typedef struct tagINCHI_OutputStruct {
         GetStdINCHI 
         Get_inchi_Input_FromAuxInfo 
         Get_std_inchi_Input_FromAuxInfo 
-		GetStructFromINCHI
-		GetStructFromStdINCHI
+        GetStructFromINCHI
+        GetStructFromStdINCHI
 */
 typedef enum tagRetValGetINCHI {
     inchi_Ret_SKIP    = -2, /* not used in InChI library */
@@ -584,8 +605,8 @@ typedef enum tagRetValCheckINCHI
 
 
 
-/* to compile all InChI code as a C++ code #define INCHI_ALL_CPP */
-#ifndef INCHI_ALL_CPP
+/* to compile all InChI code as a C++ code #define COMPILE_ALL_CPP */
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -716,7 +737,7 @@ GetINCHIfromINCHI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
 EXPIMP_TEMPLATE INCHI_API int INCHI_DECL GetINCHIfromINCHI( inchi_InputINCHI *inpInChI, inchi_Output *out );
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 }
 #endif
@@ -741,8 +762,8 @@ typedef struct tagInchiInpData {
     char         szErrMsg[STR_ERR_LEN];
 } InchiInpData;
 
-/* to compile all InChI code as a C++ code #define INCHI_ALL_CPP */
-#ifndef INCHI_ALL_CPP
+/* to compile all InChI code as a C++ code #define COMPILE_ALL_CPP */
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -809,7 +830,7 @@ Returns:
 EXPIMP_TEMPLATE INCHI_API int INCHI_DECL CheckINCHI(const char *szINCHI, const int strict);    
 
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 }
 #endif
@@ -887,9 +908,9 @@ typedef enum tagRetValGetINCHIKey
 
 
 
-/* To compile all InChI code as a C++ code #define INCHI_ALL_CPP */
+/* To compile all InChI code as a C++ code #define COMPILE_ALL_CPP */
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -960,7 +981,7 @@ Returns:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
 EXPIMP_TEMPLATE INCHI_API int INCHI_DECL CheckINCHIKey(const char *szINCHIKey);    
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 }
 #endif
@@ -1042,13 +1063,13 @@ typedef struct tagNormAtom
     S_CHAR        sb_parity[MAX_NUM_STEREO_BONDS];       /* parities of stereobonds (sp2) incident to this atom */	
     AT_NUMBR      sn_orig_at_num[MAX_NUM_STEREO_BONDS];  /* orig_at_number of sn_ord[] neighbor > 0 */
 
-#if( FIND_RING_SYSTEMS == 1 )
+#if ( FIND_RING_SYSTEMS == 1 )
     S_CHAR  bCutVertex;                    /* is the atom a cut-vertex or not */
     AT_NUMBR nRingSystem;                  /* starts from 1; number of a ring system */
     AT_NUMBR nNumAtInRingSystem;           /* number of atoms in a ring system to which this at belongs */
     AT_NUMBR nBlockSystem;                 /* ambiguous if the atom is a cut-vertex: better apply this to bonds */
 
-#if( FIND_RINS_SYSTEMS_DISTANCES == 1 )
+#if ( FIND_RINS_SYSTEMS_DISTANCES == 1 )
     AT_NUMBR nDistanceFromTerminal;        /* not used */
 #endif
 
@@ -1108,8 +1129,8 @@ typedef void* INCHIGEN_HANDLE;
 
 
 
-/* to compile all InChI code as a C++ code #define INCHI_ALL_CPP */
-#ifndef INCHI_ALL_CPP
+/* to compile all InChI code as a C++ code #define COMPILE_ALL_CPP */
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1217,7 +1238,7 @@ EXPIMP_TEMPLATE INCHI_API void INCHI_DECL STDINCHIGEN_Destroy(INCHIGEN_HANDLE HG
 
 
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 }
 #endif

@@ -70,7 +70,7 @@ namespace OpenBabel
     if (EQn(buffer,"INTHYB",6))
       {
         tokenize(vs,buffer);
-        if (vs.empty() || vs.size() < 3)
+        if (vs.size() < 3)
           {
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse INTHYB line in atom type table from atomtyp.txt", obInfo);
             return;
@@ -90,7 +90,7 @@ namespace OpenBabel
     else if (EQn(buffer,"IMPVAL",6))
       {
         tokenize(vs,buffer);
-        if (vs.empty() || vs.size() < 3)
+        if (vs.size() < 3)
           {
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse IMPVAL line in atom type table from atomtyp.txt", obInfo);
             return;
@@ -110,7 +110,7 @@ namespace OpenBabel
     else if (EQn(buffer,"EXTTYP",6))
       {
         tokenize(vs,buffer);
-        if (vs.empty() || vs.size() < 3)
+        if (vs.size() < 3)
           {
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse EXTTYP line in atom type table from atomtyp.txt", obInfo);
             return;
@@ -223,7 +223,7 @@ namespace OpenBabel
         }
   }
 
-  void OBAtomTyper::AssignImplicitValence(OBMol &mol)
+  void OBAtomTyper::AssignImplicitValence(OBMol &mol, bool CanBeLessThanActual)
   {
     // FF Make sure that valence has not been perceived
     if(mol.HasImplicitValencePerceived())
@@ -259,11 +259,12 @@ namespace OpenBabel
     if (!mol.HasAromaticCorrected())
       CorrectAromaticNitrogens(mol);
 
-    for (atom = mol.BeginAtom(k);atom;atom = mol.NextAtom(k))
-      {
-        if (atom->GetImplicitValence() < atom->GetValence())
-          atom->SetImplicitValence(atom->GetValence());
-      }
+    if(!CanBeLessThanActual)
+      for (atom = mol.BeginAtom(k);atom;atom = mol.NextAtom(k))
+        {
+          if (atom->GetImplicitValence() < atom->GetValence())
+            atom->SetImplicitValence(atom->GetValence());
+        }
 
     // FF Come back to the initial flags
     mol.SetFlags(oldflags);
@@ -330,7 +331,7 @@ namespace OpenBabel
 
     if (EQn(buffer,"RINGTYP",7)) {
       tokenize(vs,buffer);
-      if (vs.empty() || vs.size() < 3) {
+      if (vs.size() < 3) {
         obErrorLog.ThrowError(__FUNCTION__, " Could not parse RING line in ring type table from ringtyp.txt", obInfo);
         return;
       }
@@ -372,7 +373,7 @@ namespace OpenBabel
     vector<int>::iterator j;
     vector<OBRing*> rlist = mol.GetSSSR();
 
-    int member_count;
+    unsigned int member_count;
     for (i2 = _ringtyp.begin();i2 != _ringtyp.end();++i2) { // for each ring type
       if (i2->first->Match(mol)) {
         _mlist = i2->first->GetMapList();

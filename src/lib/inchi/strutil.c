@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -452,7 +473,7 @@ int fix_odd_things( int num_atoms, inp_ATOM *at, int bFixBug, int bFixNonUniform
         /* one time initialization */
         const char *b, *e;
         int  len;
-        for ( b = el; e = strchr( b, ';'); b = e+1 ) 
+        for ( b = el; (e = strchr( b, ';')); b = e+1 )
         {
             len = e-b;
             memcpy( elname, b, len );
@@ -489,7 +510,7 @@ int fix_odd_things( int num_atoms, inp_ATOM *at, int bFixBug, int bFixNonUniform
     for ( i1 = 0; i1 < num_atoms; i1 ++ ) 
     {
         if ( 1 != at[i1].charge ||
-             at[i1].radical && RADICAL_SINGLET != at[i1].radical ||
+             (at[i1].radical && RADICAL_SINGLET != at[i1].radical) ||
              at[i1].chem_bonds_valence == at[i1].valence ||
              !memchr(en, at[i1].el_number, ne) ||
              get_el_valence( at[i1].el_number, at[i1].charge, 0 ) != at[i1].chem_bonds_valence+NUMH(at,i1) ) 
@@ -629,7 +650,7 @@ int fix_odd_things( int num_atoms, inp_ATOM *at, int bFixBug, int bFixNonUniform
 
     for ( i1 = 0; i1 < num_atoms; i1 ++ ) 
     {
-        if (  1 == at[i1].valence &&
+        if ( 1 == at[i1].valence &&
              -1 == at[i1].charge  &&
              (0 == at[i1].radical || RADICAL_SINGLET == at[i1].radical) &&
               !NUMH(at,i1) &&
@@ -701,7 +722,7 @@ int fix_odd_things( int num_atoms, inp_ATOM *at, int bFixBug, int bFixNonUniform
                         }
                     }
 /*   -- removed -- 2010-03-17 DT
-#if( FIX_ODD_THINGS_REM_Plus_BUG == 1 )
+#if ( FIX_ODD_THINGS_REM_Plus_BUG == 1 )
                     at[c].charge -= charge;
 #else
                     if ( bFixBug ) 
@@ -738,7 +759,7 @@ int fix_odd_things( int num_atoms, inp_ATOM *at, int bFixBug, int bFixNonUniform
         }
     }
 
-#if( REMOVE_ION_PAIRS_EARLY == 1 )
+#if ( REMOVE_ION_PAIRS_EARLY == 1 )
     num_changes += remove_ion_pairs( num_atoms, at );
 #endif
 
@@ -864,7 +885,7 @@ int remove_ion_pairs( int num_atoms, inp_ATOM *at )
     int num_changes = 0;
 
     /*                           0 1 2  3  4 5 6  7  8  9                   8  9  */
-#if( FIX_REM_ION_PAIRS_Si_BUG == 1 )
+#if ( FIX_REM_ION_PAIRS_Si_BUG == 1 )
     static const char    el[] = "N;P;As;Sb;O;S;Se;Te;C;Si;";   /* 8 elements + C, Si */
 #else
     static const char    el[] = "N;P;As;Sb;O;S;Se;Te;C;Si";   /* 8 elements + C, Si */
@@ -891,7 +912,7 @@ int remove_ion_pairs( int num_atoms, inp_ATOM *at )
     if ( !ne ) { /* one time initialization */
         const char *b, *e;
         int  len;
-        for ( b = el; e = strchr( b, ';'); b = e+1 ) {
+        for ( b = el; (e = strchr( b, ';')); b = e+1 ) {
             len = e-b;
             memcpy( elname, b, len );
             elname[len] = '\0';
@@ -903,7 +924,7 @@ int remove_ion_pairs( int num_atoms, inp_ATOM *at )
     /****** count candidates ********/
     for ( i = 0, a = at; i < num_atoms; i ++, a++ ) {
         if ( 1 == (chrg=a->charge) || -1 == chrg ) {
-            if ( p = (char*)memchr( en, a->el_number, ne) ) {
+            if ( (p = (char*)memchr( en, a->el_number, ne)) ) {
                 n = p - en;
                 if ( n >= ELEM_C_FST ) {
                     if ( chrg > 0 )
@@ -1070,7 +1091,7 @@ int remove_ion_pairs( int num_atoms, inp_ATOM *at )
        8 6:  N(-)=O(+)(III) => N#O-
        9 7:  N(-)=C(+)(III) => N#C-
          --------------------------------------------------------------------------*/
-        if ( !type || 2 <= type && type <= 9 ) {
+        if ( !type || (2 <= type && type <= 9) ) {
             for ( i = 0; i < num_atoms && 0 < num_All; i ++ ) {
                 if ( 0 == at[i].charge && 1 == nNoMetalNumBonds(at, i) && 2 == nNoMetalBondsValence(at, i) &&
                      0 == num_of_H( at, i ) &&
@@ -1323,7 +1344,7 @@ int remove_ion_pairs( int num_atoms, inp_ATOM *at )
         14: -O(+)=C(-)(III)         => -O#C-
         15:  O(+)(III)-N(-)(II)     => O(IV)=N(III) (allow terminal H on N(-))
          --------------------------------------------------------------------------*/
-        if ( !type || 10 <= type && type <= 15 ) {
+        if ( !type || (10 <= type && type <= 15) ) {
             for ( i = 0; i < num_atoms && 0 < num_All; i ++ ) {
                 if ( 1 == at[i].charge &&
                      0 < num_N_plus + num_O_plus && 0 < num_C_minus + num_N_minus &&
@@ -1395,7 +1416,7 @@ int remove_ion_pairs( int num_atoms, inp_ATOM *at )
                             continue;
                         }
                     }
-                    if ( !type || 12 == type && 0 < num_N_plus && 0 < num_N_minus ) {
+                    if ( !type || (12 == type && 0 < num_N_plus && 0 < num_N_minus) ) {
                         int num_neigh = 0, pos_neigh = -1;
                         for ( i1 = 0; i1 < at[i].valence; i1 ++ ) {
                             n = at[i].neighbor[i1];
@@ -1653,7 +1674,7 @@ int remove_ion_pairs( int num_atoms, inp_ATOM *at )
                 }
             }
         }
-        if ( (!type || 18 == type) && (0 < num_C_plus && 0 < num_C_minus || 0 < num_C_II) ) {
+        if ( (!type || 18 == type) && ((0 < num_C_plus && 0 < num_C_minus) || 0 < num_C_II) ) {
             int m[2], v[2], j[2], k;
             for ( i = 0; i < num_atoms; i ++ ) {
                 if ( 0 == at[i].charge && 2 == nNoMetalNumBonds(at, i) && 3 == nNoMetalBondsValence(at, i) &&
@@ -1675,11 +1696,11 @@ int remove_ion_pairs( int num_atoms, inp_ATOM *at )
                     int n_Cp=-1, n_Cm=-1, i_Cp=-1, i_Cm=-1; /* p = positive, m = negatice ion C */
                     for ( k = 0; k < 2; k ++ ) {
                         n = m[k];
-                        if ( v[k] == 4 || v[k] == 3 && at[i].bond_type[j[k]] == BOND_TYPE_SINGLE ) {
+                        if ( v[k] == 4 || (v[k] == 3 && at[i].bond_type[j[k]] == BOND_TYPE_SINGLE) ) {
                             n_Cm = n;
                             i_Cm = k;
                         } else
-                        if ( v[k] == 2 || v[k] == 3 && at[i].bond_type[j[k]] == BOND_TYPE_DOUBLE ) {
+                        if ( v[k] == 2 || (v[k] == 3 && at[i].bond_type[j[k]] == BOND_TYPE_DOUBLE) ) {
                             n_Cp = n;
                             i_Cp = k;
                         }
@@ -1743,7 +1764,7 @@ int remove_ion_pairs( int num_atoms, inp_ATOM *at )
     return num_changes;
 }
 
-/*#if( DISCONNECT_SALTS == 1 )*/ /* { */
+/*#if ( DISCONNECT_SALTS == 1 )*/ /* { */
 
 
 
@@ -1784,7 +1805,7 @@ int RemoveInpAtBond( inp_ATOM *atom, int iat, int k )
         /* update CML stereogenic bond parities; at this point no removed explicit H exist yet */
         if ( at->sb_parity[0] ) {
             for ( m = 0; m < MAX_NUM_STEREO_BONDS && at->sb_parity[m]; ) {
-                if ( k == at->sb_ord[m] || k == at->sn_ord[m] && val < 2 && ATOM_PARITY_WELL_DEF(at->sb_parity[m]) ) {
+                if ( k == at->sb_ord[m] || (k == at->sn_ord[m] && val < 2 && ATOM_PARITY_WELL_DEF(at->sb_parity[m])) ) {
                     /* !!! FLAW: does take into account removed H !!! */
                     /* stereogenic bond is being removed OR */
                     /* remove stereogenic bond because its only neighbor is being removed */
@@ -1938,10 +1959,10 @@ int DisconnectInpAtBond( inp_ATOM *at, AT_NUMB *nOldCompNumber, int iat, int nei
         ret += RemoveInpAtBond( at, iat, neigh_ord );
         ret += RemoveInpAtBond( at, neigh, i );
         if ( nOldCompNumber && ret ) {
-            if ( component = at[iat].component ) {
+            if ( (component = at[iat].component) ) {
                 nOldCompNumber[component-1] = 0;
             }
-            if ( component = at[neigh].component ) {
+            if ( (component = at[neigh].component) ) {
                 nOldCompNumber[component-1] = 0;
             }
         }
@@ -1985,8 +2006,8 @@ int bIsAmmoniumSalt( inp_ATOM *at, int i, int *piO, int *pk, S_CHAR *num_explici
         for ( j = 0; j < val; j ++ ) { /* looking for O: H4N-O-C... */
             neigh = at[i].neighbor[j];
             if ( at[neigh].num_H ||
-                 at[neigh].charge && (at[neigh].el_number != el_number_O || at[neigh].charge + at[i].charge) ||
-                 at[neigh].radical && at[neigh].radical != RADICAL_SINGLET ) {
+                 (at[neigh].charge && (at[neigh].el_number != el_number_O || at[neigh].charge + at[i].charge)) ||
+                 (at[neigh].radical && at[neigh].radical != RADICAL_SINGLET) ) {
                 bDisconnect = 0;
                 break; /* reject */
             }
@@ -2005,7 +2026,7 @@ int bIsAmmoniumSalt( inp_ATOM *at, int i, int *piO, int *pk, S_CHAR *num_explici
                      at[iC].num_H ||
                      at[iC].chem_bonds_valence != 4 || */
                      at[iC].charge         ||
-                     at[iC].radical && at[iC].radical != RADICAL_SINGLET /*||
+                     (at[iC].radical && at[iC].radical != RADICAL_SINGLET) /*||
                      at[iC].valence == at[iC].chem_bonds_valence*/ ) {
                     bDisconnect = 0;
                     break; /* reject */
@@ -2074,7 +2095,7 @@ int DisconnectAmmoniumSalt ( inp_ATOM *at, int iN, int iO, int k, S_CHAR *num_ex
                 at[iO].num_H ++;
                 break;
             } else
-            if (  num_explicit_H[0] ) {
+            if ( num_explicit_H[0] ) {
                 nMove_H_iso_diff = 0; /* flag: move explicit non-isotopic H */
                 break;
             }
@@ -2159,11 +2180,11 @@ int bIsMetalSalt( inp_ATOM *at, int i )
         bDisconnect = 0; /* reject */
     } else
     /* check valence */
-    if ( at[i].charge == 0 &&
-         ( (type & 1) && val == get_el_valence( at[i].el_number, 0, 0 )   ||
-           (type & 2) && val == get_el_valence( at[i].el_number, 0, 1 ) ) ||
-         at[i].charge > 0 &&
-         (type & 1) && val == get_el_valence( at[i].el_number, at[i].charge, 0 ) ) {
+    if ( (at[i].charge == 0 &&
+         ( ((type & 1) && val == get_el_valence( at[i].el_number, 0, 0 ))   ||
+           ((type & 2) && val == get_el_valence( at[i].el_number, 0, 1 )) )) ||
+         (at[i].charge > 0 &&
+         (type & 1) && val == get_el_valence( at[i].el_number, at[i].charge, 0 )) ) {
         ; /* accept */
     } else {
         bDisconnect = 0; /* reject */
@@ -2190,7 +2211,7 @@ int bIsMetalSalt( inp_ATOM *at, int i )
                     NUMH(at, iO) ||
                     at[iO].valence   != 2 ||
                     at[iO].charge         ||
-                    at[iO].radical && at[iO].radical != RADICAL_SINGLET ||
+                    (at[iO].radical && at[iO].radical != RADICAL_SINGLET) ||
                     at[iO].valence != at[iO].chem_bonds_valence ) {
                     bDisconnect = 0; /* reject */
                     break;
@@ -2200,7 +2221,7 @@ int bIsMetalSalt( inp_ATOM *at, int i )
                     at[iC].num_H ||
                     at[iC].chem_bonds_valence != 4 ||
                     at[iC].charge         ||
-                    at[iC].radical && at[iC].radical != RADICAL_SINGLET ||
+                    (at[iC].radical && at[iC].radical != RADICAL_SINGLET) ||
                     at[iC].valence == at[iC].chem_bonds_valence ) {
                     bDisconnect = 0; /* reject */
                     break;
@@ -2281,7 +2302,7 @@ int DisconnectSalts( ORIG_ATOM_DATA *orig_inp_data, int bDisconnect )
 
         if ( !(val = at[i].valence) || /* disconnected atom */
              val != at[i].chem_bonds_valence || /* a bond has higher multiplicity than 1 */
-             at[i].radical && at[i].radical != RADICAL_SINGLET /* radical */ ) {
+             (at[i].radical && at[i].radical != RADICAL_SINGLET) /* radical */ ) {
             continue;   /* reject */
         }
         if ( bIsAmmoniumSalt( at, i, &iO, &k, num_explicit_H ) ) {
@@ -2383,7 +2404,7 @@ int bMayDisconnectMetals( ORIG_ATOM_DATA *orig_inp_data, int bCheckMetalValence,
 
 
 /*****************************************************************************/
-#if( bRELEASE_VERSION == 0 && (EXTR_HAS_METAL_ATOM & (EXTR_MASK | EXTR_FLAG) ) )
+#if ( bRELEASE_VERSION == 0 && (EXTR_HAS_METAL_ATOM & (EXTR_MASK | EXTR_FLAG) ) )
 int bHasMetalAtom( ORIG_ATOM_DATA *orig_inp_data )
 {
     int i;
@@ -2662,8 +2683,8 @@ int DisconnectOneLigand( inp_ATOM *at, AT_NUMB *nOldCompNumber, S_CHAR *bMetal, 
 
     /* attempt to change ligand charge to make its valence 'natural' */
     i = num_tot_arom_bonds - num_del_arom_bonds;
-    if ( i  && i != 2 && i != 3 ||
-         at[iLigand].radical && at[iLigand].radical != RADICAL_SINGLET ||
+    if ( (i  && i != 2 && i != 3) ||
+         (at[iLigand].radical && at[iLigand].radical != RADICAL_SINGLET) ||
          !(p = strchr( elnumber_Heteroat, at[iLigand].el_number ) ) ) {
         goto exit_function;  /* non-standard atom */
     }
@@ -2744,7 +2765,7 @@ double GetMinDistDistribution( inp_ATOM *at, int num_at, int iat, int iat_H,
                 n = at[i].neighbor[j];
                 if ( (n > i && n != iat) || n == iat_H )
                     continue;
-#if( bRELEASE_VERSION != 1 && defined(_DEBUG) )
+#if ( bRELEASE_VERSION != 1 && defined(_DEBUG) )
                 if ( n == iat ) {
                     int stop = 1;  /* <BRKPT> */
                 }
@@ -3074,7 +3095,7 @@ int get_iat_number( int el_number, const int el_num[], int el_num_len )
      IAT_MAX
  } ION_ATOM_TYPE;
 
-#if( READ_INCHI_STRING == 1 )
+#if ( READ_INCHI_STRING == 1 )
 /****************************************************************************************/
 int bHeteroAtomMayHaveXchgIsoH( inp_ATOM *atom, int iat )
 {
@@ -3099,7 +3120,7 @@ int bHeteroAtomMayHaveXchgIsoH( inp_ATOM *atom, int iat )
     if ( 0 > (iat_numb = get_iat_number( at->el_number, el_num, IAT_MAX )) ) {
         return 0;
     }
-    if ( abs(at->charge) > 1 || at->radical && RADICAL_SINGLET != at->radical ) {
+    if ( abs(at->charge) > 1 || (at->radical && RADICAL_SINGLET != at->radical) ) {
         return 0;
     }
     val = -1;
@@ -3145,7 +3166,7 @@ int bHeteroAtomMayHaveXchgIsoH( inp_ATOM *atom, int iat )
         cur_num_iso_H = 0;
         for ( j = 0, bAccept = 1; j < at->valence && bAccept; j ++ ) {
             at2 = atom + (int)at->neighbor[j];
-            if ( at2->charge && at->charge || (at2->radical && RADICAL_SINGLET != at2->radical ) ) {
+            if ( (at2->charge && at->charge) || (at2->radical && RADICAL_SINGLET != at2->radical ) ) {
                 return 0; /* adjacent charged/radical atoms: do not neutralizate */
             }
         }
@@ -3184,7 +3205,7 @@ int bNumHeterAtomHasIsotopicH( inp_ATOM *atom, int num_atoms )
             continue;
         }
         
-        if ( abs(at->charge) > 1 || at->radical && RADICAL_SINGLET != at->radical ) {
+        if ( abs(at->charge) > 1 || (at->radical && RADICAL_SINGLET != at->radical) ) {
             continue;
         }
 
@@ -3232,7 +3253,7 @@ int bNumHeterAtomHasIsotopicH( inp_ATOM *atom, int num_atoms )
             cur_num_iso_H = 0;
             for ( j = 0, bAccept = 1; j < at->valence && bAccept; j ++ ) {
                 at2 = atom + (int)at->neighbor[j];
-                if ( at2->charge && at->charge || (at2->radical && RADICAL_SINGLET != at2->radical ) ) {
+                if ( (at2->charge && at->charge) || (at2->radical && RADICAL_SINGLET != at2->radical ) ) {
                     bAccept = 0; /* adjacent charged/radical atoms: do not neutralizate */
                     break;
                 } else
@@ -3264,7 +3285,7 @@ int cmp_components( const void *a1, const void *a2 )
 
     n1 = ((const AT_NUMB *)a1)[0];     /* number of atoms in the component -- descending order */
     n2 = ((const AT_NUMB *)a2)[0];
-    if ( ret = (int)n2 - (int)n1 ) {
+    if ( (ret = (int)n2 - (int)n1) ) {
         return ret;
     }
     /* stable sort */
@@ -3553,8 +3574,8 @@ int Free_INChI(INChI **ppINChI)
 {
     INChI *pINChI;
 
-    if ( pINChI = *ppINChI ) {
-#if( bREUSE_INCHI == 1 )
+    if ( (pINChI = *ppINChI) ) {
+#if ( bREUSE_INCHI == 1 )
         if ( pINChI->nRefCount -- > 0 )
             return 1;
 #endif
@@ -3690,7 +3711,7 @@ int Free_INChI_Aux( INChI_Aux **ppINChI_Aux )
 {
     INChI_Aux *pINChI_Aux = *ppINChI_Aux;
     if ( pINChI_Aux ) {
-#if( bREUSE_INCHI == 1 )
+#if ( bREUSE_INCHI == 1 )
         if ( pINChI_Aux->nRefCount -- > 0 )
             return 1;
 #endif
@@ -3748,7 +3769,7 @@ INChI_Aux *Alloc_INChI_Aux( int num_at, int num_isotopic_atoms, int nAllocMode, 
         goto out_of_RAM;
     }
     
-    if (  num_at > 0 ) {
+    if ( num_at > 0 ) {
         pINChI_Aux->OrigInfo    = (ORIG_INFO *)inchi_calloc(sizeof(pINChI_Aux->OrigInfo[0]), num_at);
         if ( !pINChI_Aux->OrigInfo )
             goto out_of_RAM;
@@ -3816,7 +3837,7 @@ out_of_RAM:
                          at[i].iso_atw_diff && (bAtomsDT? (at[i].iso_atw_diff != 1 || strcmp(at[i].elname, "H")) : 1) )
 #define ALIASED_AT(i) (0 < NUM_ISO_H(at, i))
 /***********************************************************************************/
-#if( TEST_RENUMB_ATOMS_SAVE_LONGEST == 1 || TEST_RENUMB_SWITCH == 1 )
+#if ( TEST_RENUMB_ATOMS_SAVE_LONGEST == 1 || TEST_RENUMB_SWITCH == 1 )
 int WriteToSDfile( const INP_ATOM_DATA *inp_at_data, INCHI_IOSTREAM* fcb, const char* name, const char* comment,
                    const char *szLabel, const char *szValue)
 {
@@ -4247,7 +4268,7 @@ int WriteOrigAtomDataToSDfile(const ORIG_ATOM_DATA *inp_at_data, INCHI_IOSTREAM 
     
     /*find if we need "M  CHG" and "M  RAD"*/
     for (i=0; i < num_atoms; i++) {
-        if ( bAtomNeedsAlias = ALIASED_AT(i) ) {     /* has isotopic implicit D or T; ignoring pure 1H */
+        if ( (bAtomNeedsAlias = ALIASED_AT(i)) ) {     /* has isotopic implicit D or T; ignoring pure 1H */
             nNumAliasLines  += 2 * bAtomNeedsAlias;
         } else {
         /* abnormal means atom needs CHG, RAD, or ISO entry */
@@ -4366,7 +4387,7 @@ int WriteOrigAtomDataToSDfile(const ORIG_ATOM_DATA *inp_at_data, INCHI_IOSTREAM 
     for (i=0; i< num_atoms; i++) {
         for (j=0; j<at[i].valence; j++) {
             if (i < at[i].neighbor[j]) {
-                if ( k=at[i].bond_stereo[j] ) {
+                if ( (k=at[i].bond_stereo[j]) ) {
                     /* bond stereo */
                     if ( k < 0 ) {
                         /* transposition */
@@ -4443,7 +4464,7 @@ int WriteOrigAtomDataToSDfile(const ORIG_ATOM_DATA *inp_at_data, INCHI_IOSTREAM 
                     strcat( str_m, entry );
                     num_m ++;
                 }
-                if ( i == num_atoms-1 && num_m || num_m == 8 ) {
+                if ( (i == num_atoms-1 && num_m) || num_m == 8 ) {
                     inchi_ios_print_nodisplay( fcb, "M  CHG%3d%s\n", num_m, str_m );
                     str_m[0] = 0;
                     num_m    = 0;
@@ -4465,7 +4486,7 @@ int WriteOrigAtomDataToSDfile(const ORIG_ATOM_DATA *inp_at_data, INCHI_IOSTREAM 
                         num_m ++;
                     }
                 }
-                if ( i == num_atoms-1 && num_m || num_m == 8 ) {
+                if ( (i == num_atoms-1 && num_m) || num_m == 8 ) {
                     inchi_ios_print_nodisplay( fcb, "M  RAD%3d%s\n", num_m, str_m );
                     str_m[0] = 0;
                     num_m    = 0;
@@ -4517,7 +4538,7 @@ int WriteOrigAtomDataToSDfile(const ORIG_ATOM_DATA *inp_at_data, INCHI_IOSTREAM 
                 }
 
 
-                if ( i == num_atoms-1 && num_m || num_m == 8 ) {
+                if ( (i == num_atoms-1 && num_m) || num_m == 8 ) {
                     inchi_ios_print_nodisplay( fcb, "M  ISO%3d%s\n", num_m, str_m );
                     str_m[0] = 0;
                     num_m    = 0;
@@ -4540,7 +4561,7 @@ int WriteOrigAtomDataToSDfile(const ORIG_ATOM_DATA *inp_at_data, INCHI_IOSTREAM 
     return ret;
     
 }
-#if( FIX_ADJ_RAD == 1 )
+#if ( FIX_ADJ_RAD == 1 )
 /*************************************************************************/
 int FixNextRadicals( int cur_at, inp_ATOM *at );
 int FixNextRadicals( int cur_at, inp_ATOM *at )
@@ -4582,8 +4603,8 @@ int FixAdjacentRadicals( int num_inp_atoms, inp_ATOM *at )
 }
 #endif
 
-#ifdef INCHI_ANSI_ONLY
-#ifndef INCHI_LIBRARY
+#ifdef COMPILE_ANSI_ONLY
+#ifndef TARGET_API_LIB
 /*
 #include <stdio.h>
 #include "inpdef.h"
@@ -4596,4 +4617,3 @@ void PrintFileName( const char *fmt,
 }
 #endif
 #endif
-

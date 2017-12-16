@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -187,7 +208,7 @@ int UnmarkNonStereo( sp_ATOM *at, int num_atoms, const AT_RANK *nRank, const AT_
     int num_neighbors_with_parity, num_no_parity_atoms, num_removed_parities=-1, num_removed_parities0;
     AT_RANK nNeighborNumber[MAX_NUM_STEREO_ATOM_NEIGH];
     AT_RANK nPrevAtomRank, nPrevNeighRank;
-    S_CHAR *visited = (S_CHAR *)inchi_malloc(num_atoms * sizeof(visited[0]));
+    S_CHAR *visited = (S_CHAR *) inchi_malloc(num_atoms * sizeof(visited[0]));
     if ( !visited )
         goto exit_function;
     num_removed_parities = 0;
@@ -250,7 +271,7 @@ int UnmarkNonStereo( sp_ATOM *at, int num_atoms, const AT_RANK *nRank, const AT_
                             }
                         }
                         if ( num_implicit_H > 1 ) {
-                            if ( bIsotopic && (at[jc].num_iso_H[0] > 1 || 
+                            if ( ((bIsotopic && (at[jc].num_iso_H[0] > 1)) ||
                                                at[jc].num_iso_H[1] > 1 ||
                                                at[jc].num_iso_H[2] > 1 ) ||
                                   num_implicit_H > NUM_H_ISOTOPES        ||
@@ -365,7 +386,7 @@ int FillSingleStereoDescriptors(sp_ATOM *at, int i, int num_trans, const AT_RANK
                     nStereoNeigh[num_stereo] = n-1;
                     num_allene += IS_ALLENE_CHAIN(at[i].stereo_bond_parity[num_stereo]);
                 }
-                if ( bAllene > 0 && !num_allene || bAllene == 0 && num_allene ) {
+                if ( (bAllene > 0 && !num_allene) || (bAllene == 0 && num_allene) ) {
                     return 0;
                 }
                 /*  sort stereo bonds according to the ranks of the neighbors */
@@ -753,7 +774,7 @@ int MarkKnownEqualStereoBondParities( sp_ATOM *at, int num_atoms,
         for ( n1 = 0, i2 = 0; n1 < MAX_NUM_STEREO_BONDS && (i2=(int)at[i1].stereo_bond_neighbor[n1]); n1++ ) {
             i2 --;
             nAtomRank2         = nRank[i2];
-            if ( nAtomRank2 < nAtomRank1 || nAtomRank2 == nAtomRank1 && i1 < i2 ) {
+            if ( nAtomRank2 < nAtomRank1 || (nAtomRank2 == nAtomRank1 && i1 < i2) ) {
                 /*  An attempt to reduce unnecessary repetitions. */
                 /*  We still have repetitions because we do not accumulate a list of */
                 /*  processed (nAtomRank2, nAtomRank1) pairs. */
@@ -1014,7 +1035,7 @@ AT_RANK PathsHaveIdenticalKnownParities( sp_ATOM *at, AT_RANK prev1, AT_RANK cur
     nVisited2[cur2] = nLength;
     /*  the atoms must be either both stereogenic and have well-defined parities or non-stereogenic at all. */
     if ( at[cur1].stereo_atom_parity != at[cur2].stereo_atom_parity ||
-         at[cur1].stereo_atom_parity && !PARITY_WELL_DEF (at[cur1].stereo_atom_parity) 
+         (at[cur1].stereo_atom_parity && !PARITY_WELL_DEF (at[cur1].stereo_atom_parity))
           ) {
         return 0;  /*  Reject: Different or unknown in advance parities */
     }
@@ -1093,7 +1114,7 @@ int RemoveKnownNonStereoBondParities( sp_ATOM *at, int num_atoms, const AT_RANK 
             if ( at[i1].nRingSystem == at[(int)neigh[0]].nRingSystem ) {
                 continue;  /*  no more ring system membership check is necessary because     */
             }              /*  the two neighbors are to be constitutionally equivalent atoms */
-            if ( !nVisited && !(nVisited = (AT_RANK*)inchi_malloc( sizeof(nVisited[0])*num_atoms ) ) ) {
+            if ( !nVisited && !(nVisited = (AT_RANK*) inchi_malloc( sizeof(nVisited[0])*num_atoms ) ) ) {
                 ret = CT_OUT_OF_RAM;  /*   <BRKPT> */
                 goto exit_function;
             }
@@ -1117,7 +1138,7 @@ int RemoveKnownNonStereoBondParities( sp_ATOM *at, int num_atoms, const AT_RANK 
                                      (m-n)*sizeof(pCS->LinearCTStereoDble[0]) );
                         }
                         pCS->nLenLinearCTStereoDble --;
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
                         pCS->bExtract |= EXTR_KNOWN_USED_TO_REMOVE_PARITY;
 #endif
                         m = -1;   /*  set flag "found" */
@@ -1225,7 +1246,7 @@ int SetKnownStereoCenterParities( sp_ATOM *at, int num_atoms, const AT_RANK *nCa
     return num_set;
 }
 
-#if( REMOVE_KNOWN_NONSTEREO == 1 ) /* { */
+#if ( REMOVE_KNOWN_NONSTEREO == 1 ) /* { */
 /**********************************************************************************/
 /*  DFS along paths starting from the stereocenter through pairs of cut-edges  */
 int RemoveKnownNonStereoCenterParities( sp_ATOM *at, int num_atoms, const AT_RANK *nCanonRank,
@@ -1262,7 +1283,7 @@ int RemoveKnownNonStereoCenterParities( sp_ATOM *at, int num_atoms, const AT_RAN
                 nNeighRank[nNeighOrd[j-1]] == nNeighRank[nNeighOrd[j]] ) {
                 k = j;
                 do {
-                    if ( !nVisited && !(nVisited = (AT_RANK*)inchi_malloc( sizeof(nVisited[0])*num_atoms ) ) ) {
+                    if ( !nVisited && !(nVisited = (AT_RANK*) inchi_malloc( sizeof(nVisited[0])*num_atoms ) ) ) {
                         ret = CT_OUT_OF_RAM;  /*   <BRKPT> */
                         goto exit_function;
                     }
@@ -1284,7 +1305,7 @@ int RemoveKnownNonStereoCenterParities( sp_ATOM *at, int num_atoms, const AT_RAN
                                 }
                                 pCS->nLenLinearCTStereoCarb --;
                                 k = 0;
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
                                 pCS->bExtract |= EXTR_KNOWN_USED_TO_REMOVE_PARITY;
 #endif
                                 break;
@@ -1478,7 +1499,7 @@ int FillOutStereoParities( sp_ATOM *at, int num_atoms, const AT_RANK *nCanonRank
                 ret2 = MarkKnownEqualStereoBondParities( at, num_atoms, nRank, nAtomNumber);
             }
         }
-#if( REMOVE_KNOWN_NONSTEREO == 1 ) /* { */
+#if ( REMOVE_KNOWN_NONSTEREO == 1 ) /* { */
         if ( ret2 >= 0 ) {
             int ret3;
             do {
@@ -1637,4 +1658,3 @@ int GetStereoCenterParity(sp_ATOM *at, int i, AT_RANK *nRank )
 
     return parity;
 }
-

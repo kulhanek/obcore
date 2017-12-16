@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -31,7 +52,7 @@
 #endif
 
 
-#ifdef INCHI_LIB
+#ifdef TARGET_LIB_FOR_WINCHI
 extern void (*FWPRINT) (const char * format, va_list argptr );
 #endif
 
@@ -389,7 +410,7 @@ va_list argList;
             va_end(argList);
             if ( ret >= 0 ) 
                 ios->s.nUsedLength += ret;
-#ifdef INCHI_LIB
+#ifdef TARGET_LIB_FOR_WINCHI
             if( FWPRINT )
             {
                 my_va_start( argList, lpszFormat );
@@ -417,7 +438,7 @@ va_list argList;
             ret2 = vfprintf( stdout, lpszFormat, argList );
             va_end( argList );
         }
-#ifdef INCHI_LIB
+#ifdef TARGET_LIB_FOR_WINCHI
         if( FWPRINT )
         {
             my_va_start( argList, lpszFormat );
@@ -514,7 +535,7 @@ va_list argList;
     if (!ios) 
         return -1;
 
-    if (ios->type == INCHI_IOSTREAM_STRING) /* was #if ( defined(INCHI_LIBRARY) || defined(INCHI_STANDALONE_EXE) ) */
+    if (ios->type == INCHI_IOSTREAM_STRING) /* was #if ( defined(TARGET_API_LIB) || defined(INCHI_STANDALONE_EXE) ) */
     {
         /* output to string buffer */
         int max_len, nAddLength = 0;
@@ -572,7 +593,7 @@ va_list argList;
             ret = inchi_vfprintf( ios->f, lpszFormat, argList ); 
             va_end( argList );
 /*^^^  No output to stderr from within dll or GUI program */
-#if ( !defined(INCHI_LIBRARY) && !defined(INCHI_LIB) )
+#if ( !defined(TARGET_API_LIB) && !defined(TARGET_LIB_FOR_WINCHI) )
             if ( ios->f != stderr ) 
             { 
                 my_va_start( argList, lpszFormat );
@@ -614,7 +635,7 @@ va_list argList;
         ret = inchi_vfprintf( f, lpszFormat, argList ); 
         va_end( argList );
 /*^^^  No output to stderr from within dll or GUI program */
-#if ( !defined(INCHI_LIBRARY) && !defined(INCHI_LIB) )
+#if ( !defined(TARGET_API_LIB) && !defined(TARGET_LIB_FOR_WINCHI) )
         if ( f != stderr ) 
         { 
             my_va_start( argList, lpszFormat );
@@ -638,7 +659,7 @@ int ret=0;
     if ( f == stderr && lpszFormat && lpszFormat[0] && '\r' == lpszFormat[strlen(lpszFormat)-1] ) 
     {
 #define CONSOLE_LINE_LEN 80
-#ifndef INCHI_ANSI_ONLY
+#ifndef COMPILE_ANSI_ONLY
         char szLine[CONSOLE_LINE_LEN];
         ret = _vsnprintf( szLine, CONSOLE_LINE_LEN-1, lpszFormat, argList );
         if ( ret < 0 ) 
@@ -698,7 +719,7 @@ int inchi_fgetsLfTab( char *szLine, int len, FILE *f )
         LtrimRtrim( szLine, &length );
     } while ( !length );
     if ( bTooLongLine ) {
-        while ( p = inchi_fgetsTab( szSkip, sizeof(szSkip)-1, f ) ) {
+        while ( (p = inchi_fgetsTab( szSkip, sizeof(szSkip)-1, f )) ) {
             if ( strchr( szSkip, '\n' ) )
                 break;
         }

@@ -1,4 +1,4 @@
-/**********************************************************************
+/********************************************************************** 
 mol.cpp - Handle molecules.
 
 Copyright (C) 1998-2001 by OpenEye Scientific Software, Inc.
@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include <openbabel/mol.h>
 #include <openbabel/rotamer.h>
 #include <openbabel/phmodel.h>
+#include <openbabel/atomclass.h>
 #include <openbabel/bondtyper.h>
 #include <openbabel/builder.h>
 #include <openbabel/math/matrix3x3.h>
@@ -38,7 +39,7 @@ namespace OpenBabel
 {
 
   extern bool SwabInt;
-  extern OBPhModel	phmodel;
+  extern OBPhModel  phmodel;
   extern OBAromaticTyper  aromtyper;
   extern OBAtomTyper      atomtyper;
   extern OBBondTyper      bondtyper;
@@ -180,7 +181,8 @@ namespace OpenBabel
       return(_title.c_str());
 
     //Only multiline titles use the following to replace newlines by spaces
-    static string title(_title); //potential problems in calling code with multiple molecules!
+    static string title;
+    title=_title;
     string::size_type j;
     for ( ; (j = title.find_first_of( "\n\r" )) != string::npos ; ) {
       title.replace( j, 1, " ");
@@ -201,7 +203,7 @@ namespace OpenBabel
 
   double OBMol::GetAngle( OBAtom* a, OBAtom* b, OBAtom* c)
   {
-	  return a->GetAngle( b, c );
+    return a->GetAngle( b, c );
   }
 
   double OBMol::GetTorsion(int a,int b,int c,int d)
@@ -230,51 +232,15 @@ namespace OpenBabel
     for (j = 0 ; (unsigned)j < atoms.size() ; j++ )
       atoms[j] = (atoms[j] - 1) * 3;
 
-    double v1x,v1y,v1z,v2x,v2y,v2z,v3x,v3y,v3z;
-    double c1x,c1y,c1z,c2x,c2y,c2z,c3x,c3y,c3z;
-    double c1mag,c2mag,radang,costheta,m[9];
+    double v2x,v2y,v2z;
+    double radang,m[9];
     double x,y,z,mag,rotang,sn,cs,t,tx,ty,tz;
 
     //calculate the torsion angle
-
-    v1x = _c[tor[0]]   - _c[tor[1]];
-    v2x = _c[tor[1]]   - _c[tor[2]];
-    v1y = _c[tor[0]+1] - _c[tor[1]+1];
-    v2y = _c[tor[1]+1] - _c[tor[2]+1];
-    v1z = _c[tor[0]+2] - _c[tor[1]+2];
-    v2z = _c[tor[1]+2] - _c[tor[2]+2];
-    v3x = _c[tor[2]]   - _c[tor[3]];
-    v3y = _c[tor[2]+1] - _c[tor[3]+1];
-    v3z = _c[tor[2]+2] - _c[tor[3]+2];
-
-
-    c1x = v1y*v2z - v1z*v2y;
-    c2x = v2y*v3z - v2z*v3y;
-    c1y = -v1x*v2z + v1z*v2x;
-    c2y = -v2x*v3z + v2z*v3x;
-    c1z = v1x*v2y - v1y*v2x;
-    c2z = v2x*v3y - v2y*v3x;
-    c3x = c1y*c2z - c1z*c2y;
-    c3y = -c1x*c2z + c1z*c2x;
-    c3z = c1x*c2y - c1y*c2x;
-
-    c1mag = SQUARE(c1x)+SQUARE(c1y)+SQUARE(c1z);
-    c2mag = SQUARE(c2x)+SQUARE(c2y)+SQUARE(c2z);
-    if (c1mag*c2mag < 0.01)
-      costheta = 1.0; //avoid div by zero error
-    else
-      costheta = (c1x*c2x + c1y*c2y + c1z*c2z)/(sqrt(c1mag*c2mag));
-
-    if (costheta < -0.999999)
-      costheta = -0.999999;
-    if (costheta >  0.999999)
-      costheta =  0.999999;
-
-    if ((v2x*c3x + v2y*c3y + v2z*c3z) > 0.0)
-      radang = -acos(costheta);
-    else
-      radang = acos(costheta);
-
+    radang = CalcTorsionAngle(a->GetVector(),
+                              b->GetVector(),
+                              c->GetVector(),
+                              d->GetVector()) / RAD_TO_DEG;
     //
     // now we have the torsion angle (radang) - set up the rot matrix
     //
@@ -285,7 +251,12 @@ namespace OpenBabel
     sn = sin(rotang);
     cs = cos(rotang);
     t = 1 - cs;
-    //normalize the rotation vector
+
+    v2x = _c[tor[1]]   - _c[tor[2]];
+    v2y = _c[tor[1]+1] - _c[tor[2]+1];
+    v2z = _c[tor[1]+2] - _c[tor[2]+2];
+
+   //normalize the rotation vector
     mag = sqrt(SQUARE(v2x)+SQUARE(v2y)+SQUARE(v2z));
     x = v2x/mag;
     y = v2y/mag;
@@ -759,7 +730,7 @@ namespace OpenBabel
         for (nbr = i->first->BeginNbrAtom(j);nbr;nbr = i->first->NextNbrAtom(j))
           vtmp.push_back(vp1[nbr->GetIdx()-1].second);
         sort(vtmp.begin(),vtmp.end(),OBCompareUnsigned);
-        for (id=i->second,m=100,k = vtmp.begin();k != vtmp.end();k++,m*=100)
+        for (id=i->second,m=100,k = vtmp.begin();k != vtmp.end();++k,m*=100)
           id += *k * m;
 
         vp2.push_back(pair<OBAtom*,unsigned int> (i->first,id));
@@ -821,16 +792,16 @@ namespace OpenBabel
     return(count);
   }
 
-  unsigned int OBMol::NumRotors()
+  unsigned int OBMol::NumRotors(bool includeRingBonds)
   {
     OBBond *bond;
     vector<OBBond*>::iterator i;
 
     unsigned int count = 0;
-    for (bond = BeginBond(i);bond;bond = NextBond(i))
-      if (bond->IsRotor())
+    for (bond = BeginBond(i);bond;bond = NextBond(i)) {
+      if (bond->IsRotor(includeRingBonds))
         count++;
-
+    }
     return(count);
   }
 
@@ -1131,7 +1102,6 @@ namespace OpenBabel
     dp->SetValue( sformula );
     dp->SetOrigin( perceived ); // internal generation
     SetData(dp);
-
     return sformula;
   }
 
@@ -1139,17 +1109,15 @@ namespace OpenBabel
   {
     string attr = "Formula";
     OBPairData *dp = (OBPairData *) GetData(attr);
-
     if (dp == NULL)
       {
         dp = new OBPairData;
         dp->SetAttribute(attr);
+        SetData(dp);
       }
     dp->SetValue(molFormula);
     // typically file input, but this needs to be revisited
     dp->SetOrigin(fileformatInput);
-
-    SetData(dp);
   }
 
   void OBMol::SetTotalCharge(int charge)
@@ -1192,7 +1160,7 @@ namespace OpenBabel
   void OBMol::SetInternalCoord(std::vector<OBInternalCoord*> int_coord) {
     if (int_coord[0] != NULL) {
       std::vector<OBInternalCoord*>::iterator it = int_coord.begin();
-      int_coord.insert(it, NULL);
+      int_coord.insert(it, static_cast<OBInternalCoord*>(NULL));
     }
 
     if (int_coord.size() != _natoms + 1) {
@@ -1380,10 +1348,13 @@ namespace OpenBabel
       _title += "_" + extitle;
 
     // First, handle atoms and bonds
+    map<unsigned long int, unsigned long int> correspondingId;
     for (atom = src.BeginAtom(i) ; atom ; atom = src.NextAtom(i)) {
-      atom->SetId(NoId);//Need to remove ID which relates to source mol rather than this mol
-      AddAtom(*atom);
+      AddAtom(*atom, true); // forceNewId=true (don't reuse the original Id)
+      OBAtom *addedAtom = GetAtom(NumAtoms());
+      correspondingId[atom->GetId()] = addedAtom->GetId();
     }
+
     for (bond = src.BeginBond(j) ; bond ; bond = src.NextBond(j)) {
       bond->SetId(NoId);//Need to remove ID which relates to source mol rather than this mol
       AddBond(bond->GetBeginAtomIdx() + prevatms,
@@ -1403,6 +1374,34 @@ namespace OpenBabel
           // (i.e., what we just copied)
           (_residue[_residue.size() - 1])->AddAtom(atom);
         }
+    }
+
+    // Copy the stereo
+    std::vector<OBGenericData*> vdata = src.GetAllData(OBGenericDataType::StereoData);
+    for (std::vector<OBGenericData*>::iterator data = vdata.begin(); data != vdata.end(); ++data) {
+      OBStereo::Type datatype = ((OBStereoBase*)*data)->GetType();
+      if (datatype == OBStereo::CisTrans) {
+        OBCisTransStereo *ct = dynamic_cast<OBCisTransStereo*>(*data);
+        OBCisTransStereo *nct = new OBCisTransStereo(this);
+        OBCisTransStereo::Config ct_cfg = ct->GetConfig();
+        ct_cfg.begin = correspondingId[ct_cfg.begin];
+        ct_cfg.end = correspondingId[ct_cfg.end];
+        for(OBStereo::RefIter ri = ct_cfg.refs.begin(); ri != ct_cfg.refs.end(); ++ri)
+          *ri = correspondingId[*ri];
+        nct->SetConfig(ct_cfg);
+        SetData(nct);
+      }
+      else if (datatype == OBStereo::Tetrahedral) {
+        OBTetrahedralStereo *ts = dynamic_cast<OBTetrahedralStereo*>(*data);
+        OBTetrahedralStereo *nts = new OBTetrahedralStereo(this);
+        OBTetrahedralStereo::Config ts_cfg = ts->GetConfig();
+        ts_cfg.center = correspondingId[ts_cfg.center];
+        ts_cfg.from = correspondingId[ts_cfg.from];
+        for(OBStereo::RefIter ri = ts_cfg.refs.begin(); ri != ts_cfg.refs.end(); ++ri)
+          *ri = correspondingId[*ri];
+        nts->SetConfig(ts_cfg);
+        SetData(nts);
+      }
     }
 
     // TODO: This is actually a weird situation (e.g., adding a 2D mol to 3D one)
@@ -1544,8 +1543,6 @@ namespace OpenBabel
     //      atom->UnsetAromatic();
 
     //    OBBond *bond;
-    //    vector<OBBond*>::iterator k;
-    //    for (bond = BeginBond(k);bond;bond = NextBond(k))
     //      bond->UnsetAromatic();
 
     // Always remove angle and torsion data, since they will interfere with the iterators
@@ -1631,7 +1628,7 @@ namespace OpenBabel
 
 #define OBAtomIncrement 100
 
-    if (_vatom.empty() || _natoms+1 >= (signed)_vatom.size())
+    if (_natoms+1 >= _vatom.size())
       {
         _vatom.resize(_natoms+OBAtomIncrement);
         vector<OBAtom*>::iterator j;
@@ -1711,7 +1708,7 @@ namespace OpenBabel
     pBond->SetId(id);
 
 #define OBBondIncrement 100
-    if (_vbond.empty() || _nbonds+1 >= (signed)_vbond.size())
+    if (_nbonds+1 >= _vbond.size())
       {
         _vbond.resize(_nbonds+OBBondIncrement);
         vector<OBBond*>::iterator i;
@@ -1729,15 +1726,19 @@ namespace OpenBabel
   //! \brief Add an atom to a molecule
   //!
   //! Also checks bond_queue for any bonds that should be made to the new atom
-  bool OBMol::AddAtom(OBAtom &atom)
+  bool OBMol::AddAtom(OBAtom &atom, bool forceNewId)
   {
     //    BeginModify();
 
-    // get the atom id or assign the next available id if the
-    // specified atom has an invalid id
-    unsigned long id = atom.GetId();
-    if (id == NoId)
+    // Use the existing atom Id unless either it's invalid or forceNewId has been specified
+    unsigned long id;
+    if (forceNewId)
       id = _atomIds.size();
+    else {
+      id = atom.GetId();
+      if (id == NoId)
+        id = _atomIds.size();
+    }
 
     OBAtom *obatom = CreateAtom();
     *obatom = atom;
@@ -1757,7 +1758,7 @@ namespace OpenBabel
 
 #define OBAtomIncrement 100
 
-    if (_vatom.empty() || _natoms+1 >= (signed)_vatom.size())
+    if (_natoms+1 >= _vatom.size())
       {
         _vatom.resize(_natoms+OBAtomIncrement);
         vector<OBAtom*>::iterator j;
@@ -1825,62 +1826,102 @@ namespace OpenBabel
 
   bool OBMol::StripSalts(int threshold)
   {
-	vector<vector<int> > cfl;
+    vector<vector<int> > cfl;
     vector<vector<int> >::iterator i,max;
 
     ContigFragList(cfl);
     if (cfl.empty() || cfl.size() == 1)
-	{
-		return(false);
-	}
+      {
+        return(false);
+      }
 
 
     obErrorLog.ThrowError(__FUNCTION__, "Ran OpenBabel::StripSalts", obAuditMsg);
 
     max = cfl.begin();
     for (i = cfl.begin();i != cfl.end();++i)
-	{
-      	if ((*max).size() < (*i).size())
-		{
-	        max = i;
-		}
-	}
+      {
+        if ((*max).size() < (*i).size())
+          max = i;
+      }
 
     vector<int>::iterator j;
     vector<OBAtom*> delatoms;
     set<int> atomIndices;
     for (i = cfl.begin(); i != cfl.end(); ++i)
-	{
-      	if (i->size() < threshold || (threshold == 0 && i != max))
-		{
-        	for (j = (*i).begin(); j != (*i).end(); ++j)
-			{
-          		if (atomIndices.find( *j ) == atomIndices.end())
-				{
-            		delatoms.push_back(GetAtom(*j));
-            		atomIndices.insert(*j);
-          		}
-        	}
-      	}
-    }
+      {
+        if (i->size() < threshold || (threshold == 0 && i != max))
+          {
+            for (j = (*i).begin(); j != (*i).end(); ++j)
+              {
+                if (atomIndices.find( *j ) == atomIndices.end())
+                  {
+                    delatoms.push_back(GetAtom(*j));
+                    atomIndices.insert(*j);
+                  }
+              }
+          }
+      }
 
     if (!delatoms.empty())
-	{
-//      int tmpflags = _flags & (~(OB_SSSR_MOL));
-      	BeginModify();
-      	vector<OBAtom*>::iterator k;
-      	for (k = delatoms.begin(); k != delatoms.end(); ++k)
-		{
-        	DeleteAtom((OBAtom*)*k);
-      	}
-      	EndModify();
-//      _flags = tmpflags;	// Gave crash when SmartsPattern::Match()
-							// was called susequently
-							// Hans De Winter; 03-nov-2010
-    }
+      {
+        //      int tmpflags = _flags & (~(OB_SSSR_MOL));
+        BeginModify();
+        vector<OBAtom*>::iterator k;
+        for (k = delatoms.begin(); k != delatoms.end(); ++k)
+          DeleteAtom((OBAtom*)*k);
+        EndModify();
+        //      _flags = tmpflags;  // Gave crash when SmartsPattern::Match()
+        // was called susequently
+        // Hans De Winter; 03-nov-2010
+      }
 
     return (true);
   }
+
+  // Convenience function used by the DeleteHydrogens methods
+  static bool IsSuppressibleHydrogen(OBAtom *atom, OBAtomClassData *pac)
+  {
+    if (atom->GetIsotope() == 0 && atom->GetHvyValence() == 1 && atom->GetFormalCharge() == 0
+        && (pac == NULL || !pac->HasClass(atom->GetIdx())))
+      return true;
+    else
+      return false;
+  }
+
+  bool OBMol::DeletePolarHydrogens()
+  {
+    OBAtom *atom;
+    vector<OBAtom*>::iterator i;
+    vector<OBAtom*> delatoms;
+
+    obErrorLog.ThrowError(__FUNCTION__,
+                          "Ran OpenBabel::DeleteHydrogens -- polar",
+                          obAuditMsg);
+
+    OBAtomClassData *pac = NULL;
+    if (this->HasData("Atom Class"))
+      pac = static_cast<OBAtomClassData*>(this->GetData("Atom Class"));
+
+    for (atom = BeginAtom(i);atom;atom = NextAtom(i))
+      if (atom->IsPolarHydrogen() && IsSuppressibleHydrogen(atom, pac))
+        delatoms.push_back(atom);
+
+    if (delatoms.empty())
+      return(true);
+
+    IncrementMod();
+
+    for (i = delatoms.begin();i != delatoms.end();++i)
+      DeleteAtom((OBAtom *)*i);
+
+    DecrementMod();
+
+    UnsetSSSRPerceived();
+    UnsetLSSRPerceived();
+    return(true);
+  }
+
 
   bool OBMol::DeleteNonPolarHydrogens()
   {
@@ -1892,8 +1933,13 @@ namespace OpenBabel
                           "Ran OpenBabel::DeleteHydrogens -- nonpolar",
                           obAuditMsg);
 
+
+    OBAtomClassData *pac = NULL;
+    if (this->HasData("Atom Class"))
+      pac = static_cast<OBAtomClassData*>(this->GetData("Atom Class"));
+
     for (atom = BeginAtom(i);atom;atom = NextAtom(i))
-      if (atom->IsNonPolarHydrogen())
+      if (atom->IsNonPolarHydrogen() && IsSuppressibleHydrogen(atom, pac))
         delatoms.push_back(atom);
 
     if (delatoms.empty())
@@ -1919,6 +1965,7 @@ namespace OpenBabel
     DecrementMod();
 
     UnsetSSSRPerceived();
+    UnsetLSSRPerceived();
     return(true);
   }
 
@@ -1931,8 +1978,12 @@ namespace OpenBabel
     obErrorLog.ThrowError(__FUNCTION__,
                           "Ran OpenBabel::DeleteHydrogens", obAuditMsg);
 
+    OBAtomClassData *pac = NULL;
+    if (this->HasData("Atom Class"))
+      pac = static_cast<OBAtomClassData*>(this->GetData("Atom Class"));
+
     for (atom = BeginAtom(i);atom;atom = NextAtom(i))
-      if (atom->IsHydrogen())
+      if (atom->IsHydrogen() && IsSuppressibleHydrogen(atom, pac))
         delatoms.push_back(atom);
 
     UnsetHydrogensAdded();
@@ -1959,6 +2010,7 @@ namespace OpenBabel
     DecrementMod();
 
     UnsetSSSRPerceived();
+    UnsetLSSRPerceived();
     return(true);
   }
 
@@ -1970,8 +2022,12 @@ namespace OpenBabel
     vector<OBBond*>::iterator k;
     vector<OBAtom*> delatoms;
 
+    OBAtomClassData *pac = NULL;
+    if (this->HasData("Atom Class"))
+      pac = static_cast<OBAtomClassData*>(this->GetData("Atom Class"));
+
     for (nbr = atom->BeginNbrAtom(k);nbr;nbr = atom->NextNbrAtom(k))
-      if (nbr->IsHydrogen())
+      if (nbr->IsHydrogen() && IsSuppressibleHydrogen(atom, pac))
         delatoms.push_back(nbr);
 
     if (delatoms.empty())
@@ -1984,6 +2040,7 @@ namespace OpenBabel
 
     UnsetHydrogensAdded();
     UnsetSSSRPerceived();
+    UnsetLSSRPerceived();
     return(true);
   }
 
@@ -2038,10 +2095,19 @@ namespace OpenBabel
     DestroyAtom(atom);
 
     UnsetSSSRPerceived();
+    UnsetLSSRPerceived();
     return(true);
   }
 
-  bool OBMol::AddHydrogens(bool polaronly,bool correctForPH, double pH)
+  /*
+  this has become a wrapper for backward compatibility
+  */
+  bool OBMol::AddHydrogens(bool polaronly, bool correctForPH, double pH)
+  {
+    return(AddNewHydrogens(polaronly ? PolarHydrogen : AllHydrogen, correctForPH, pH));
+  }
+
+  bool OBMol::AddNewHydrogens(HydrogenType whichHydrogen, bool correctForPH, double pH)
   {
     if (!IsCorrectedForPH() && correctForPH)
       CorrectForPH(pH);
@@ -2050,6 +2116,7 @@ namespace OpenBabel
       return(true);
 
     bool hasChiralityPerceived = this->HasChiralityPerceived(); // remember
+    bool hasImplicitValencePerceived = this->HasImplicitValencePerceived(); // remember
 
     /*
     //
@@ -2062,24 +2129,35 @@ namespace OpenBabel
     return true;
     }
     */
-    if (!polaronly)
+    if (whichHydrogen == AllHydrogen)
       obErrorLog.ThrowError(__FUNCTION__,
                             "Ran OpenBabel::AddHydrogens", obAuditMsg);
-    else
+    else if (whichHydrogen == PolarHydrogen)
       obErrorLog.ThrowError(__FUNCTION__,
                             "Ran OpenBabel::AddHydrogens -- polar only", obAuditMsg);
+    else
+      obErrorLog.ThrowError(__FUNCTION__,
+                            "Ran OpenBabel::AddHydrogens -- nonpolar only", obAuditMsg);
 
     // Make sure we have conformers (PR#1665519)
-    if (!_vconf.empty()) {
-      BeginModify();
-      EndModify();
+    if (!_vconf.empty() && !Empty() && !_mod)
+    {
+      if(!_c) _c = _vconf[0];
+      OBAtom *atom;
+      vector<OBAtom*>::iterator i;
+      for (atom = BeginAtom(i); atom; atom = NextAtom(i))
+      {
+        atom->SetVector();
+      }
     }
 
     SetHydrogensAdded(); // This must come after EndModify() as EndModify() wipes the flags
     // If chirality was already perceived, remember this (to avoid wiping information
-    // on unspecified chiral centers, for example)
     if (hasChiralityPerceived)
       this->SetChiralityPerceived();
+    // If implicit valence was already perceived, remember (e.g. custom valence model)
+    if (hasImplicitValencePerceived)
+      this->SetImplicitValencePerceived();
 
     //count up number of hydrogens to add
     OBAtom *atom,*h;
@@ -2088,7 +2166,12 @@ namespace OpenBabel
     vector<OBAtom*>::iterator i;
     for (atom = BeginAtom(i);atom;atom = NextAtom(i))
       {
-        if (polaronly && !(atom->IsNitrogen() || atom->IsOxygen() ||
+        if (whichHydrogen == PolarHydrogen
+                           && !(atom->IsNitrogen() || atom->IsOxygen() ||
+                           atom->IsSulfur() || atom->IsPhosphorus()))
+          continue;
+        if (whichHydrogen == NonPolarHydrogen
+                           && (atom->IsNitrogen() || atom->IsOxygen() ||
                            atom->IsSulfur() || atom->IsPhosphorus()))
           continue;
 
@@ -2194,35 +2277,13 @@ namespace OpenBabel
               }
 
             int bondFlags = 0;
-            // OBBuilder::GetNewBondVec checked to make sure the new bond is
-            // next to a wedge/hash if present, now we still need to set the
-            // bond flag.
-            if (GetDimension() == 2) {
-              OBStereoFacade stereoFacade(this);
-              if (stereoFacade.HasTetrahedralStereo(atom->GetId())) {
-                OBBondIterator i;
-                for (OBBond *bond = atom->BeginBond(i); bond; bond = atom->NextBond(i))
-                  if (bond->IsWedge()) {
-                    if (bond->GetBeginAtom() == atom)
-                      bondFlags = OB_HASH_BOND; // real wedge, make hash to H
-                    else
-                      bondFlags = OB_WEDGE_BOND; // inverted wedge = hash, make wedge to H
-                  } else if (bond->IsHash()) {
-                    if (bond->GetBeginAtom() == atom)
-                      bondFlags = OB_WEDGE_BOND; // real hash, make wedge to H
-                    else
-                      bondFlags = OB_HASH_BOND; // inverted hash = wedge, make hash to H
-                  }
-              }
-            }
-
             AddBond(atom->GetIdx(),h->GetIdx(),1, bondFlags);
             h->SetCoordPtr(&_c);
+            OpenBabel::ImplicitRefToStereo(*this, atom->GetId(), h->GetId());
           }
       }
 
     DecrementMod();
-    SetConformer(0);
 
     //reset atom type and partial charge flags
     _flags &= (~(OB_PCHARGE_MOL|OB_ATOMTYPES_MOL|OB_SSSR_MOL|OB_AROMATIC_MOL));
@@ -2232,7 +2293,12 @@ namespace OpenBabel
 
   bool OBMol::AddPolarHydrogens()
   {
-    return(AddHydrogens(true));
+    return(AddNewHydrogens(PolarHydrogen));
+  }
+
+  bool OBMol::AddNonPolarHydrogens()
+  {
+    return(AddNewHydrogens(NonPolarHydrogen));
   }
 
   bool OBMol::AddHydrogens(OBAtom *atom)
@@ -2304,30 +2370,9 @@ namespace OpenBabel
             h->SetAtomicNum(1);
 
             int bondFlags = 0;
-            // OBBuilder::GetNewBondVec checked to make sure the new bond is
-            // next to a wedge/hash if present, now we still need to set the
-            // bond flag.
-            if (GetDimension() == 2) {
-              OBStereoFacade stereoFacade(this);
-              if (stereoFacade.HasTetrahedralStereo(atom->GetId())) {
-                OBBondIterator i;
-                for (OBBond *bond = atom->BeginBond(i); bond; bond = atom->NextBond(i))
-                  if (bond->IsWedge()) {
-                    if (bond->GetBeginAtom() == atom)
-                      bondFlags = OB_HASH_BOND; // real wedge, make hash to H
-                    else
-                      bondFlags = OB_WEDGE_BOND; // inverted wedge = hash, make wedge to H
-                  } else if (bond->IsHash()) {
-                    if (bond->GetBeginAtom() == atom)
-                      bondFlags = OB_WEDGE_BOND; // real hash, make wedge to H
-                    else
-                      bondFlags = OB_HASH_BOND; // inverted hash = wedge, make hash to H
-                  }
-              }
-            }
-
             AddBond(atom->GetIdx(),h->GetIdx(),1, bondFlags);
             h->SetCoordPtr(&_c);
+            OpenBabel::ImplicitRefToStereo(*this, atom->GetId(), h->GetId());
           }
       }
 
@@ -2372,7 +2417,10 @@ namespace OpenBabel
 
   bool OBMol::AssignSpinMultiplicity(bool NoImplicitH)
   {
-    if (HasSpinMultiplicityAssigned())
+    // The following functions now uses the flag OB_ATOMSPIN_MOL rather than OB_TSPIN_MOL.
+    // OB_TSPIN_MOL is set when the total spin of a molecule is set, which prevented
+    // the hydrogen deficiency of individual atoms being set in this function.
+    if (HasSpinMultiplicityAssigned())//
       return(true);
 
     SetSpinMultiplicityAssigned();
@@ -2383,13 +2431,12 @@ namespace OpenBabel
     if(NumBonds()==0 && NumAtoms()!=1)
       {
         obErrorLog.ThrowError(__FUNCTION__,
-                              "Did not run OpenBabel::AssignSpinMultiplicity on molecule with no bonds", obAuditMsg);
+                  "Did not run OpenBabel::AssignSpinMultiplicity on molecule with no bonds", obAuditMsg);
         return true;
       }
 
     obErrorLog.ThrowError(__FUNCTION__,
-                          "Ran OpenBabel::AssignSpinMultiplicity",
-                          obAuditMsg);
+                  "Ran OpenBabel::AssignSpinMultiplicity", obAuditMsg);
 
     OBAtom *atom;
     int diff;
@@ -2858,6 +2905,36 @@ namespace OpenBabel
     return(true);
   }
 
+  // Used by DeleteAtom below. Code based on StereoRefToImplicit
+  const void DeleteStereoOnAtom(OBMol& mol, OBStereo::Ref atomId)
+  {
+    std::vector<OBGenericData*> vdata = mol.GetAllData(OBGenericDataType::StereoData);
+    for (std::vector<OBGenericData*>::iterator data = vdata.begin(); data != vdata.end(); ++data) {
+      OBStereo::Type datatype = ((OBStereoBase*)*data)->GetType();
+
+      if (datatype != OBStereo::CisTrans && datatype != OBStereo::Tetrahedral) {
+        obErrorLog.ThrowError(__FUNCTION__,
+            "This function should be updated to handle additional stereo types.\nSome stereochemistry objects may contain explicit refs to hydrogens which have been removed.", obWarning);
+        continue;
+      }
+
+      if (datatype == OBStereo::CisTrans) {
+        OBCisTransStereo *ct = dynamic_cast<OBCisTransStereo*>(*data);
+        OBCisTransStereo::Config ct_cfg = ct->GetConfig();
+        if (ct_cfg.begin == atomId || ct_cfg.end == atomId ||
+            std::find(ct_cfg.refs.begin(), ct_cfg.refs.end(), atomId) != ct_cfg.refs.end())
+          mol.DeleteData(ct);
+      }
+      else if (datatype == OBStereo::Tetrahedral) {
+        OBTetrahedralStereo *ts = dynamic_cast<OBTetrahedralStereo*>(*data);
+        OBTetrahedralStereo::Config ts_cfg = ts->GetConfig();
+        if (ts_cfg.from == atomId ||
+            std::find(ts_cfg.refs.begin(), ts_cfg.refs.end(), atomId) != ts_cfg.refs.end())
+          mol.DeleteData(ts);
+      }
+    }
+  }
+
   bool OBMol::DeleteAtom(OBAtom *atom, bool destroyAtom)
   {
     if (atom->IsHydrogen())
@@ -2890,10 +2967,15 @@ namespace OpenBabel
 
     EndModify();
 
+    // Delete any stereo objects involving this atom
+    OBStereo::Ref id = atom->GetId();
+    DeleteStereoOnAtom(*this, id);
+
     if (destroyAtom)
       DestroyAtom(atom);
 
     UnsetSSSRPerceived();
+    UnsetLSSRPerceived();
     return(true);
   }
 
@@ -2909,6 +2991,7 @@ namespace OpenBabel
       DestroyResidue(residue);
 
     UnsetSSSRPerceived();
+    UnsetLSSRPerceived();
     return(true);
   }
 
@@ -2934,18 +3017,19 @@ namespace OpenBabel
       DestroyBond(bond);
 
     UnsetSSSRPerceived();
+    UnsetLSSRPerceived();
     return(true);
   }
 
   bool OBMol::AddBond(int first,int second,int order,int flags,int insertpos)
   {
-    if (first == second)
+    // Don't add the bond if it already exists
+    if (first == second || GetBond(first, second) != NULL)
       return(false);
 
     //    BeginModify();
 
-    if ((unsigned)first <= NumAtoms() && (unsigned)second <= NumAtoms()
-        && !GetBond(first, second))
+    if ((unsigned)first <= NumAtoms() && (unsigned)second <= NumAtoms())
       //atoms exist and bond doesn't
       {
         OBBond *bond = CreateBond();
@@ -2978,7 +3062,7 @@ namespace OpenBabel
           }
 
 #define OBBondIncrement 100
-        if (_vbond.empty() || _nbonds+1 >= (signed)_vbond.size())
+        if (_nbonds+1 >= _vbond.size())
           {
             _vbond.resize(_nbonds+OBBondIncrement);
             vector<OBBond*>::iterator i;
@@ -3309,7 +3393,7 @@ namespace OpenBabel
   //! \since version 2.3
   void OBMol::RenumberAtoms(vector<int> v)
   {
-    if (Empty() || v.empty() || v.size() != NumAtoms())
+    if (Empty() || v.size() != NumAtoms())
       return;
 
     vector <OBAtom*> va;
@@ -3403,6 +3487,7 @@ namespace OpenBabel
                           "Ran OpenBabel::ConnectTheDots", obAuditMsg);
 
     int j,k,max;
+    double maxrad = 0;
     bool unset = false;
     OBAtom *atom,*nbr;
     vector<OBAtom*>::iterator i;
@@ -3429,6 +3514,7 @@ namespace OpenBabel
       {
         atom   = zsortedAtoms[j].first;
         rad[j] = etab.GetCovalentRad(atom->GetAtomicNum());
+        maxrad = std::max(rad[j],maxrad);
         zsorted.push_back(atom->GetIdx()-1);
       }
 
@@ -3436,6 +3522,7 @@ namespace OpenBabel
     double d2,cutoff,zd;
     for (j = 0 ; j < max ; ++j)
       {
+    	double maxcutoff = SQUARE(rad[j]+maxrad+0.45);
         idx1 = zsorted[j];
         for (k = j + 1 ; k < max ; k++ )
           {
@@ -3445,24 +3532,29 @@ namespace OpenBabel
             cutoff = SQUARE(rad[j] + rad[k] + 0.45);
 
             zd  = SQUARE(c[idx1*3+2] - c[idx2*3+2]);
-            if (zd > 25.0 )
-              break; // bigger than max cutoff
+            // bigger than max cutoff, which is determined using largest radius,
+            // not the radius of k (which might be small, ie H, and cause an early  termination)
+            // since we sort by z, anything beyond k will also fail
+            if (zd > maxcutoff )
+              break;
 
             d2  = SQUARE(c[idx1*3]   - c[idx2*3]);
+            if (d2 > cutoff)
+              continue; // x's bigger than cutoff
             d2 += SQUARE(c[idx1*3+1] - c[idx2*3+1]);
+            if (d2 > cutoff)
+              continue; // x^2 + y^2 bigger than cutoff
             d2 += zd;
 
             if (d2 > cutoff)
               continue;
-            if (d2 < 0.40)
+            if (d2 < 0.16) // 0.4 * 0.4 = 0.16
               continue;
 
             atom = GetAtom(idx1+1);
             nbr  = GetAtom(idx2+1);
 
             if (atom->IsConnected(nbr))
-              continue;
-            if (atom->IsHydrogen() && nbr->IsHydrogen())
               continue;
 
             AddBond(idx1+1,idx2+1,1);
@@ -3484,9 +3576,10 @@ namespace OpenBabel
     // Cleanup -- delete long bonds that exceed max valence
     OBBond *maxbond, *bond;
     double maxlength;
-    vector<OBBond*>::iterator l;
+    vector<OBBond*>::iterator l, m;
     int valCount;
-
+    bool changed;
+    BeginModify(); //prevent needless re-perception in DeleteBond
     for (atom = BeginAtom(i);atom;atom = NextAtom(i))
       {
         while (atom->BOSum() > static_cast<unsigned int>(etab.GetMaxBonds(atom->GetAtomicNum()))
@@ -3508,7 +3601,7 @@ namespace OpenBabel
               // NextBond = 0x????????
               // NextBond = 0x????????
               // NextBond = 0x????????
-              // NextBond = NULL	<-- this NULL was not detected
+              // NextBond = NULL  <-- this NULL was not detected
               // NextBond = 0x????????
               if (!bond) // so we add an additional check
                 break;
@@ -3518,11 +3611,35 @@ namespace OpenBabel
             if (!bond) // no new bonds added for this atom, just skip it
               break;
 
+            // delete bonds between hydrogens when over max valence
+            if (atom->IsHydrogen())
+              {
+                m = l;
+                changed = false;
+                for (;bond;bond = atom->NextBond(m))
+                  {
+                    if (bond->GetNbrAtom(atom)->IsHydrogen())
+                      {
+                        DeleteBond(bond);
+                        changed = true;
+                        break;
+                      }
+                  }
+                if (changed)
+                  {
+                    // bond deleted, reevaluate BOSum
+                    continue;
+                  }
+                else
+                  {
+                    // reset to first new bond
+                    bond = maxbond;
+                  }
+              }
+
             maxlength = maxbond->GetLength();
             for (bond = atom->NextBond(l);bond;bond = atom->NextBond(l))
               {
-                if (!bond)
-                  break;
                 if (bond->GetLength() > maxlength)
                   {
                     maxbond = bond;
@@ -3532,7 +3649,7 @@ namespace OpenBabel
             DeleteBond(maxbond); // delete the new bond with the longest length
           }
       }
-
+    EndModify();
     if (unset)
       {
         _c = NULL;
@@ -3541,7 +3658,8 @@ namespace OpenBabel
         _vconf.resize(_vconf.size()-1);
       }
 
-    delete [] c;
+    if (_c != NULL)
+      delete [] c;
   }
 
   /*! This method uses bond angles and geometries from current
@@ -3578,8 +3696,16 @@ namespace OpenBabel
 
         if (angle > 155.0)
           atom->SetHyb(1);
-        else if ( angle <= 155.0 && angle > 115)
+        else if (angle <= 155.0 && angle > 115.0)
           atom->SetHyb(2);
+
+        // special case for imines
+        if (atom->IsNitrogen()
+            && atom->ExplicitHydrogenCount() == 1
+            && atom->GetValence() == 2
+            && angle > 109.5)
+          atom->SetHyb(2);
+
       } // pass 1
 
     // Make sure upcoming calls to GetHyb() don't kill these temporary values
@@ -3690,7 +3816,7 @@ namespace OpenBabel
       {
         typed = false;
         loopSize = (*ringit)->PathSize();
-        if (loopSize == 5 || loopSize == 6)
+        if (loopSize == 5 || loopSize == 6 || loopSize == 7)
           {
             path = (*ringit)->_path;
             for(loop = 0; loop < loopSize; ++loop)
@@ -3707,7 +3833,7 @@ namespace OpenBabel
             if (!typed)
               for(loop = 0; loop < loopSize; ++loop)
                 {
-                  //		cout << " set aromatic " << path[loop] << endl;
+                  //    cout << " set aromatic " << path[loop] << endl;
                   (GetBond(path[loop], path[(loop+1) % loopSize]))->SetBO(5);
                   (GetBond(path[loop], path[(loop+1) % loopSize]))->UnsetKekule();
                 }
@@ -3715,6 +3841,23 @@ namespace OpenBabel
       }
     _flags &= (~(OB_KEKULE_MOL));
     Kekulize();
+
+    // Quick pass.. eliminate inter-ring sulfur atom multiple bonds
+    for (atom = BeginAtom(i); atom; atom = NextAtom(i)) {
+      // Don't build multiple bonds to ring sulfurs
+      //  except thiopyrylium
+      if (atom->IsInRing() && atom->GetAtomicNum() == 16) {
+        if (_totalCharge > 1 && atom->GetFormalCharge() == 0)
+          atom->SetFormalCharge(+1);
+        else {
+          // remove any ring bonds with multiple bond order
+          FOR_BONDS_OF_ATOM(bond, &*atom) {
+            if (bond->IsInRing() && bond->GetBondOrder() > 1)
+              bond->SetBondOrder(1);
+          }
+        }
+      }
+    }
 
     // Pass 6: Assign remaining bond types, ordered by atom electronegativity
     vector<pair<OBAtom*,double> > sortedAtoms;
@@ -3745,7 +3888,9 @@ namespace OpenBabel
     for (iter = 0 ; iter < max ; iter++ )
       {
         atom = sortedAtoms[iter].first;
-        //        cout << " atom->Hyb " << atom->GetAtomicNum() << " " << atom->GetHyb() << endl;
+        // Debugging statement
+        //        cout << " atom->Hyb " << atom->GetAtomicNum() << " " << atom->GetIdx() << " " << atom->GetHyb()
+        //             << " BO: " << atom->BOSum() << endl;
 
         // Possible sp-hybrids
         if ( (atom->GetHyb() == 1 || atom->GetValence() == 1)
@@ -3802,6 +3947,15 @@ namespace OpenBabel
                 (atom->GetAtomicNum() == 7 && atom->BOSum() + 1 > 3))
               continue;
 
+            // Don't build multiple bonds to ring sulfurs
+            //  except thiopyrylium
+            if (atom->IsInRing() && atom->GetAtomicNum() == 16) {
+              if (_totalCharge > 1 && atom->GetFormalCharge() == 0)
+                atom->SetFormalCharge(+1);
+              else
+                continue;
+            }
+
             maxElNeg = 0.0;
             shortestBond = 5000.0;
             c = NULL;
@@ -3811,16 +3965,18 @@ namespace OpenBabel
                 if ( (b->GetHyb() == 2 || b->GetValence() == 1)
                      && b->BOSum() + 1 <= static_cast<unsigned int>(etab.GetMaxBonds(b->GetAtomicNum()))
                      && (GetBond(atom, b))->IsDoubleBondGeometry()
-                     && (currentElNeg > maxElNeg ||
-                         (IsApprox(currentElNeg,maxElNeg, 1.0e-6)
-                          // If only the bond length counts, prefer double bonds in the ring
-                          && (((atom->GetBond(b))->GetLength() < shortestBond)
-                              && (!atom->IsInRing() || !c || !c->IsInRing() || b->IsInRing()))
-                          || (atom->IsInRing() && c && !c->IsInRing() && b->IsInRing()))))
+                     && (currentElNeg > maxElNeg || (IsApprox(currentElNeg,maxElNeg, 1.0e-6)) ) )
                   {
                     if (b->HasNonSingleBond() ||
                         (b->GetAtomicNum() == 7 && b->BOSum() + 1 > 3))
                       continue;
+
+                    if (b->IsInRing() && b->GetAtomicNum() == 16) {
+                      if (_totalCharge > 1 && b->GetFormalCharge() == 0)
+                        b->SetFormalCharge(+1);
+                      else
+                        continue;
+                    }
 
                     // Test terminal bonds against expected double bond lengths
                     bondLength = (atom->GetBond(b))->GetLength();
@@ -3831,11 +3987,20 @@ namespace OpenBabel
                         continue; // too long, ignore it
                     }
 
-                    shortestBond = (atom->GetBond(b))->GetLength();
-                    maxElNeg = etab.GetElectroNeg(b->GetAtomicNum());
-                    c = b; // save this atom for later use
+                    // OK, see if this is better than the previous choice
+                    // If it's much shorter, pick it (e.g., fulvene)
+                    // If they're close (0.1A) then prefer the bond in the ring
+                    double difference = shortestBond - (atom->GetBond(b))->GetLength();
+                    if ( (difference > 0.1)
+                         || ( (difference > -0.01) &&
+                              ( (!atom->IsInRing() || !c || !c->IsInRing() || b->IsInRing())
+                                || (atom->IsInRing() && c && !c->IsInRing() && b->IsInRing()) ) ) ) {
+                      shortestBond = (atom->GetBond(b))->GetLength();
+                      maxElNeg = etab.GetElectroNeg(b->GetAtomicNum());
+                      c = b; // save this atom for later use
+                    } // is this bond better than previous choices
                   }
-              }
+              } // loop through neighbors
             if (c)
               (atom->GetBond(c))->SetBO(2);
           }
@@ -3853,42 +4018,12 @@ namespace OpenBabel
     //deficient and which have implicit valency definitions (essentially the
     //organic subset in SMILES). There are assumed to no implicit hydrogens.
     AssignSpinMultiplicity(true);
-  }
+    }
 
   void OBMol::Center()
   {
-    int j,size;
-    double *c,x,y,z,fsize;
-
-    size = NumAtoms();
-    fsize = -1.0/(double)NumAtoms();
-
-    obErrorLog.ThrowError(__FUNCTION__,
-                          "Ran OpenBabel::Center", obAuditMsg);
-
-    vector<double*>::iterator i;
-    for (i = _vconf.begin();i != _vconf.end();++i)
-      {
-        c = *i;
-        x = y = z = 0.0;
-        for (j = 0;j < size;++j)
-          {
-            x += c[j*3];
-            y += c[j*3+1];
-            z += c[j*3+2];
-          }
-        x *= fsize;
-        y *= fsize;
-        z *= fsize;
-
-        for (j = 0;j < size;++j)
-          {
-            c[j*3]+=x;
-            c[j*3+1]+=y;
-            c[j*3+2]+=z;
-          }
-      }
-
+    for (int i = 0;i < NumConformers();++i)
+      Center(i);
   }
 
   vector3 OBMol::Center(int nconf)
@@ -3936,7 +4071,7 @@ namespace OpenBabel
   /*! this method adds the vector v to all atom positions in the
     conformer nconf. If nconf == OB_CURRENT_CONFORMER, then the atom
     positions in the current conformer are translated. */
-  void OBMol::Translate(const vector3 &v,int nconf)
+  void OBMol::Translate(const vector3 &v, int nconf)
   {
     obErrorLog.ThrowError(__FUNCTION__,
                           "Ran OpenBabel::Translate", obAuditMsg);
@@ -4081,6 +4216,7 @@ namespace OpenBabel
     //Look for + and - charges on adjacent atoms
     OBAtom* patom;
     vector<OBAtom*>::iterator i;
+    bool converted = false;
     for (patom = BeginAtom(i);patom;patom = NextAtom(i))
       {
         vector<OBBond*>::iterator itr;
@@ -4093,6 +4229,7 @@ namespace OpenBabel
             if((chg1>0 && chg2<0)|| (chg1<0 && chg2>0))
               {
                 //dative bond. Reduce charges and increase bond order
+                converted =true;
                 if(chg1>0)
                   --chg1;
                 else
@@ -4107,7 +4244,158 @@ namespace OpenBabel
               }
           }
       }
-    return true;
+    return converted; //false if no changes made
+  }
+
+  //This maybe would be better using smirks from a datafile
+  bool OBMol::MakeDativeBonds()
+  {
+    //! Converts 5-valent N to charged form of dative bonds,
+    //! e.g. -N(=O)=O converted to -[N+]([O-])=O. Returns true if conversion occurs.
+    BeginModify();
+    //AddHydrogens();
+    bool converted = false;
+    OBAtom* patom;
+    vector<OBAtom*>::iterator ai;
+    for (patom = BeginAtom(ai);patom;patom = NextAtom(ai)) //all atoms
+    {
+      if(patom->IsNitrogen() // || patom->IsPhosphorus()) not phosphorus!
+        && (patom->BOSum()==5 || (patom->BOSum()==4 && patom->GetFormalCharge()==0)))
+      {
+        // Find the bond to be modified. Prefer a bond to a hetero-atom,
+        // and the highest order bond if there is a choice.
+        OBBond *bond, *bestbond;
+        OBBondIterator bi;
+        for (bestbond = bond = patom->BeginBond(bi); bond; bond = patom->NextBond(bi))
+        {
+          int bo = bond->GetBO();
+          if(bo>=2 && bo<=4)
+          {
+            bool het = bond->GetNbrAtom(patom)->IsNotCorH();
+            bool oldhet = bestbond->GetNbrAtom(patom)->IsNotCorH();
+            bool higherorder = bo > bestbond->GetBondOrder();
+            if((het && !oldhet) || (((het && oldhet) || (!het && !oldhet)) && higherorder))
+              bestbond = bond;
+          }
+        }
+        //Make the charged form
+        bestbond->SetBondOrder(bestbond->GetBondOrder()-1);
+        patom->SetFormalCharge(+1);
+        OBAtom* at = bestbond->GetNbrAtom(patom);
+        at->SetFormalCharge(-1);
+        converted=true;
+      }
+    }
+    EndModify();
+    return converted;
+  }
+
+  /**
+   *  This function is useful when writing to legacy formats (such as MDL MOL) that do
+   *  not support zero-order bonds. It is worth noting that some compounds cannot be
+   *  well represented using just single, double and triple bonds, even with adjustments
+   *  to adjacent charges. In these cases, simply converting zero-order bonds to single
+   *  bonds is all that can be done.
+   *
+   @verbatim
+   Algorithm from:
+   Clark, A. M. Accurate Specification of Molecular Structures: The Case for
+   Zero-Order Bonds and Explicit Hydrogen Counting. Journal of Chemical Information
+   and Modeling, 51, 3149-3157 (2011). http://pubs.acs.org/doi/abs/10.1021/ci200488k
+   @endverbatim
+  */
+  bool OBMol::ConvertZeroBonds()
+  {
+    // TODO: Option to just remove zero-order bonds entirely
+
+    // TODO: Is it OK to not wrap this in BeginModify() and EndModify()?
+    // If we must, I think we need to manually remember HasImplicitValencePerceived and
+    // re-set it after EndModify()
+
+    // Periodic table block for element (1=s, 2=p, 3=d, 4=f)
+    const int BLOCKS[113] = {0,1,2,1,1,2,2,2,2,2,2,1,1,2,2,2,2,2,2,1,1,3,3,3,3,3,3,3,3,3,
+                             3,2,2,2,2,2,2,1,1,3,3,3,3,3,3,3,3,3,3,2,2,2,2,2,2,1,1,4,4,4,
+                             4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,2,2,2,2,2,2,1,1,4,
+                             4,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3};
+
+    bool converted = false;
+    // Get contiguous fragments of molecule
+    vector<vector<int> > cfl;
+    ContigFragList(cfl);
+    // Iterate over contiguous fragments
+    for (vector< vector<int> >::iterator i = cfl.begin(); i != cfl.end(); ++i) {
+      // Get all zero-order bonds in contiguous fragment
+      vector<OBBond*> bonds;
+      for(vector<int>::const_iterator j = i->begin(); j != i->end(); ++j) {
+        FOR_BONDS_OF_ATOM(b, GetAtom(*j)) {
+          if (b->GetBondOrder() == 0 && !(find(bonds.begin(), bonds.end(), &*b) != bonds.end())) {
+            bonds.push_back(&*b);
+          }
+        }
+      }
+      // Convert zero-order bonds
+      while (bonds.size() > 0) {
+        // Pick a bond using scoring system
+        int bi = 0;
+        if (bonds.size() > 1) {
+          vector<int> scores(bonds.size());
+          for (int n = 0; n < bonds.size(); n++) {
+            OBAtom *bgn = bonds[n]->GetBeginAtom();
+            OBAtom *end = bonds[n]->GetEndAtom();
+            int score = 0;
+            score += bgn->GetAtomicNum() + end->GetAtomicNum();
+            score += abs(bgn->GetFormalCharge()) + abs(end->GetFormalCharge());
+            pair<int, int> lb = bgn->LewisAcidBaseCounts();
+            pair<int, int> le = end->LewisAcidBaseCounts();
+            if (lb.first > 0 && lb.second > 0 && le.first > 0 && le.second > 0) {
+              score += 100;   // Both atoms are Lewis acids *and* Lewis bases
+            } else if ((lb.first > 0 && le.second > 0) && (lb.second > 0 && le.first > 0)) {
+              score -= 1000;  // Lewis acid/base direction is mono-directional
+            }
+            int bcount = bgn->ImplicitHydrogenCount();
+            FOR_BONDS_OF_ATOM(b, bgn) { bcount += 1; }
+            int ecount = end->ImplicitHydrogenCount();
+            FOR_BONDS_OF_ATOM(b, end) { ecount += 1; }
+            if (bcount == 1 || ecount == 1) {
+              score -= 10; // If the start or end atoms have only 1 neighbour
+            }
+            scores[n] = score;
+          }
+          for (int n = 1; n < scores.size(); n++) {
+            if (scores[n] < scores[bi]) {
+              bi = n;
+            }
+          }
+        }
+        OBBond *bond = bonds[bi];
+        bonds.erase(bonds.begin() + bi);
+        OBAtom *bgn = bond->GetBeginAtom();
+        OBAtom *end = bond->GetEndAtom();
+        int blockb = BLOCKS[bgn->GetAtomicNum()];
+        int blocke = BLOCKS[end->GetAtomicNum()];;
+        pair<int, int> lb = bgn->LewisAcidBaseCounts();
+        pair<int, int> le = end->LewisAcidBaseCounts();
+        int chg = 0; // Amount to adjust atom charges
+        int ord = 1; // New bond order
+        if (lb.first > 0 && lb.second > 0 && le.first > 0 && le.second > 0) {
+          ord = 2;  // both atoms are amphoteric, so turn it into a double bond
+        } else if (lb.first > 0 && blockb == 2 && blocke >= 3) {
+          ord = 2;  // p-block lewis acid with d/f-block element: make into double bond
+        } else if (le.first > 0 && blocke == 2 && blockb >= 3) {
+          ord = 2;  // p-block lewis acid with d/f-block element: make into double bond
+        } else if (lb.first > 0 && le.second > 0) {
+          chg = -1;  // lewis acid/base goes one way only; charge separate it
+        } else if (lb.second > 0 && le.first > 0) {
+          chg = 1;  //  no matching capacity; do not charge separate
+        }
+        // adjust bond order and atom charges accordingly
+        bgn->SetFormalCharge(bgn->GetFormalCharge()+chg);
+        end->SetFormalCharge(end->GetFormalCharge()-chg);
+        bond->SetBondOrder(ord);
+        converted = true;
+      }
+    }
+    return converted;
   }
 
   OBAtom *OBMol::BeginAtom(OBAtomIterator &i)
@@ -4134,6 +4422,35 @@ namespace OpenBabel
     return((i == _vbond.end()) ? (OBBond*)NULL : (OBBond*)*i);
   }
 
+  //! \since version 2.4
+  int OBMol::AreInSameRing(OBAtom *a, OBAtom *b)
+  {
+    bool a_in, b_in;
+    vector<OBRing*> vr;
+    vr = GetLSSR();
+
+    vector<OBRing*>::iterator i;
+    vector<int>::iterator j;
+
+    for (i = vr.begin();i != vr.end();++i) {
+      a_in = false;
+      b_in = false;
+      // Go through the path of the ring and see if a and/or b match
+      // each node in the path
+      for(j = (*i)->_path.begin();j != (*i)->_path.end();++j) {
+        if ((unsigned)(*j) == a->GetIdx())
+          a_in = true;
+        if ((unsigned)(*j) == b->GetIdx())
+          b_in = true;
+      }
+
+      if (a_in && b_in)
+        return (*i)->Size();
+    }
+
+    return 0;
+  }
+
   vector<OBMol> OBMol::Separate(int StartIndex)
   {
     vector<OBMol> result;
@@ -4142,7 +4459,6 @@ namespace OpenBabel
 
     OBMolAtomDFSIter iter( this, StartIndex );
     OBMol newMol;
-    int fragments = 0;
     while( GetNextFragment( iter, newMol ) ) {
       result.push_back( newMol );
       newMol.Clear();
@@ -4156,65 +4472,58 @@ namespace OpenBabel
 
     newmol.SetDimension(GetDimension());
     map<OBAtom*, OBAtom*> AtomMap;//key is from old mol; value from new mol
-    map<OBAtom*, OBChiralData*> ChiralMap; // key is from old mol
     do { //for each atom in fragment
       OBAtom* pnext = &*iter;
       newmol.AddAtom(*pnext); //each subsequent atom with its bond
       AtomMap[pnext] = newmol.GetAtom(newmol.NumAtoms());
-
-      OBChiralData* cd = (OBChiralData*)pnext->GetData(OBGenericDataType::ChiralData);
-      if (cd)
-        ChiralMap[pnext] = cd;
     }while((iter++).next());
 
+    // Update Stereo
+    std::vector<OBGenericData*>::iterator data;
+    std::vector<OBGenericData*> stereoData = GetAllData(OBGenericDataType::StereoData);
+    for (data = stereoData.begin(); data != stereoData.end(); ++data) {
+      if (static_cast<OBStereoBase*>(*data)->GetType() == OBStereo::CisTrans) {
+        OBCisTransStereo *ct = dynamic_cast<OBCisTransStereo*>(*data);
+        OBCisTransStereo::Config cfg = ct->GetConfig();
+        if (AtomMap.find(GetAtomById(cfg.begin)) == AtomMap.end()) // This stereodata does not refer to this fragment
+          continue;
 
-    // update any OBChiralData records
-    map<OBAtom*, OBChiralData*>::iterator ChiralSearch;
-    for (ChiralSearch = ChiralMap.begin(); ChiralSearch != ChiralMap.end(); ++ChiralSearch) {
-      OBAtom *oldAtom = ChiralSearch->first;
-      OBChiralData *oldCD = ChiralSearch->second;
-      OBAtom *newAtom = AtomMap[oldAtom];
-      if (newAtom == NULL) continue; // shouldn't happen, but be defensive
-      if (oldCD == NULL) continue; // similarly
+        OBCisTransStereo::Config newcfg;
+        newcfg.specified = cfg.specified;
+        newcfg.begin = cfg.begin == OBStereo::ImplicitRef ? OBStereo::ImplicitRef : AtomMap[GetAtomById(cfg.begin)]->GetId();
+        newcfg.end = cfg.end == OBStereo::ImplicitRef ? OBStereo::ImplicitRef : AtomMap[GetAtomById(cfg.end)]->GetId();
+        OBStereo::Refs refs;
+        for(OBStereo::RefIter ri=cfg.refs.begin(); ri!=cfg.refs.end(); ++ri) {
+          OBStereo::Ref ref = *ri == OBStereo::ImplicitRef ? OBStereo::ImplicitRef : AtomMap[GetAtomById(*ri)]->GetId();
+          refs.push_back(ref);
+        }
+        newcfg.refs = refs;
 
-      OBChiralData *newCD = new OBChiralData;
-      if (newCD == NULL) continue; // out of memory error
-
-      OBAtom *a0, *a1, *a2, *a3; // old atom references
-      if (oldCD->GetSize(input) == 4) {
-        a0 = this->GetAtom(oldCD->GetAtomRef(0, input));
-        a1 = this->GetAtom(oldCD->GetAtomRef(1, input));
-        a2 = this->GetAtom(oldCD->GetAtomRef(2, input));
-        a3 = this->GetAtom(oldCD->GetAtomRef(3, input));
-        if (a0 && AtomMap[a0]) newCD->AddAtomRef(AtomMap[a0]->GetIdx(), input);
-        if (a1 && AtomMap[a1]) newCD->AddAtomRef(AtomMap[a1]->GetIdx(), input);
-        if (a2 && AtomMap[a2]) newCD->AddAtomRef(AtomMap[a2]->GetIdx(), input);
-        if (a3 && AtomMap[a3]) newCD->AddAtomRef(AtomMap[a3]->GetIdx(), input);
+        OBCisTransStereo *newct = new OBCisTransStereo(this);
+        newct->SetConfig(newcfg);
+        newmol.SetData(newct);
       }
+      else if (static_cast<OBStereoBase*>(*data)->GetType() == OBStereo::Tetrahedral) {
+        OBTetrahedralStereo *tet = dynamic_cast<OBTetrahedralStereo*>(*data);
+        OBTetrahedralStereo::Config cfg = tet->GetConfig();
+        if (AtomMap.find(GetAtomById(cfg.center)) == AtomMap.end()) // This stereodata does not refer to this fragment
+          continue;
 
-      if (oldCD->GetSize(output) == 4) {
-        a0 = this->GetAtom(oldCD->GetAtomRef(0, output));
-        a1 = this->GetAtom(oldCD->GetAtomRef(1, output));
-        a2 = this->GetAtom(oldCD->GetAtomRef(2, output));
-        a3 = this->GetAtom(oldCD->GetAtomRef(3, output));
-        if (a0 && AtomMap[a0]) newCD->AddAtomRef(AtomMap[a0]->GetIdx(), output);
-        if (a1 && AtomMap[a1]) newCD->AddAtomRef(AtomMap[a1]->GetIdx(), output);
-        if (a2 && AtomMap[a2]) newCD->AddAtomRef(AtomMap[a2]->GetIdx(), output);
-        if (a3 && AtomMap[a3]) newCD->AddAtomRef(AtomMap[a3]->GetIdx(), output);
-      }
+        OBTetrahedralStereo::Config newcfg;
+        newcfg.specified = cfg.specified;
+        newcfg.center = AtomMap[GetAtomById(cfg.center)]->GetId();
+        newcfg.from = cfg.from == OBStereo::ImplicitRef ? OBStereo::ImplicitRef : AtomMap[GetAtomById(cfg.from)]->GetId();
+        OBStereo::Refs refs;
+        for(OBStereo::RefIter ri=cfg.refs.begin(); ri!=cfg.refs.end(); ++ri) {
+          OBStereo::Ref ref = *ri == OBStereo::ImplicitRef ? OBStereo::ImplicitRef : AtomMap[GetAtomById(*ri)]->GetId();
+          refs.push_back(ref);
+        }
+        newcfg.refs = refs;
 
-      if (oldCD->GetSize(calcvolume) == 4) {
-        a0 = this->GetAtom(oldCD->GetAtomRef(0, calcvolume));
-        a1 = this->GetAtom(oldCD->GetAtomRef(1, calcvolume));
-        a2 = this->GetAtom(oldCD->GetAtomRef(2, calcvolume));
-        a3 = this->GetAtom(oldCD->GetAtomRef(3, calcvolume));
-        if (a0 && AtomMap[a0]) newCD->AddAtomRef(AtomMap[a0]->GetIdx(), calcvolume);
-        if (a1 && AtomMap[a1]) newCD->AddAtomRef(AtomMap[a1]->GetIdx(), calcvolume);
-        if (a2 && AtomMap[a2]) newCD->AddAtomRef(AtomMap[a2]->GetIdx(), calcvolume);
-        if (a3 && AtomMap[a3]) newCD->AddAtomRef(AtomMap[a3]->GetIdx(), calcvolume);
-      }
-
-      newAtom->SetData(newCD);
+        OBTetrahedralStereo *newtet = new OBTetrahedralStereo(this);
+        newtet->SetConfig(newcfg);
+        newmol.SetData(newtet);
+        }
     }
 
     FOR_BONDS_OF_MOL(b, this) {
@@ -4229,6 +4538,61 @@ namespace OpenBabel
     return( true );
   }
 
+  // Put the specified molecular charge on a single atom (which is expected for InChIFormat).
+  // Assumes all the hydrogen is explicitly included in the molecule,
+  // and that SetTotalCharge() has not been called. (This function is an alternative.)
+  // Returns false if cannot assign all the charge.
+  // Not robust in the general case, but see below for the more common simpler cases.
+  bool OBMol::AssignTotalChargeToAtoms(int charge)
+  {
+    int extraCharge = charge - GetTotalCharge(); //GetTotalCharge() gets charge on atoms
+
+    //Redo AssignImplicitValence on atoms, allowing it to be less than the actual valence.
+    UnsetImplicitValencePerceived();
+    UnsetFlag(OB_ATOMSPIN_MOL);
+    atomtyper.AssignImplicitValence(*this, true);
+
+    bool somethingDone=false;
+    FOR_ATOMS_OF_MOL (atom, this)
+    {
+      if(atom->HasImplHForced() || atom->IsHydrogen()) //incl unbracketed atoms in SMILES
+        continue;
+      int diff=atom->GetImplicitValence() - (atom->GetHvyValence() + atom->ExplicitHydrogenCount());
+      if(diff!=0)
+      {
+        int c;
+        if(extraCharge==0)
+          c = diff>0 ? -1 : +1; //e.g. CH3C(=O)O, NH4 respectively
+        else
+          c = extraCharge<0 ? -1 : 1;
+        atom->SetFormalCharge(atom->GetFormalCharge() + c);
+        extraCharge-=c;
+        somethingDone = true;
+      }
+    }
+    // Correct the atom spin multiplicities for the charge added
+    if(somethingDone)
+    {
+      UnsetFlag(OB_ATOMSPIN_MOL);
+      AssignSpinMultiplicity(true);
+    }
+    if(extraCharge!=0)
+    {
+      obErrorLog.ThrowError(__FUNCTION__, "Unable to assign all the charge to atoms", obWarning);
+      return false;
+    }
+    return true;
+ }
+  /* These cases work ok
+   original      charge  result
+  [NH4]             +1   [NH4+]
+  -C(=O)[O]         -1   -C(=O)[O-]
+  -[CH2]            +1   -C[CH2+]
+  -[CH2]            -1   -C[CH2-]
+  [NH3]CC(=O)[O]     0   [NH3+]CC(=O)[O-]
+  S(=O)(=O)([O])[O] -2   S(=O)(=O)([O-])[O-]
+  [NH4].[Cl]         0   [NH4+].[Cl-]
+  */
 
 } // end namespace OpenBabel
 

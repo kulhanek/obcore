@@ -554,7 +554,7 @@ namespace OpenBabel
     int 	_current_conformer; //!< used to hold i for current conformer (needed by UpdateConformers)
     std::vector<double> _energies; //!< used to hold the energies for all conformers
     // minimization variables
-    double 	_econv, _e_n1; //!< Used for conjugate gradients and steepest descent(Initialize and TakeNSteps)
+    double 	_econv, _gconv, _e_n1; //!< Used for conjugate gradients and steepest descent(Initialize and TakeNSteps)
     int 	_cstep, _nsteps; //!< Used for conjugate gradients and steepest descent(Initialize and TakeNSteps)
     double 	*_grad1; //!< Used for conjugate gradients and steepest descent(Initialize and TakeNSteps)
     unsigned int _ncoords; //!< Number of coordinates for conjugate gradients
@@ -565,8 +565,8 @@ namespace OpenBabel
     double 	*_velocityPtr; //!< pointer to the velocities
     // contraint varibles
     static OBFFConstraints _constraints; //!< Constraints
-    static int _fixAtom; //!< SetFixAtom()/UnsetFixAtom()
-    static int _ignoreAtom; //!< SetIgnoreAtom()/UnsetIgnoreAtom()
+    static unsigned int _fixAtom; //!< SetFixAtom()/UnsetFixAtom()
+    static unsigned int _ignoreAtom; //!< SetIgnoreAtom()/UnsetIgnoreAtom()
     // cut-off variables
     bool 	_cutoff; //!< true = cut-off enabled
     double 	_rvdw; //!< VDW cut-off distance
@@ -859,9 +859,17 @@ namespace OpenBabel
     //void UpdatePairsGroup(); TODO
 
     /*! Get the number of non-bonded pairs in _mol.
-     *  \return The number of pairs currently enabled (within cut-off distance)
+     *  \return The number of atom pairs (ignores cutoff)
      */
     unsigned int GetNumPairs();
+    /*! Get the number of enabled electrostatic pairs in _mol.
+     *  \return The number of pairs currently enabled (within cut-off distance)
+     */
+    unsigned int GetNumElectrostaticPairs();
+    /*! Get the number of enabled VDW pairs in _mol.
+     *  \return The number of pairs currently enabled (within cut-off distance)
+     */
+    unsigned int GetNumVDWPairs();
     /*! Set bits in range 0..._numpairs-1 to 1. Using this means there will
      *  be no cut-off. (not-working: see code for more information.
      */
@@ -1020,7 +1028,8 @@ namespace OpenBabel
 
     //! \name Methods for structure generation
     //@{
-    //! Generate coordinates for the molecule (distance geometry). (OB 3.0).
+    //! Generate coordinates for the molecule (distance geometry)
+    //! \deprecated Use OBDistanceGeometry class instead
     void DistanceGeometry();
     /*! Generate conformers for the molecule (systematicaly rotating torsions).
      *
@@ -1031,6 +1040,7 @@ namespace OpenBabel
      *  lowest energy conformer is selected.
      *
      *  \param geomSteps The number of steps to take during geometry optimization.
+     *  \param sampleRingBonds Whether to sample ring torsions.
      *
      *	\par Output to log:
      *  This function should only be called with the log level set to OBFF_LOGLVL_NONE or OBFF_LOGLVL_LOW. Otherwise
@@ -1041,7 +1051,7 @@ namespace OpenBabel
      *  OBFF_LOGLVL_MEDIUM: See note above. \n
      *  OBFF_LOGLVL_HIGH:   See note above. \n
      */
-    void SystematicRotorSearch(unsigned int geomSteps = 2500);
+    void SystematicRotorSearch(unsigned int geomSteps = 2500, bool sampleRingBonds = false);
     /*! Generate conformers for the molecule by systematicaly rotating torsions. To be used in combination with
      *  SystematicRotorSearchNexConformer().
      *
@@ -1057,9 +1067,10 @@ namespace OpenBabel
      *  If you don't need any updating in your program, SystematicRotorSearch() is recommended.
      *
      *  \param geomSteps The number of steps to take during geometry optimization.
+     *  \param sampleRingBonds Whether to sample ring torsions.
      *  \return The number of conformers.
      */
-    int SystematicRotorSearchInitialize(unsigned int geomSteps = 2500);
+    int SystematicRotorSearchInitialize(unsigned int geomSteps = 2500, bool sampleRingBonds = false);
     /*! Evaluate the next conformer.
      *  \param geomSteps The number of steps to take during geometry optimization.
      *  \return True if there are more conformers.
@@ -1075,6 +1086,7 @@ namespace OpenBabel
      *
      *  \param conformers The number of random conformers to consider during the search.
      *  \param geomSteps The number of steps to take during geometry optimization for each conformer.
+     *  \param sampleRingBonds Whether to sample ring torsions.
      *
      *	\par Output to log:
      *  This function should only be called with the log level set to OBFF_LOGLVL_NONE or OBFF_LOGLVL_LOW. Otherwise
@@ -1085,7 +1097,8 @@ namespace OpenBabel
      *  OBFF_LOGLVL_MEDIUM: See note above. \n
      *  OBFF_LOGLVL_HIGH:   See note above. \n
      */
-    void RandomRotorSearch(unsigned int conformers, unsigned int geomSteps = 2500);
+    void RandomRotorSearch(unsigned int conformers, unsigned int geomSteps = 2500,
+                           bool sampleRingBonds = false);
     /*! Generate conformers for the molecule by randomly rotating torsions. To be used in combination with
      *  RandomRotorSearchNexConformer().
      *
@@ -1102,8 +1115,10 @@ namespace OpenBabel
      *
      *  \param conformers The number of random conformers to consider during the search
      *  \param geomSteps The number of steps to take during geometry optimization
+     *  \param sampleRingBonds Whether to sample ring torsions.
      */
-    void RandomRotorSearchInitialize(unsigned int conformers, unsigned int geomSteps = 2500);
+    void RandomRotorSearchInitialize(unsigned int conformers, unsigned int geomSteps = 2500,
+                                     bool sampleRingBonds = false);
     /*! Evaluate the next conformer.
      *  \param geomSteps The number of steps to take during geometry optimization.
      *  \return True if there are more conformers.
@@ -1120,6 +1135,7 @@ namespace OpenBabel
      *
      * \param conformers The number of random conformers to consider during the search.
      * \param geomSteps The number of steps to take during geometry optimization for each conformer.
+     *  \param sampleRingBonds Whether to sample ring torsions.
      *
      *	\par Output to log:
      *  This function should only be called with the log level set to OBFF_LOGLVL_NONE or OBFF_LOGLVL_LOW. Otherwise
@@ -1130,7 +1146,38 @@ namespace OpenBabel
      *  OBFF_LOGLVL_MEDIUM: See note above. \n
      *  OBFF_LOGLVL_HIGH:   See note above. \n
      */
-    void WeightedRotorSearch(unsigned int conformers, unsigned int geomSteps);
+    void WeightedRotorSearch(unsigned int conformers, unsigned int geomSteps,
+                             bool sampleRingBonds = false);
+    /**
+     * @brief A fast rotor search to find low energy conformations
+     *
+     * Iterate over each of the rotors, and set the
+     * torsion angle to that which minimizes the energy (while keeping the rest of the molecule
+     * fixed). In general (for molecules with more than
+     * one rotatable bond), this procedure will not find
+     * the global minimum, but it will at least get rid of any bad
+     * clashes, and it do so quickly.
+     *
+     * Torsions closer to the center
+     * of the molecule will be optimized first as these most likely
+     * to generate large clashes.
+     *
+     * One possible use of this procedure is to prepare a reasonable 3D structure
+     * of a molecule for viewing. Another is to prepare the starting structure
+     * for a more systematic rotor search (in which case you should geometry
+     * optimize the final structure).
+     *
+     * @param permute Whether or not to permute the order of the 4 most central rotors.
+     *                Default is true. This does a more thorough search, but takes 4! = 24 times
+     *                as long.
+     * @since version 2.4
+     */
+    int FastRotorSearch(bool permute = true);
+
+#ifdef HAVE_EIGEN
+    //! \since version 2.4
+    int DiverseConfGen(double rmsd, unsigned int nconfs = 0, double energy_gap = 50, bool verbose = false);
+#endif
 
     /////////////////////////////////////////////////////////////////////////
     // Energy Minimization                                                 //
@@ -1138,7 +1185,7 @@ namespace OpenBabel
 
     //! \name Methods for energy minimization
     //@{
-    /*! Set the LineSearchType. The default type is LineSearchType::Simple.
+    /*! Set the LineSearchType. The default type is LineSearchType::Newton2Num.
      *  \param type The LineSearchType to be used in SteepestDescent and ConjugateGradients.
      */
     void SetLineSearchType(int type)
@@ -1262,7 +1309,6 @@ namespace OpenBabel
      *  OBFF_LOGLVL_MEDIUM: see note above \n
      *  OBFF_LOGLVL_HIGH:   see note above \n
      */
-
     void ConjugateGradients(int steps, double econv = 1e-6f, int method = OBFF_ANALYTICAL_GRADIENT);
     /*! Initialize conjugate gradient optimalization and take the first step, to be
      *  used in combination with ConjugateGradientsTakeNSteps().
@@ -1309,15 +1355,6 @@ namespace OpenBabel
     */
     bool ConjugateGradientsTakeNSteps(int n);
     //@}
-
-    // NEMESIS versions
-    void SteepestDescentInitializeNemesis(int steps = 1000, double econv = 1e-6f, int method = OBFF_ANALYTICAL_GRADIENT);
-    bool SteepestDescentNemesis(double* rstgrd,double rstene);
-    void ConjugateGradientsInitializeNemesis(int steps = 1000, double econv = 1e-6f, int method = OBFF_ANALYTICAL_GRADIENT);
-    bool ConjugateGradientsNemesis(double* rstgrd, double rstene);
-
-    //! get last energy
-    double  GetLastEnergy(void);
 
     /////////////////////////////////////////////////////////////////////////
     // Molecular Dynamics                                                  //

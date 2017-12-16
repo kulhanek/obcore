@@ -62,6 +62,7 @@ namespace OpenBabel
     _bgn=NULL;
     _end=NULL;
     _vdata.clear();
+    _parent=(OBMol*)NULL;
   }
 
   OBBond::~OBBond()
@@ -173,11 +174,34 @@ namespace OpenBabel
     SetLength(atom2, length);
   }
 
-  bool OBBond::IsRotor()
+  bool OBBond::IsRotor(bool includeRingBonds)
   {
-    return(_bgn->GetHvyValence() > 1 && _end->GetHvyValence() > 1 &&
-           _order == 1 && !IsInRing() && _bgn->GetHyb() != 1 &&
-           _end->GetHyb() != 1);
+    // This could be one hellish conditional, but let's break it down
+    // .. the bond is a single bond
+    if (_order != 1)
+      return false;
+
+    // not in a ring, or in a large ring
+    // and if it's a ring, not sp2
+    OBRing *ring = FindSmallestRing();
+    if (ring != NULL) {
+      if(!includeRingBonds)
+        return false;
+      if (ring->Size() <= 3)
+        return false;
+      if (_bgn->GetHyb() == 2 || _end->GetHyb() == 2)
+        return false;
+    }
+
+    // atoms are not sp hybrids
+    if (_bgn->GetHyb() == 1 || _end->GetHyb() == 1)
+      return false;
+
+    // not just an -OH or -NH2, etc.
+    // maybe we want to add this as an option
+    //    rotatable = rotatable && ((_bgn->IsHeteroatom() || _bgn->GetHvyValence() > 1)
+    //                               && (_end->IsHeteroatom() || _end->GetHvyValence() > 1) );
+    return (_bgn->GetHvyValence() > 1 && _end->GetHvyValence() > 1);
   }
 
    bool OBBond::IsAmide()
@@ -649,57 +673,10 @@ namespace OpenBabel
   {
     OBMol *mol = (OBMol*)GetParent();
     if (!mol)
-      return(false);
-    if (mol->HasClosureBondsPerceived())
-      return(HasFlag(OB_CLOSURE_BOND));
-
-    mol->SetClosureBondsPerceived();
-
-    obErrorLog.ThrowError(__FUNCTION__,
-                          "Ran OpenBabel::PerceiveClosureBonds", obAuditMsg);
-
-    OBBond *bond;
-    OBAtom *atom,*nbr;
-    OBBitVec uatoms,ubonds;
-    vector<OBAtom*> curr,next;
-    vector<OBAtom*>::iterator i;
-    vector<OBBond*>::iterator j;
-
-    uatoms.Resize(mol->NumAtoms()+1);
-    ubonds.Resize(mol->NumAtoms()+1);
-
-    for (;static_cast<unsigned int>(uatoms.CountBits()) < mol->NumAtoms();)
-      {
-        if (curr.empty())
-          for (atom = mol->BeginAtom(i);atom;atom = mol->NextAtom(i))
-            if (!uatoms[atom->GetIdx()])
-              {
-                uatoms |= atom->GetIdx();
-                curr.push_back(atom);
-                break;
-              }
-
-        for (;!curr.empty();)
-          {
-            for (i = curr.begin();i != curr.end();++i)
-              for (nbr = ((OBAtom*)*i)->BeginNbrAtom(j);nbr;nbr = ((OBAtom*)*i)->NextNbrAtom(j))
-                if (!uatoms[nbr->GetIdx()])
-                  {
-                    uatoms |= nbr->GetIdx();
-                    ubonds |= (*j)->GetIdx();
-                    next.push_back(nbr);
-                  }
-
-            curr = next;
-            next.clear();
-          }
-      }
-
-    for (bond = mol->BeginBond(j);bond;bond = mol->NextBond(j))
-      if (!ubonds[bond->GetIdx()])
-        bond->SetClosure();
-
-    return(HasFlag(OB_CLOSURE_BOND));
+      return false;
+    if (!mol->HasClosureBondsPerceived())
+      mol->FindRingAtomsAndBonds();
+    return HasFlag(OB_CLOSURE_BOND);
   }
 
   double OBBond::GetEquibLength() const

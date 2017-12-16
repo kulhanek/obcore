@@ -37,18 +37,6 @@ extern string GetInChI(istream& is);
 //Make an instance of the format class
 InChIFormat theInChIFormat;
 
-  // Helper for 2.3 -- is this atom a metal
-  bool IsMetal(OBAtom *atom)
-  {
-    const unsigned NMETALS = 78;
-    const int metals[NMETALS] = {
-    3,4,11,12,13,19,20,21,22,23,24,25,26,27,28,29,
-    30,31,37,38,39,40,41,42,43,44,45,46,47,48,49,50,55,56,57,58,59,60,61,62,63,
-    64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,87,88,89,90,91,
-    92,93,94,95,96,97,98,99,100,101,102,103};
-    return std::find(metals, metals+78, atom->GetAtomicNum())!=metals+78;
-  }
-
 /////////////////////////////////////////////////////////////////
 bool InChIFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 {
@@ -83,16 +71,22 @@ bool InChIFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 
   //Call the conversion routine in InChI code
   int ret = GetStructFromINCHI( &inp, &out );
+  delete[] nonconstinchi;
+  delete[] opts;
 
   if (ret!=inchi_Ret_OKAY)
   {
-    string mes = out.szMessage ? out.szMessage : "Conversion failed";
-    obErrorLog.ThrowError("InChI code", mes + '\n' + inchi, obWarning);
+    string mes = out.szMessage;
+    if (!mes.empty()) {
+      Trim(mes);
+      obErrorLog.ThrowError("InChI code", "For " + inchi + "\n  " + mes, obWarning);
+    }
+    if (ret!=inchi_Ret_WARNING)
+    {
+      obErrorLog.ThrowError("InChI code", "Reading InChI failed", obError);
+      return false;
+    }
   }
-  delete[] nonconstinchi;
-  delete[] opts;
-  if(ret)
-    return false;
 
   //Read name if requested e.g InChI=1/CH4/h1H4 methane
   //OR InChI=1/CH4/h1H4 "First alkane"  Quote can be any punct char and
@@ -139,26 +133,29 @@ bool InChIFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
     int j;
     for(j=0;j<piat->num_bonds;++j)
     {
-      pmol->AddBond(i+1, piat->neighbor[j]+1, piat->bond_type[j]);
+      if (i < piat->neighbor[j]) // Only add the bond in one direction
+        pmol->AddBond(i+1, piat->neighbor[j]+1, piat->bond_type[j]);
     }
 
-    //OB takes care of implicit hydrogens, so num_iso_H[0] and num_iso_H[1] are ignored,
-    //except for H2, which has one explicit H and one implict H. OB doesn't add implicit H to H.
-    //Implicit D and T also need to be added explicitly.
-    for(int m=0;m<3;++m)
+    //Now use the implicit H info provided by InChI code to make explicit H in OBMol,
+    //assign spinMultiplicity, then remove the hydrogens to be consistent with old way.
+    //Add implicit hydrogen. m=0 is non-istopic H m=1,2,3 are isotope specified
+    for(int m=0;m<=3;++m)
     {
-      if(piat->num_iso_H[m] && (m>1 || *piat->elname=='H'))
+      if(piat->num_iso_H[m])// && (m>1 || *piat->elname=='H'))
       {
         for(int k=0;k<piat->num_iso_H[m];++k)
         {
           OBAtom* DorT = pmol->NewAtom();
           DorT->SetAtomicNum(1);
-          DorT->SetIsotope(m);
+          if(m>0)
+            DorT->SetIsotope(m);
           pmol->AddBond(i+1, pmol->NumAtoms(), 1);
         }
       }
     }
   }
+  pmol->AssignSpinMultiplicity(true); //true means no implicit H
 
   //***@todo implicit H isotopes
   //Stereochemistry
@@ -234,6 +231,9 @@ bool InChIFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
       obErrorLog.ThrowError("InChI code", "Unsupported stereo type has been ignored.", obWarning);
     }
   }
+
+  pmol->DeleteHydrogens();
+
   // Tidy up the stereo chemistry by removing any objects that are not
   // consistent with OB's symmetry analysis
   StereoFrom0D(pmol);
@@ -266,7 +266,7 @@ bool InChIFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 
   string ostring; //the inchi string
   inchi_Output inout;
-  memset(&inout,0,sizeof(inchi_Output));
+  inout.szInChI = NULL; // We are going to test this value later
 
   stringstream molID;
   if(strlen(mol.GetTitle())==0)
@@ -278,7 +278,11 @@ bool InChIFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 
   //Use any existing InChI, probably from an InChIformat input,
   //in preference to determining it from the structure.
-  if(!pConv->IsOption("r") && pmol->HasData("inchi"))
+  //but only if no InChI output option has been specified that would
+  //modify a standard InChI
+  if (pmol->HasData("inchi") && pConv->IsOption("r")==NULL && pConv->IsOption("a")==NULL &&
+    pConv->IsOption("s")==NULL && pConv->IsOption("X")==NULL && pConv->IsOption("F")==NULL &&
+    pConv->IsOption("M")==NULL)
   {
     //All origins for the data are currently acceptable.
     //Possibly this may need to be restricted to data with a local origin.
@@ -339,7 +343,7 @@ bool InChIFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
             stereo = OBStereo::DownBond;
           else if (pbond->IsWedgeOrHash())
             stereo = OBStereo::UnknownDir;
-        }
+        } 
         else if (from_cit!=from.end()) { // It's a stereo bond
           stereo = updown[pbond];
         }
@@ -372,7 +376,7 @@ bool InChIFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
       strcpy(iat.elname,etab.GetSymbol(patom->GetAtomicNum()));
       iat.num_bonds = nbonds;
       //Let inchi add implicit Hs unless the atom is known not to have any
-      iat.num_iso_H[0] = patom->HasNoHForced() || IsMetal(patom) ? 0 : -1;
+      iat.num_iso_H[0] = patom->HasNoHForced() || patom->IsMetal() ? 0 : -1;
       if(patom->GetIsotope())
       {
         iat.isotopic_mass = ISOTOPIC_SHIFT_FLAG +
@@ -499,7 +503,7 @@ bool InChIFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
             if(pos!=string::npos)
             {
               mes.erase(pos,targ[i].size());
-              if(mes[pos]==';')
+              if(pos<mes.size() && mes[pos]==';')
                 mes[pos]=' ';
             }
           }
@@ -530,7 +534,7 @@ bool InChIFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   if(pConv->IsOption("K")) //Generate InChIKey and add after InChI on same line
   {
     char szINCHIKey[28];
-    GetStdINCHIKeyFromStdINCHI(ostring.c_str(), szINCHIKey);
+    GetINCHIKeyFromINCHI(ostring.c_str(), 0 ,0, szINCHIKey, NULL, NULL);
     ostring = szINCHIKey;
   }
 
@@ -567,25 +571,29 @@ bool InChIFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 
   ofs << ostring << endl;
 
-  if (pConv->IsOption("a"))
-    ofs << inout.szAuxInfo << endl;
+  // Note that inout.szInChI will still be NULL if this is an InChI->InChIKey conversion
+  // and so the following section will not apply.
+  if (inout.szInChI != NULL) {
+    if (pConv->IsOption("a"))
+      ofs << inout.szAuxInfo << endl;
 
-  if(pConv->IsOption("l"))
-    //Display InChI log message. With multiple molecules, it appears only once
-    obErrorLog.ThrowError("InChI log", inout.szLog, obError, onceOnly);
+    if(pConv->IsOption("l"))
+      //Display InChI log message. With multiple molecules, it appears only once
+      obErrorLog.ThrowError("InChI log", inout.szLog, obError, onceOnly);
 
-  if(pConv->IsOption("e"))
-  {
-    if(pConv->GetOutputIndex()==1)
-      firstInchi = inout.szInChI;
-    else
+    if(pConv->IsOption("e"))
     {
-      ofs << "Molecules " << firstID << "and " << molID.str();
-      ofs << InChIErrorMessage(CompareInchi(firstInchi.c_str(), inout.szInChI)) << endl;
+      if(pConv->GetOutputIndex()==1)
+        firstInchi = inout.szInChI;
+      else
+      {
+        ofs << "Molecules " << firstID << "and " << molID.str();
+        ofs << InChIErrorMessage(CompareInchi(firstInchi.c_str(), inout.szInChI)) << endl;
+      }
     }
+    FreeStdINCHI(&inout);
   }
 
-  FreeStdINCHI(&inout);
   return true;
 }
 
@@ -733,7 +741,7 @@ char* InChIFormat::GetInChIOptions(OBConversion* pConv, bool Reading)
 #endif
 
   string sopts;
-  for(int i=0;i<optsvec.size();++i)
+  for (unsigned int i = 0; i < optsvec.size(); ++i)
     sopts += ch + optsvec[i];
   opts = new char[strlen(sopts.c_str())+1]; //has to be char, not const char
   return strcpy(opts, sopts.c_str());

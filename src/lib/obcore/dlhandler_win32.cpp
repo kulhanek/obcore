@@ -17,7 +17,6 @@ GNU General Public License for more details.
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
 
-#include <cstdio>
 #include <vector>
 #include <cstdarg>
 #include <iostream>
@@ -27,7 +26,6 @@ GNU General Public License for more details.
 //#include <direct.h>
 #include <windows.h>
 #include <openbabel/dlhandler.h>
-#include <openbabel/oberror.h>
 using namespace std;
 
 namespace OpenBabel {
@@ -38,49 +36,38 @@ namespace OpenBabel {
 #define BUFF_SIZE 32768
 #endif
 
-//bool DLHandler::getConvDirectory(string& convPath)
-//{
-//    char path[MAX_PATH+1];
-//  // Get handle to this module in order to determine the path to .obf files.
-//  //  The exe file may be elsewhere if OpenBabel is being used as a library
-//  //  rather than through its own user interface.
-//  #if defined(_DEBUG)
-//    HMODULE handle = GetModuleHandle("OBErrorD.dll");
-//  #else
-//    HMODULE handle = GetModuleHandle("OBError.dll");
-//  #endif
-//  if(!handle)
-//    handle = GetModuleHandle("openbabel-2.dll");//CMake/VC++2008 build will use this.
-//  if(!handle)
-//    handle = GetModuleHandle(NULL); // If all else fails try the exe file module
-//  if (!handle)
-//    return false;
-
-//  if (!GetModuleFileName(handle, path, MAX_PATH))
-//    return false;
-
-//    // strip of appname.exe
-//    convPath = path;
-//    std::string::size_type p = convPath.rfind('\\');
-//    if (p == std::string::npos)
-//      return false;
-
-//    convPath = convPath.substr(0, p+1);
-
-//    return true;
-//}
-
 bool DLHandler::getConvDirectory(string& convPath)
 {
-  //Need to provide the directory from which this shared library was loaded.
-  //This is the default directory for format shared library files.
+    char path[MAX_PATH+1];
+  // Get handle to this module in order to determine the path to .obf files.
+  //  The exe file may be elsewhere if OpenBabel is being used as a library
+  //  rather than through its own user interface.
+  #if defined(_DEBUG)
+    HMODULE handle = GetModuleHandle("OBErrorD.dll");
+  #else
+    HMODULE handle = GetModuleHandle("OBError.dll");
+  #endif
+  if(!handle)
+    handle = GetModuleHandle("openbabel-2.dll");//CMake/VC++2008 build will use this.
+  if(!handle)
+    handle = GetModuleHandle(NULL); // If all else fails try the exe file module
+  if (!handle)
+    return false;
 
-  string testPath;
-  testPath += OB_MODULE_PATH; // defined in src/config.h.cmake -> babelconfig.h
-  convPath = testPath;
+  if (!GetModuleFileName(handle, path, MAX_PATH))
+    return false;
 
-  return true;
+    // strip of appname.exe
+    convPath = path;
+    std::string::size_type p = convPath.rfind('\\');
+    if (p == std::string::npos)
+      return false;
+
+    convPath = convPath.substr(0, p+1);
+
+    return true;
 }
+
 
 int DLHandler :: findFiles (std::vector<std::string>& file_list,const std::string &filename)
 {
@@ -105,7 +92,7 @@ int DLHandler :: findFiles (std::vector<std::string>& file_list,const std::strin
     paths.push_back(path);
 
   if (paths.empty())
-    paths.push_back(".\\"); // defaults to current directory
+    paths.push_back("./"); // defaults to current directory
 
   string currentPath;
   for (unsigned int i = 0; i < paths.size(); ++i)
@@ -113,7 +100,6 @@ int DLHandler :: findFiles (std::vector<std::string>& file_list,const std::strin
     currentPath = paths.at(i);
     WIN32_FIND_DATA file_data;
     HANDLE handle;
-    cout << "here" << currentPath << endl;
     handle = FindFirstFile ((currentPath + pattern).c_str(), &file_data);
     while(handle!=INVALID_HANDLE_VALUE)
     {
@@ -135,7 +121,7 @@ int DLHandler :: findFiles (std::vector<std::string>& file_list,const std::strin
 
 const char* DLHandler::getFormatFilePattern()
 {
-    return "*.dll";
+    return "*.obf";
 }
 
 
@@ -144,11 +130,8 @@ bool DLHandler :: openLib(const string& lib_name)
 
     if(LoadLibrary(lib_name.c_str()))
         return true;
-    char buffer[BUFF_SIZE];
+
     unsigned long err = GetLastError();
-    sprintf(buffer, "%s did not load properly.\n Error: %ld",
-              lib_name.c_str(), err);
-    OpenBabel::obErrorLog.ThrowError(__FUNCTION__, buffer, OpenBabel::obError);
     return false;
 }
 

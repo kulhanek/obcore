@@ -175,6 +175,7 @@ namespace OpenBabel
     _v = src->GetVector();
     _flags = src->GetFlag();
     _residue = (OBResidue*)NULL;
+    _id = src->GetId();
 
     _vdata.clear();
     //Copy all the OBGenericData, providing the new atom
@@ -294,6 +295,18 @@ namespace OpenBabel
         count++;
 
     return(count);
+  }
+
+  int OBAtom::HighestBondOrder()
+  {
+    int highest = 0;
+    OBBond *bond;
+    OBBondIterator i;
+    for(bond = BeginBond(i); bond; bond = NextBond(i))
+      if(bond->GetBO() > highest)
+        highest = bond->GetBO();
+
+    return(highest);
   }
 
   bool OBAtom::HasNonSingleBond()
@@ -501,8 +514,12 @@ namespace OpenBabel
   unsigned int OBAtom::GetImplicitValence() const
   {
     //Special case for [H] to avoid infite loop: SMARTS Match() <-> AssignSpinMultiplicity()
-    if(GetAtomicNum() == 1)
-      return GetFormalCharge() ? 0 : 1;
+    if(GetAtomicNum() == 1) {
+      unsigned int val = GetValence();
+      if (val == 0 && GetFormalCharge() == 0 && GetSpinMultiplicity() == 0)
+        return 1;
+      return val;
+    }
     OBMol *mol = (OBMol*)((OBAtom*)this)->GetParent();
     if (mol && !mol->HasImplicitValencePerceived())
       atomtyper.AssignImplicitValence(*((OBMol*)((OBAtom*)this)->GetParent()));
@@ -629,11 +646,12 @@ namespace OpenBabel
         }
     if (!atom)
       return(false);
-    if (atom->CountFreeOxygens() != 2)
+    if (!(atom->CountFreeOxygens() == 2)
+      && !(atom->CountFreeOxygens() == 1 && atom->CountFreeSulfurs() == 1))
       return(false);
 
     //atom is connected to a carbon that has a total
-    //of 2 attached free oxygens
+    //of 2 attached free oxygens or 1 free oxygen and 1 free sulfur
     return(true);
   }
 
@@ -643,7 +661,6 @@ namespace OpenBabel
       return(false);
     if (GetHvyValence() != 1)
       return(false);
-
     OBAtom *atom;
     OBBond *bond;
     OBBondIterator i;
@@ -692,6 +709,55 @@ namespace OpenBabel
     //of 2 attached free oxygens
     return(true);
   }
+
+  // Helper function for IsHBondAcceptor
+  static bool IsSulfoneOxygen(OBAtom* atm)
+  // Stefano Forli 
+  //atom is connected to a sulfur that has a total
+  //of 2 attached free oxygens, and it's not a sulfonamide
+  //e.g. C-SO2-C
+  // Is this atom an oxygen in a sulfone(R1 - SO2 - R2) group ?
+  {
+    if (!atm->IsOxygen())
+      return(false);
+    if (atm->GetHvyValence() != 1){
+      //cerr << "sulfone> O valence is not 1\n";
+      return(false);
+      }
+
+    OBAtom *nbr = NULL;
+    OBBond *bond1,*bond2;
+    OBBondIterator i,j;
+
+    // searching for attached sulfur
+    for (bond1 = atm->BeginBond(i); bond1; bond1 = atm->NextBond(i))
+      if ((bond1->GetNbrAtom(atm))->IsSulfur())
+        { nbr = bond1->GetNbrAtom(atm);
+          break; }
+    if (!nbr){
+      //cerr << "sulfone> atom null\n" ;
+      return(false); }
+
+    // check for sulfate
+    //cerr << "sulfone> If we're here... " << atom->GetAtomicNum() <<"\n" << atom->IsSulfur() << "\n";
+    //cerr << "sulfone> number of free oxygens:" << atom->CountFreeOxygens() << "\n";
+    if (nbr->CountFreeOxygens() != 2){
+      //cerr << "sulfone> count of free oxygens not 2" << atom->CountFreeOxygens() << '\n' ;
+      return(false); }
+
+    // check for sulfonamide
+    for (bond2 = nbr->BeginBond(j);bond2;bond2 = nbr->NextBond(j)){
+      //cerr<<"NEIGH: " << (bond2->GetNbrAtom(atom))->GetAtomicNum()<<"\n";
+      if ((bond2->GetNbrAtom(nbr))->IsNitrogen()){
+        //cerr << "sulfone> sulfonamide null\n" ;
+        return(false);}}
+    //cerr << "sulfone> none of the above\n";
+    return(true); // true sulfone
+  }
+
+
+
+
 
   bool OBAtom::IsNitroOxygen()
   {
@@ -945,6 +1011,23 @@ namespace OpenBabel
     return(count);
   }
 
+  unsigned int OBAtom::CountFreeSulfurs() const
+  {
+    unsigned int count = 0;
+    OBAtom *atom;
+    OBBond *bond;
+    OBBondIterator i;
+
+    for (bond = ((OBAtom*)this)->BeginBond(i);bond;bond = ((OBAtom*)this)->NextBond(i))
+      {
+        atom = bond->GetNbrAtom((OBAtom*)this);
+        if (atom->IsSulfur() && atom->GetHvyValence() == 1)
+          count++;
+      }
+
+    return(count);
+  }
+
   unsigned int OBAtom::BOSum() const
   {
     unsigned int bo;
@@ -955,7 +1038,7 @@ namespace OpenBabel
     for (bond = ((OBAtom*)this)->BeginBond(i);bond;bond = ((OBAtom*)this)->NextBond(i))
       {
         bo = bond->GetBO();
-        bosum += (bo < 4) ? 2*bo : 3;
+        bosum += (bo < 5) ? 2*bo : 3;
       }
 
     bosum /= 2;
@@ -1014,6 +1097,50 @@ namespace OpenBabel
         numH++;
 
     return(numH);
+  }
+
+  /**
+   *  The returned values count whole lone pairs, so the acid count is the number of
+   *  electron pairs desired and the base count is the number of electron pairs
+   *  available.
+   *
+   @verbatim
+   Algorithm from:
+   Clark, A. M. Accurate Specification of Molecular Structures: The Case for
+   Zero-Order Bonds and Explicit Hydrogen Counting. Journal of Chemical Information
+   and Modeling, 51, 3149-3157 (2011). http://pubs.acs.org/doi/abs/10.1021/ci200488k
+   @endverbatim
+  */
+  pair<int, int> OBAtom::LewisAcidBaseCounts() const
+  {
+    // TODO: Is this data stored elsewhere?
+    // The number of valence electrons in a free atom
+    const int VALENCE[113] = {0,1,2,1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,9,10,
+                              11,12,3,4,5,6,7,8,1,2,3,4,5,6,7,8,9,10,11,12,3,4,5,6,7,8,1,2,
+                              4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,4,5,6,7,8,9,10,11,12,3,4,5,6,7,
+                              8,1,1,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,4,5,6,7,8,9,10,11,12};
+    // The number of electrons required to make up a full valence shell
+    const int SHELL[113]   = {0,2,2,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,18,18,18,18,18,18,
+                              18,18,18,18,8,8,8,8,8,8,8,8,18,18,18,18,18,18,18,18,18,18,8,
+                              8,8,8,8,8,8,8,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,
+                              18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,8,8,18,18,18,18,
+                              18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18};
+
+    pair<int, int> counts;
+    int N = GetAtomicNum();
+    if (N == 0 || N > 112) {
+      counts.first = 0;
+      counts.second = 0;
+    } else {
+      int S = SHELL[N];
+      int V = VALENCE[N];
+      int C = GetFormalCharge();
+      int B = ImplicitHydrogenCount() + BOSum();
+      // TODO: Do we actually want to divide by 2 here? (counting pairs instead of single)
+      counts.first = (S - V - B + C) / 2;  // Acid: Number of electrons pairs desired
+      counts.second = (V - B - C) / 2;     // Base: Number of electrons pairs available
+    }
+    return counts;
   }
 
   bool OBAtom::DeleteBond(OBBond *bond)
@@ -1079,6 +1206,11 @@ namespace OpenBabel
   {
     OBMol *mol = (OBMol*)GetParent();
     return(( this->GetVector() - mol->GetAtom(b)->GetVector() ).length());
+  }
+
+  double OBAtom::GetDistance(vector3 *v)
+  {
+    return(( this->GetVector() - *v ).length());
   }
 
   double OBAtom::GetAngle(OBAtom *b, OBAtom *c)
@@ -1669,7 +1801,7 @@ namespace OpenBabel
   }
   */
 
-  bool OBAtom::IsHbondAcceptor()
+  bool OBAtom::IsHbondAcceptorSimple()
   {
     // Changes from Liu Zhiguo
     if (_ele == 8 || _ele == 9)
@@ -1680,7 +1812,102 @@ namespace OpenBabel
             || (GetValence() == 3 && GetHyb() == 2)))
             return true;
     }
+    // Changes from Paolo Tosco
+    if (_ele == 16 && GetFormalCharge() == -1)
+      return true;
     return false;
+  }
+
+  // new function, Stefano Forli
+  // Incorporate ideas and data from Kubyni and others. 
+  // [1] Kubinyi, H. "Changing paradigms in drug discovery.
+  //    "SPECIAL PUBLICATION-ROYAL SOCIETY OF CHEMISTRY 304.1 (2006): 219-232.
+  //
+  // [2] Kingsbury, Charles A. "Why are the Nitro and Sulfone 
+  //     Groups Poor Hydrogen Bonders?." (2015).
+  //
+  // [3] Per Restorp, Orion B. Berryman, Aaron C. Sather, Dariush Ajami 
+  //     and Julius Rebek Jr., Chem. Commun., 2009, 5692 DOI: 10.1039/b914171e
+  //
+  // [4] Dunitz, Taylor. "Organic fluorine hardly ever accepts
+  //     hydrogen bonds." Chemistry-A European Journal 3.1 (1997): 83-92.
+  //
+  // This function has a finer grain than the original
+  // implementation, checking also the neighbor atoms. 
+  // Accordingly to these rules, the function will return:
+  //
+  //    aliph-O-aliph ether   -> true   [1]
+  //    hydroxy O-sp3         -> true   [1]
+  //    aro-O-aliph ether     -> true   [1]
+  //    ester O-sp2           -> true   [1]
+  //    sulfate O (R-SO3)     -> true   [2]
+  //    sulfoxyde O (R-SO-R)  -> true   [2]
+  //    organoboron-F (R-BF3) -> true   [3]
+  //    ester O-sp3           -> false  [1]
+  //    sulfone (R1-SO2-R2 )  -> false  [2]
+  //    aro-O-aro             -> false  [1]
+  //    aromatic O            -> false  [1]
+  //    O-nitro               -> false  [2]
+  //    organic F (R-F)       -> false  [4]
+  //    
+  bool OBAtom::IsHbondAcceptor() {
+      if (_ele == 8) {
+        // oxygen; this should likely be a separate function
+        // something like IsHbondAcceptorOxygen()
+        unsigned int aroCount = 0;
+
+        OBBond *bond;
+        OBBondIterator i;
+        if (IsNitroOxygen()){ // maybe could be a bool option in the function?
+          return (false);
+          }
+        if (IsAromatic()){ // aromatic oxygen (furan) (NO)
+          return(false);
+          }
+        if (IsSulfoneOxygen(this)){ // sulfone (NO)
+          return(false);
+          }
+        FOR_NBORS_OF_ATOM(nbr, this){
+          if (nbr->IsAromatic()){ 
+            aroCount += 1;
+            if (aroCount == 2){ // aromatic ether (aro-O-aro) (NO)
+              return(false); 
+            }
+          }
+          else { 
+            if (nbr->IsHydrogen()) { // hydroxyl (YES)
+              return(true); 
+            }
+            else {
+              bond = nbr->GetBond(this);
+              if ( (bond->IsEster()) && (!(IsCarboxylOxygen()))) 
+                 return(false); 
+            }
+          }
+        }
+        return(true); // any other oxygen
+    } // oxygen END
+    // fluorine
+    if (_ele == 9 ) {
+        OBBondIterator i;
+        // organic fluorine (NO)
+        for (OBAtom* nbr = BeginNbrAtom(i);nbr;nbr=NextNbrAtom(i))
+          if (nbr->GetAtomicNum() == 6)
+            return (false);
+          else
+            return (true);
+    };
+    if (_ele == 7) {
+      // N+ ions and sp2 hybrid N with 3 valences should not be Hbond acceptors
+      if (!((GetValence() == 4 && GetHyb() == 3)
+        || (GetValence() == 3 && GetHyb() == 2)))
+        return true;
+    };
+    // Changes from Paolo Tosco
+    if (_ele == 16 && GetFormalCharge() == -1){
+          return (true); }
+    // everything else
+    return (false);
   }
 
   bool OBAtom::IsHbondDonor()
@@ -1714,6 +1941,17 @@ namespace OpenBabel
       }
 
     return(false);
+  }
+
+  bool OBAtom::IsMetal()
+  {
+    const unsigned NMETALS = 78;
+    const int metals[NMETALS] = {
+    3,4,11,12,13,19,20,21,22,23,24,25,26,27,28,29,
+    30,31,37,38,39,40,41,42,43,44,45,46,47,48,49,50,55,56,57,58,59,60,61,62,63,
+    64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,87,88,89,90,91,
+    92,93,94,95,96,97,98,99,100,101,102,103};
+    return std::find(metals, metals+78, GetAtomicNum())!=metals+78;
   }
 
 } // end namespace OpenBabel

@@ -297,7 +297,7 @@ namespace OpenBabel
 
     FOR_ATOMS_OF_MOL(atom, mol)
       {
-        snprintf(buffer, BUFF_SIZE, "%-3s%15.5f%15.5f%15.5f\n",
+        snprintf(buffer, BUFF_SIZE, "%-3s %20.10f %20.10f %20.10f\n",
                  etab.GetSymbol(atom->GetAtomicNum()),
                  atom->GetX(),
                  atom->GetY(),

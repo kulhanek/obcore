@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -86,7 +107,7 @@
 #define INCHI_INP_EOF_ERR     11
 #define INCHI_INP_EOF_RET      0
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -95,7 +116,7 @@ extern "C" {
 extern int (*UserAction)(void); /* callback */
 extern int (*ConsoleQuit)(void); /* Console user issued CTRL+C etc. */
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef  __cplusplus
 }
 #endif
@@ -108,10 +129,10 @@ extern int (*ConsoleQuit)(void); /* Console user issued CTRL+C etc. */
 #define LOG_MASK_ALL     (LOG_MASK_WARN | LOG_MASK_ERR | LOG_MASK_FATAL)
 #define LOG_MASK_NO_WARN (LOG_MASK_ERR | LOG_MASK_FATAL)
 
-#ifdef INCHI_LIB
+#ifdef TARGET_LIB_FOR_WINCHI
 #include <stdarg.h>
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -122,7 +143,7 @@ extern void (*DRAWDATA) ( struct DrawData * pDrawData);
 extern int  (*DRAWDATA_EXISTS) ( int nComponent, int nType, int bReconnected );
 extern struct DrawData * (*GET_DRAWDATA) ( int nComponent, int nType, int bReconnected );
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef  __cplusplus
 }
 #endif

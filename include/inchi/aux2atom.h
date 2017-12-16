@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -27,7 +48,7 @@
 /* Note: (INCHI_LINE_LEN - INCHI_LINE_ADD) > (length of the longest item: szCoord) = 33 */
 /*****************************************************************************/
 
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 
 #define AB_MAX_WELL_DEFINED_PARITY inchi_max(INCHI_PARITY_ODD, INCHI_PARITY_EVEN) /* 1, 2 => well defined parities, uncluding 'unknown' */
 #define AB_MIN_WELL_DEFINED_PARITY inchi_min(INCHI_PARITY_ODD, INCHI_PARITY_EVEN) /* min(INCHI_PARITY_ODD, INCHI_PARITY_EVEN) */
@@ -50,7 +71,7 @@
 
 
 
-#ifdef INCHI_LIBRARY
+#ifdef TARGET_API_LIB
 
 void            FreeInchi_Atom( inchi_Atom **at );
 inchi_Atom     *CreateInchi_Atom( int num_atoms );
@@ -63,7 +84,7 @@ int             is_element_a_metal( char szEl[] );
 
 #endif
 
-#ifndef INCHI_MAIN
+#ifndef TARGET_EXE_USING_API
 
 void            FreeInchi_Stereo0D( inchi_Stereo0D **stereo0D );
 inchi_Stereo0D *CreateInchi_Stereo0D( int num_stereo0D );
@@ -74,14 +95,14 @@ int Extract0DParities( inp_ATOM *at, int nNumAtoms, inchi_Stereo0D *stereo0D,
 #endif
 
 
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 
 /* inchi_fgets */
 
 #endif
 
 
-#ifdef INCHI_LIBRARY
+#ifdef TARGET_API_LIB
 /******************************************************************************************************/
 void FreeInchi_Atom( inchi_Atom **at )
 {
@@ -133,7 +154,7 @@ int is_element_a_metal( char szEl[] )
 #endif
 
 
-#ifndef INCHI_MAIN
+#ifndef TARGET_EXE_USING_API
 /******************************************************************************************************/
 inchi_Stereo0D *CreateInchi_Stereo0D( int num_stereo0D )
 {
@@ -151,9 +172,9 @@ void FreeInchi_Stereo0D( inchi_Stereo0D **stereo0D )
 
 #define INPUT_FILE          INCHI_IOSTREAM
 
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 
-#ifdef INCHI_LIBRARY
+#ifdef TARGET_API_LIB
 #define INChITo_Atom        ll_INChIToInchi_Atom
 #else
 #define INChITo_Atom        ee_INChIToIbChI_Atom
@@ -204,7 +225,7 @@ int INChITo_Atom(INPUT_FILE *inp_molfile, MOL_COORD **szCoord,
                       long *Id, INCHI_MODE *pInpAtomFlags, int *err, char *pStrErr );
 
 
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 /*****************************************************************************/
 int INChIToInchi_Atom ( INCHI_IOSTREAM *inp_molfile, inchi_Stereo0D **stereo0D, int *num_stereo0D,
                       int bDoNotAddH, int vABParityUnknown, INPUT_TYPE nInputType, 
@@ -333,7 +354,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
         if ( *at && max_num_at ) {
             memset( *at, 0, max_num_at * sizeof(**at) );
         }
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
         if ( stereo0D && num_stereo0D ) {
             if ( *stereo0D && *num_stereo0D ) {
                 max_len_stereo0D = *num_stereo0D;
@@ -384,7 +405,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                 if ( *p ) {
                     /* has label name */
                     /*p ++;*/
-                    if ( q = strchr( p, '=' ) ) {
+                    if ( (q = strchr( p, '=' )) ) {
                         /* '=' separates label name from the value */
                         len = inchi_min( q-p+1, MAX_SDF_HEADER-1);
                         if ( pSdfLabel ) {
@@ -402,7 +423,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                         }
 
                     } else
-                    if ( q = strstr( p, sStructHdrPlnNoLblVal ) ) {
+                    if ( (q = strstr( p, sStructHdrPlnNoLblVal )) ) {
                         len = inchi_min( q-p+1, MAX_SDF_HEADER-1);
                         if ( pSdfLabel ) {
                             mystrncpy( pSdfLabel, p, len );
@@ -520,7 +541,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                         if ( isalpha( UCINT *p ) && islower( UCINT *p ) ) {
                             atom[i].elname[1] = *p ++;
                         }
-    #if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+    #if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
     #else
                         atom[i].el_number = get_periodic_table_number( atom[i].elname );
     #endif
@@ -554,7 +575,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                             if ( isdigit( UCINT *p ) ) {
                                 int mw = strtol( p, &q, 10 );
                                 p = q;
-    #if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+    #if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
                                 atom[i].isotopic_mass = mw;
     #else
                                 mw -= get_atw_from_elnum( atom[i].el_number );
@@ -605,7 +626,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                         }
                         i ++;
                     }
-                    if ( !bItemIsOver || i != num_atoms || s && p != s ) {
+                    if ( !bItemIsOver || i != num_atoms || (s && p != s) ) {
                         num_atoms = INCHI_INP_ERROR_RET; /* error */
                         *err      = INCHI_INP_ERROR_ERR;
                         MOLFILE_ERR_SET (*err, 0, "Wrong number of atoms");
@@ -637,7 +658,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                     while ( i < num_atoms ) {
                         p = LoadLine( inp_molfile, &bTooLongLine, &bItemIsOver, &s,
                                       szLine, sizeof(szLine), INCHI_LINE_ADD, p, &res );
-                        if ( i >= num_atoms || s && p >= s ) {
+                        if ( i >= num_atoms || (s && p >= s) ) {
                             break; /* end of bonds (plain) */
                         }
                         /* bond, first char */
@@ -810,7 +831,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                             len_stereo0D ++;
                         }
                     }
-                    if ( !bItemIsOver || i != num_atoms || s && p != s ) {
+                    if ( !bItemIsOver || i != num_atoms || (s && p != s) ) {
                         num_atoms = INCHI_INP_ERROR_RET; /* error */
                         *err      = INCHI_INP_ERROR_ERR;
                         MOLFILE_ERR_SET (*err, 0, "Wrong number of bonds");
@@ -831,7 +852,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                     goto bypass_end_of_INChI_plain;
                 } else {
                     /* coordinates block started */
-                    if ( pszCoord = (MOL_COORD*)inchi_malloc(inchi_max(num_atoms,1) * sizeof(MOL_COORD)) ) {
+                    if ( (pszCoord = (MOL_COORD*) inchi_malloc(inchi_max(num_atoms,1) * sizeof(MOL_COORD))) ) {
                         memset( pszCoord, ' ', inchi_max(num_atoms,1) * sizeof(MOL_COORD));
                     } else {
                         num_atoms = INCHI_INP_FATAL_RET; /* allocation error */
@@ -845,7 +866,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                     while ( i < num_atoms ) {
                         p = LoadLine( inp_molfile, &bTooLongLine, &bItemIsOver, &s,
                                       szLine, sizeof(szLine), INCHI_LINE_ADD, p, &res );
-                        if ( i >= num_atoms || s && p >= s ) {
+                        if ( i >= num_atoms || (s && p >= s) ) {
                             break; /* end of bonds (plain) */
                         }
 
@@ -907,7 +928,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                             goto bypass_end_of_INChI_plain;
                         }
                     }
-                    if ( !bItemIsOver || s && p != s || i != num_atoms ) {
+                    if ( !bItemIsOver || (s && p != s) || i != num_atoms ) {
                         num_atoms = INCHI_INP_ERROR_RET; /* error */
                         *err      = INCHI_INP_ERROR_ERR;
                         MOLFILE_ERR_SET (*err, 0, "Wrong number of coordinates");
@@ -927,7 +948,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                         for ( bNonMetal = 0; bNonMetal < 1; bNonMetal ++ ) {
                             for ( a1 = 0; a1 < num_atoms; a1 ++ ) {
                                 int num_bond_type[MAX_INPUT_BOND_TYPE - MIN_INPUT_BOND_TYPE + 1];
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 #else
                                 int bHasMetalNeighbor=0;
 #endif
@@ -935,14 +956,14 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
 
                                 valence = AT_BONDS_VAL(atom, a1); /*  save atom valence if available */
                                 AT_BONDS_VAL(atom, a1) = 0;
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 #else
                                 atom[a1].orig_at_number = a1+1;
 #endif
                                 nX = nY = nZ = 0;
                                 for ( n1 = 0; n1 < AT_NUM_BONDS(atom[a1]); n1 ++ ) {
                                     bond_type = atom[a1].bond_type[n1] - MIN_INPUT_BOND_TYPE;
-                                    if (  bond_type < 0 || bond_type > MAX_INPUT_BOND_TYPE - MIN_INPUT_BOND_TYPE ) {
+                                    if ( bond_type < 0 || bond_type > MAX_INPUT_BOND_TYPE - MIN_INPUT_BOND_TYPE ) {
                                         bond_type = 0;
                                         MOLFILE_ERR_SET (*err, 0, "Unknown bond type in InChI aux assigned as a single bond");
                                     }
@@ -994,7 +1015,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                                         break;
                                     }
                                 }
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
                                 /*************************************************************************************
                                  *
                                  *  Set number of hydrogen atoms
@@ -1065,7 +1086,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                             *num_bonds = nNumBonds;
                         }
                         /*======= 0D parities =================================*/
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
                         if ( len_stereo0D > 0 && atom_stereo0D && stereo0D ) {
                             *stereo0D     = atom_stereo0D;
                             *num_stereo0D = len_stereo0D;
@@ -1113,14 +1134,14 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                                 sb_ord_from_a1 = p1 - atom[a1].neighbor;
                                 sb_ord_from_a2 = p2 - atom[a2].neighbor;
                                 
-                                if (  AT_NUM_BONDS(atom[a1]) == 2 &&
+                                if ( AT_NUM_BONDS(atom[a1]) == 2 &&
                                       atom[a1].bond_type[0] + atom[a1].bond_type[1] == 2*INCHI_BOND_TYPE_DOUBLE &&
                                       0 == inchi_NUMH2(atom, a1) &&
                                      (AT_NUM_BONDS(atom[a2]) != 2 ||
                                       atom[a2].bond_type[0] + atom[a2].bond_type[1] != 2*INCHI_BOND_TYPE_DOUBLE ) ) {
                                     bEnd2 = 1; /* a2 is the end-atom, a1 is middle atom */   
                                 }
-                                if (  AT_NUM_BONDS(atom[a2]) == 2 &&
+                                if ( AT_NUM_BONDS(atom[a2]) == 2 &&
                                       atom[a2].bond_type[0] + atom[a2].bond_type[1] == 2*INCHI_BOND_TYPE_DOUBLE &&
                                       0 == inchi_NUMH2(atom, a2) &&
                                      (AT_NUM_BONDS(atom[a1]) != 2 ||
@@ -1221,7 +1242,7 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                         /* end of 0D parities extraction */
 /*exit_cycle:;*/
                     }
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 #else
                     /* transfer atom_stereo0D[] to atom[] */
                     if ( len_stereo0D ) {
@@ -1238,9 +1259,9 @@ int INChITo_Atom(INCHI_IOSTREAM *inp_molfile, MOL_COORD **szCoord,
                     inchi_free( atom );
                     atom = NULL;
                 }
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 #else
-#if( FIX_READ_AUX_MEM_LEAK == 1 )
+#if ( FIX_READ_AUX_MEM_LEAK == 1 )
                 /* 2005-08-04 avoid memory leak */
                 if ( atom_stereo0D && !(stereo0D && *stereo0D == atom_stereo0D) ) {
                     FreeInchi_Stereo0D( &atom_stereo0D );
@@ -1283,7 +1304,7 @@ bypass_end_of_INChI_plain:
                 0 < inchi_ios_getsTab1( szLine, sizeof(szLine)-1, inp_molfile, &bTooLongLine ) ) {
             ;
         }
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
         /* cleanup */
         if ( !*at ) {
             if ( atom ) {
@@ -1336,7 +1357,7 @@ bypass_end_of_INChI_plain:
                 longID = 0;
                 num_atoms = 0;
                 /* structure number */
-                if ( q = strstr( p, sStructHdrXmlNumber ) ) {
+                if ( (q = strstr( p, sStructHdrXmlNumber )) ) {
                     p = q + sizeof(sStructHdrXmlNumber)-1;
                     longID = strtol( p, &q, 10);
                     if ( q && *q == '\"' )
@@ -1349,7 +1370,7 @@ bypass_end_of_INChI_plain:
                     pSdfValue[0] = '\0';
                 }
                 /* pSdfLabel */
-                if ( q = strstr( p, sStructHdrXmlIdName ) ) {
+                if ( (q = strstr( p, sStructHdrXmlIdName )) ) {
                     p = q + sizeof(sStructHdrXmlIdName)-1;
                     q = strchr( p, '\"' );
                     if ( q ) {
@@ -1361,7 +1382,7 @@ bypass_end_of_INChI_plain:
                     }
                 }
                 /* pSdfValue */
-                if ( q = strstr( p, sStructHdrXmlIdValue ) ) {
+                if ( (q = strstr( p, sStructHdrXmlIdValue )) ) {
                     p = q + sizeof(sStructHdrXmlIdValue)-1;
                     q = strchr( p, '\"' );
                     if ( q ) {
@@ -1377,8 +1398,8 @@ bypass_end_of_INChI_plain:
                 bHeaderRead = 1;
                 bErrorMsg = bRestoreInfo = 0;
             } else
-            if ( bHeaderRead && (bFatal=0, len=sizeof(sStructMsgXmlErr)-1,      !memcmp(szLine, sStructMsgXmlErr, len)) ||
-                 bHeaderRead && (len=sizeof(sStructMsgXmlErrFatal)-1, !memcmp(szLine, sStructMsgXmlErrFatal, len))&&(bFatal=1)) {
+            if ( (bHeaderRead && (bFatal=0, len=sizeof(sStructMsgXmlErr)-1,      !memcmp(szLine, sStructMsgXmlErr, len))) ||
+                 (bHeaderRead && (len=sizeof(sStructMsgXmlErrFatal)-1, !memcmp(szLine, sStructMsgXmlErrFatal, len))&&(bFatal=1))) {
                 p = szLine+len;
                 q = strchr( p, '\"' );
                 if ( q && !bFindNext ) {
@@ -1516,7 +1537,7 @@ bypass_end_of_INChI_plain:
                     if ( isalpha( UCINT *p ) && islower( UCINT *p ) ) {
                         atom[i].elname[1] = *p ++;
                     }
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 #else
                     atom[i].el_number = get_periodic_table_number( atom[i].elname );
 #endif
@@ -1550,7 +1571,7 @@ bypass_end_of_INChI_plain:
                         if ( isdigit( UCINT *p ) ) {
                             int mw = strtol( p, &q, 10 );
                             p = q;
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
                             atom[i].isotopic_mass = mw;
 #else
                             mw -= get_atw_from_elnum( atom[i].el_number );
@@ -1833,7 +1854,7 @@ bypass_end_of_INChI_plain:
                     goto bypass_end_of_INChI;
                 }
                 /********************** coordinates xml ****************************/
-                if ( pszCoord = (MOL_COORD*)inchi_malloc(inchi_max(num_atoms,1) * sizeof(MOL_COORD)) ) {
+                if ( (pszCoord = (MOL_COORD*) inchi_malloc(inchi_max(num_atoms,1) * sizeof(MOL_COORD))) ) {
                     memset( pszCoord, ' ', inchi_max(num_atoms,1) * sizeof(MOL_COORD));
                     res = inchi_ios_gets( szLine, sizeof(szLine)-1, inp_molfile, &bTooLongLine );
                     if ( res <= 0  ||
@@ -1958,7 +1979,7 @@ bypass_end_of_INChI_plain:
                         for ( bNonMetal = 0; bNonMetal < 1 /*2*/; bNonMetal ++ ) {
                             for ( a1 = 0; a1 < num_atoms; a1 ++ ) {
                                 int num_bond_type[MAX_INPUT_BOND_TYPE - MIN_INPUT_BOND_TYPE + 1];
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 #else
                                 int bHasMetalNeighbor=0;
 #endif
@@ -1966,14 +1987,14 @@ bypass_end_of_INChI_plain:
 
                                 valence = AT_BONDS_VAL(atom, a1); /*  save atom valence if available */
                                 AT_BONDS_VAL(atom, a1) = 0;
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 #else
                                 atom[a1].orig_at_number = a1+1;
 #endif
                                 nX = nY = nZ = 0;
                                 for ( n1 = 0; n1 < AT_NUM_BONDS(atom[a1]); n1 ++ ) {
                                     bond_type = atom[a1].bond_type[n1] - MIN_INPUT_BOND_TYPE;
-                                    if (  bond_type < 0 || bond_type > MAX_INPUT_BOND_TYPE - MIN_INPUT_BOND_TYPE ) {
+                                    if ( bond_type < 0 || bond_type > MAX_INPUT_BOND_TYPE - MIN_INPUT_BOND_TYPE ) {
                                         bond_type = 0; /* cannot happen */
                                         MOLFILE_ERR_SET (*err, 0, "Unknown bond type in InChI aux assigned as a single bond");
                                     }
@@ -2026,7 +2047,7 @@ bypass_end_of_INChI_plain:
                                     }
                                 }
 
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
                                 /*************************************************************************************
                                  *
                                  *  Set number of hydrogen atoms
@@ -2097,7 +2118,7 @@ bypass_end_of_INChI_plain:
                             *num_bonds = nNumBonds;
                         }
                         /*======= 0D parities =================================*/
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
                         if ( len_stereo0D > 0 && atom_stereo0D && stereo0D ) {
                             *stereo0D     = atom_stereo0D;
                             *num_stereo0D = len_stereo0D;
@@ -2145,14 +2166,14 @@ bypass_end_of_INChI_plain:
                                 sb_ord_from_a1 = p1 - atom[a1].neighbor;
                                 sb_ord_from_a2 = p2 - atom[a2].neighbor;
                                 
-                                if (  AT_NUM_BONDS(atom[a1]) == 2 &&
+                                if ( AT_NUM_BONDS(atom[a1]) == 2 &&
                                       atom[a1].bond_type[0] + atom[a1].bond_type[1] == 2*INCHI_BOND_TYPE_DOUBLE &&
                                       0 == inchi_NUMH2(atom, a1) &&
                                      (AT_NUM_BONDS(atom[a2]) != 2 ||
                                       atom[a2].bond_type[0] + atom[a2].bond_type[1] != 2*INCHI_BOND_TYPE_DOUBLE ) ) {
                                     bEnd2 = 1; /* a2 is the end-atom, a1 is middle atom */   
                                 }
-                                if (  AT_NUM_BONDS(atom[a2]) == 2 &&
+                                if ( AT_NUM_BONDS(atom[a2]) == 2 &&
                                       atom[a2].bond_type[0] + atom[a2].bond_type[1] == 2*INCHI_BOND_TYPE_DOUBLE &&
                                       0 == inchi_NUMH2(atom, a2) &&
                                      (AT_NUM_BONDS(atom[a1]) != 2 ||
@@ -2253,7 +2274,7 @@ bypass_end_of_INChI_plain:
                         /* end of 0D parities extraction */
 /*exit_cycle:;*/
                     }
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 #else
                     /* transfer atom_stereo0D[] to atom[] */
                     if ( len_stereo0D ) {
@@ -2270,7 +2291,7 @@ bypass_end_of_INChI_plain:
                     inchi_free( atom );
                     atom = NULL;
                 }
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 #else
                 if ( szCoord ) {
                     *szCoord = pszCoord;
@@ -2327,7 +2348,7 @@ bypass_end_of_INChI:
 #undef IN_NEIGH_LIST
 #undef inchi_NUMH2
 
-#if( defined(INCHI_LIBRARY) || defined(INCHI_MAIN) )
+#if ( defined(TARGET_API_LIB) || defined(TARGET_EXE_USING_API) )
 #else 
 #undef inchi_Atom
 #endif
@@ -2347,7 +2368,7 @@ bypass_end_of_INChI:
 
 
 }
-#ifdef INCHI_MAIN
+#ifdef TARGET_EXE_USING_API
 
 /**********************************************************************************/
 int INChIToInchi_Input( INCHI_IOSTREAM *inp_molfile, inchi_Input *orig_at_data, int bMergeAllInputStructures,
@@ -2510,7 +2531,7 @@ int INChIToInchi_Input( INCHI_IOSTREAM *inp_molfile, inchi_Input *orig_at_data, 
 
 #endif
 
-#ifndef INCHI_MAIN
+#ifndef TARGET_EXE_USING_API
 #undef AB_MAX_WELL_DEFINED_PARITY
 #undef AB_MIN_WELL_DEFINED_PARITY
 #include "extr_ct.h"
@@ -2531,8 +2552,8 @@ int Extract0DParities( inp_ATOM *at, int nNumAtoms, inchi_Stereo0D *stereo0D,
             parity   = (stereo0D[i0D].parity & SB_PARITY_MASK);
             parityNM = (stereo0D[i0D].parity & SB_PARITY_FLAG) >> SB_PARITY_SHFT;
             if ( parity == INCHI_PARITY_NONE ||
-                 parity != INCHI_PARITY_ODD && parity != INCHI_PARITY_EVEN &&
-                 parity != INCHI_PARITY_UNKNOWN && parity != INCHI_PARITY_UNDEFINED ) {
+                 (parity != INCHI_PARITY_ODD && parity != INCHI_PARITY_EVEN &&
+                 parity != INCHI_PARITY_UNKNOWN && parity != INCHI_PARITY_UNDEFINED) ) {
                 char szTemp[16];
                 sprintf( szTemp, "#%d", i0D+1 );
                 MOLFILE_ERR_SET (*err, 0, "Wrong 0D stereo descriptor(s):");
@@ -2546,11 +2567,11 @@ int Extract0DParities( inp_ATOM *at, int nNumAtoms, inchi_Stereo0D *stereo0D,
             sb_ord_from_i1 = sb_ord_from_i2 = sn_ord_from_i1 = sn_ord_from_i2 = -1;
             i1n = i2n = i1 = i2 = MAX_ATOMS+1;
 
-            if ( (type == INCHI_StereoType_Tetrahedral ||
+            if ( ((type == INCHI_StereoType_Tetrahedral ||
                   type == INCHI_StereoType_Allene ) &&
-                  0 <= a2 && a2 < nNumAtoms ||
-                  type == INCHI_StereoType_DoubleBond &&
-                  a2 == NO_ATOM) {
+                  0 <= a2 && a2 < nNumAtoms) ||
+                  (type == INCHI_StereoType_DoubleBond &&
+                  a2 == NO_ATOM)) {
                 /* test the quadruplet */
                 for ( j = 0, k_prev = -1; j < 4; j ++, k_prev = k ) {
                     k = stereo0D[i0D].neighbor[j];
@@ -2751,9 +2772,9 @@ int Extract0DParities( inp_ATOM *at, int nNumAtoms, inchi_Stereo0D *stereo0D,
         /*( through vABParityUnknown )  (2009-12-12)                             */
         FixUnkn0DStereoBonds(at, nNumAtoms);
 
-#ifdef INCHI_LIBRARY
+#ifdef TARGET_API_LIB
 
-        if ( k = ReconcileAllCmlBondParities( at, nNumAtoms, 0 ) ) {
+        if ( (k = ReconcileAllCmlBondParities( at, nNumAtoms, 0 )) ) {
             char szErrCode[16];
             sprintf( szErrCode, "%d", k);
             AddMOLfileError( pStrErr, "0D Parities Reconciliation failed:" );
@@ -2767,4 +2788,3 @@ int Extract0DParities( inp_ATOM *at, int nNumAtoms, inchi_Stereo0D *stereo0D,
 }
 
 #endif
-

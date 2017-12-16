@@ -95,8 +95,10 @@ namespace OpenBabel
     mol.ReserveAtoms(natoms);
     mol.BeginModify();
 
+    string str;
     double x,y,z;
     OBAtom *atom;
+    int atomicNum;
 
     for (int i = 1; i <= natoms; ++i)
     {
@@ -215,7 +217,7 @@ namespace OpenBabel
 
   int SetMM3Type(OBAtom *atom)
   {
-    OBAtom *b; //, *c; // neighbors
+    OBAtom *b, *c; // neighbors
     OBBondIterator i, j;
     int countNeighborO, countNeighborS, countNeighborN, countNeighborC;
     countNeighborO = countNeighborS = countNeighborN = countNeighborC = 0;
@@ -384,7 +386,7 @@ namespace OpenBabel
           countNeighborS++; break;
         default:
           continue;
-        }            
+        }
       }
 
       if (countNeighborO == 1)
@@ -479,9 +481,8 @@ namespace OpenBabel
 
 
     default:
-      return 0;
+      break;
     }
-
     return 0;
   }
 

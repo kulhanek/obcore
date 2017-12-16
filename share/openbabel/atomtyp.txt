@@ -61,8 +61,8 @@ INTHYB  [Sn;!D5]                  3
 INTHYB  [AsD3]                    3       # AsCl3 (AsCl5 handled by D5 above)
 INTHYB  [SbD3]                    3       #
 # SbD5, AsD5 are all trigbpy so are handled by D5 above
-INTHYB  [BiD3]                    3       # 
-INTHYB  [BiD5]                    6       # BiF5 is square-pyr, not trigbpy 
+INTHYB  [BiD3]                    3       #
+INTHYB  [BiD5]                    6       # BiF5 is square-pyr, not trigbpy
 
 INTHYB  [se]                      2       # aromatic sp2 Se
 INTHYB  [Se]                      3       # sp3 hybridization Se (and family)
@@ -132,14 +132,13 @@ IMPVAL  [$([#7+]#*)]              2
 IMPVAL  [$([#7+]=*)]              3
 IMPVAL  [$([#7+](=*)=*)]          2
 
-IMPVAL [$([#8+]#*)] 1
-
 IMPVAL [#8]                       2 # Generic O
 IMPVAL [#8-]                      1
 IMPVAL [#8-2]                     0
 IMPVAL [#8+]                      3
 IMPVAL [$([#8]=*)]                1
 IMPVAL [#8^1+]                    1 # carbon monoxide
+IMPVAL [$([#8]#*)]                1
 
 IMPVAL  [#9D0]                    1
 IMPVAL  [#9D0-]                   0 #[F-]
@@ -164,6 +163,7 @@ IMPVAL  [pD2]                     2
 IMPVAL  [$([#15]=[#8])]           4 # phosphinate (double bond = one valence)
 IMPVAL  [$([#15](=[#8])=[#8])]    3 # metaphosphate (double bond = one valence)
 IMPVAL  [$([#15+](=[#8])([#8]))]  0 # R-P+O2
+IMPVAL  [$([#15]#*)]                1 # for P#P
 
 IMPVAL  [#16]                     2 #revised CM April 2008
 IMPVAL  [$([#16D1]=*)]            1
@@ -256,4 +256,3 @@ EXTTYP  [#5D4]          B3
 #INTHYB  [Cr]			  5 # for development
 
 ############################# End Extra Definitions ##########################
-

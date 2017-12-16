@@ -64,11 +64,11 @@ namespace OpenBabel
 						   // dpar1 = v1
 						   // dpar2 = v2
 						   // dpar3 = v3
-      std::vector<OBFFParameter> _ffoutplanebendparams; /* // a = atom b     a
+      std::vector<OBFFParameter> _ffoutplanebendparams; // a = atom b        a
                                                         // b = atom d         \
 							// dpar1 = force       b---d
 							//                    /
-                                                        //                   c */
+							//                   c
       std::vector<OBFFParameter> _ffvdwprparams;  // a = atom 1 of pair
                                                   // b = atom 2 of pair
 					    	  // dpar1 = sum of vdw radii

@@ -1214,7 +1214,7 @@ namespace OpenBabel
     vector<pair<OBSmartsPattern*,string> >::iterator i;
     OBSmartsPattern *sp;
     vector<string> vs;
-    char buffer[80];
+    char buffer[150];
     OBAtom *atm, *a, *b;
     OBBitVec visited;
     int BO;
@@ -1231,7 +1231,7 @@ namespace OpenBabel
     // Set the locale for number parsing to avoid locale issues: PR#1785463
     obLocale.SetLocale();
 
-    while (ifs.getline(buffer, 80)) {
+    while (ifs.getline(buffer, sizeof(buffer))) {
       if (EQn(buffer, "atom", 4)) {
       	tokenize(vs, buffer);
 
@@ -1388,10 +1388,11 @@ namespace OpenBabel
 
     IF_OBFF_LOGLVL_LOW {
       OBFFLog("\nA T O M   T Y P E S\n\n");
-      OBFFLog("IDX\tTYPE\n");
+      OBFFLog("IDX\tTYPE\tRING\n");
 
       FOR_ATOMS_OF_MOL (a, _mol) {
-        snprintf(_logbuf, BUFF_SIZE, "%d\t%s\n", a->GetIdx(), a->GetType());
+        snprintf(_logbuf, BUFF_SIZE, "%d\t%s\t%s\n", a->GetIdx(), a->GetType(),
+	  (a->IsInRing() ? (a->IsAromatic() ? "AR" : "AL") : "NO"));
         OBFFLog(_logbuf);
       }
 

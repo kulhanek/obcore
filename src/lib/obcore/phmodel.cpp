@@ -69,7 +69,7 @@ namespace OpenBabel
     if (EQn(buffer,"TRANSFORM",7))
       {
         tokenize(vs,buffer);
-        if (vs.empty() || vs.size() < 5)
+        if (vs.size() < 5)
           {
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse line in phmodel table from phmodel.txt", obInfo);
             return;
@@ -90,7 +90,7 @@ namespace OpenBabel
     else if (EQn(buffer,"SEEDCHARGE",10))
       {
         tokenize(vs,buffer);
-        if (vs.empty() || vs.size() < 2)
+        if (vs.size() < 2)
           {
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse line in phmodel table from phmodel.txt", obInfo);
             return;
@@ -235,7 +235,8 @@ namespace OpenBabel
     //find elements to be changed
     int ele;
     for (i = 0;i < _bgn.NumAtoms();++i)
-      if ((vb = _bgn.GetVectorBinding(i)) != 0)
+      // Allow single-atom transformations without vector bindings
+      if ((vb = _bgn.GetVectorBinding(i)) || _bgn.NumAtoms() == 1)
         {
           ele = _bgn.GetAtomicNum(i);
           for (j = 0;j < _end.NumAtoms();++j)
@@ -252,7 +253,7 @@ namespace OpenBabel
     for (i = 0;i < _bgn.NumAtoms();++i)
       // Allow single-atom transformations without vector bindings
       // PR#2802980.
-      if ((vb = _bgn.GetVectorBinding(i) || _bgn.NumAtoms() == 1))
+      if ((vb = _bgn.GetVectorBinding(i)) || _bgn.NumAtoms() == 1)
         {
           chrg = _bgn.GetCharge(i);
           for (j = 0;j < _end.NumAtoms();++j)
@@ -300,7 +301,7 @@ namespace OpenBabel
   {
     if (!_bgn.Match(mol))
       return(false);
-
+    mol.BeginModify();
     vector<vector<int> > mlist = _bgn.GetUMapList();
 
     obErrorLog.ThrowError(__FUNCTION__,
@@ -368,20 +369,16 @@ namespace OpenBabel
           mol.DeleteAtom((OBAtom*)*k);
       }
 
+    mol.EndModify();
     return(true);
   }
 
   bool OBChemTsfm::IsAcid()
   {
-    //cout << _bgn.GetSMARTS() << " >> " << _end.GetSMARTS() << endl;
-    //cout << "  NumAtoms = " << _end.NumAtoms() << endl;
-
     if (_bgn.NumAtoms() > _end.NumAtoms())  // O=CO[#1:1] >> O=CO
       return true;
 
-    for (int i = 0; i < _end.NumAtoms(); ++i) {
-      //cout << "    _end(" << i << ")  " << _end.GetCharge(i) << endl;
-      //cout << "    _bgn(" << i << ")  " << _bgn.GetCharge(i) << endl;
+    for (unsigned int i = 0; i < _end.NumAtoms(); ++i) {
       if (_end.GetCharge(i) < 0)
         return true;
     }
@@ -391,12 +388,7 @@ namespace OpenBabel
 
   bool OBChemTsfm::IsBase()
   {
-    //cout << _bgn.GetSMARTS() << " >> " << _end.GetSMARTS() << endl;
-    //cout << "  NumAtoms = " << _end.NumAtoms() << endl;
-
-    for (int i = 0; i < _end.NumAtoms(); ++i) {
-      //cout << "    _end(" << i << ")  " << _end.GetCharge(i) << endl;
-      //cout << "    _bgn(" << i << ")  " << _bgn.GetCharge(i) << endl;
+    for (unsigned int i = 0; i < _end.NumAtoms(); ++i) {
       if (_end.GetCharge(i) > 0)
         return true;
     }

@@ -67,7 +67,7 @@ namespace OpenBabel
     {
       return
 
-      "AutoDock PDQBT format\n"
+      "AutoDock PDBQT format\n"
       "Reads and writes AutoDock PDBQT (Protein Data Bank, Partial Charge (Q), & Atom Type (T)) format\n"
       "Note that the torsion tree is by default. Use the ``r`` write option\n"
       "to prevent this.\n\n"
@@ -81,7 +81,9 @@ namespace OpenBabel
       "  r  Output as a rigid molecule (i.e. no branches or torsion tree)\n"
       "  c  Combine separate molecular pieces of input into a single rigid molecule (requires \"r\" option or will have no effect)\n"
       "  s  Output as a flexible residue\n"
-      "  p  Preserve atom indices from input file (default is to renumber atoms sequentially)\n\n";
+      "  p  Preserve atom indices from input file (default is to renumber atoms sequentially)\n"
+      "  h  Preserve hydrogens\n"
+			"  n  Preserve atom names\n\n";
     };
 
     virtual const char* SpecificationURL()
@@ -112,7 +114,7 @@ namespace OpenBabel
   static unsigned int AtomsSoFar(const map <unsigned int, branch >& tree, unsigned int depth);
   static bool FindBondedPiece(const vector<int>& root, const vector<int>& branch, unsigned int& root_atom, unsigned int& branch_atom,
                 unsigned int& root_atom_rank, unsigned int& branch_atom_rank, const OBMol& mol, unsigned int & atoms_moved);
-  static bool OutputTree(OBMol& mol, ostream& ofs, map <unsigned int, branch >& tree, unsigned int depth, bool moves_many, bool preserve_original_index);
+  static bool OutputTree(OBConversion *pConv, OBMol& mol, ostream& ofs, map <unsigned int, branch >& tree, unsigned int depth, bool moves_many, bool preserve_original_index);
   static void ConstructTree (map <unsigned int, branch >& tree, vector <vector <int> > rigid_fragments, unsigned int root_piece, const OBMol& mol, bool flexible);
   static bool DeleteHydrogens(OBMol & mol);
   static bool Separate_preserve_charges(OBMol & mol, vector<OBMol> & result);
@@ -328,7 +330,7 @@ namespace OpenBabel
     else
     {
       char tmp[10];
-      strncpy(tmp, type_name, 10);
+      strncpy(tmp, type_name, 9); // Make sure to null-terminate
       snprintf(type_name, sizeof(type_name), " %-3s", tmp);
     }
 
@@ -345,7 +347,7 @@ namespace OpenBabel
         if (strlen(type_name) < 4)
         {
           char tmp[10];
-          strncpy(tmp, type_name, 10);
+          strncpy(tmp, type_name, 9); // make sure to null-terminate
           snprintf(padded_name, sizeof(padded_name), " %-3s", tmp);
           strncpy(type_name,padded_name,4);
           type_name[4] = '\0';
@@ -384,7 +386,7 @@ namespace OpenBabel
     }
 
     double charge = atom->GetPartialCharge();
-    snprintf(buffer, BUFF_SIZE, "%s%5d %-4s %-3s %c%3d     %8.3f%8.3f%8.3f  0.00  0.00    %+5.3f %.2s",
+    snprintf(buffer, BUFF_SIZE, "%s%5d %-4s %-3s %c%4d    %8.3f%8.3f%8.3f  0.00  0.00    %+5.3f %.2s",
       het?"HETATM":"ATOM  ",
       index,
       type_name,
@@ -402,7 +404,7 @@ namespace OpenBabel
 
   void OutputGroup(OBMol& mol, ostream& ofs, const vector <int>& group, map <unsigned int, unsigned int> new_indexes, bool use_new_indexes)
   {
-    for (vector <int>::const_iterator it = group.begin(); it != group.end(); it++)
+    for (vector <int>::const_iterator it = group.begin(); it != group.end(); ++it)
     {
       if (use_new_indexes) {OutputAtom(mol.GetAtom((*it)), ofs, new_indexes.find(*it)->second);}
       else {OutputAtom(mol.GetAtom((*it)), ofs, (*it));}
@@ -448,7 +450,7 @@ namespace OpenBabel
       if (bonds_to_delete.size() != 0) //checks there is something to delete
       {
         vector <unsigned int>::iterator itb=bonds_to_delete.end();
-        itb--;
+        --itb;
         for (OBBondIterator it=mol_pieces.EndBonds(); true; )
         {
           it--;
@@ -456,7 +458,7 @@ namespace OpenBabel
           {
             mol_pieces.DeleteBond((*it), true);
             if (itb == bonds_to_delete.begin()) {break;}
-            else {itb--;}
+            else {--itb;}
           }
         }
       }
@@ -480,9 +482,9 @@ namespace OpenBabel
     return mol.DeleteNonPolarHydrogens();
   }
 
-  bool OutputTree(OBMol& mol, ostream& ofs, map <unsigned int, branch> & tree, unsigned int depth, bool moves_many, bool preserve_original_index)
+  bool OutputTree(OBConversion* pConv, OBMol& mol, ostream& ofs, map <unsigned int, branch> & tree, unsigned int depth, bool moves_many, bool preserve_original_index)
   {
-    if (tree.size() == 0) {return false;}
+    if (tree.empty()) {return false;}
     if (depth>= tree.size()-1) {depth=tree.size()-1;}
 
     set <unsigned int> free_bonds; //this section is to allow the code to be generalised when using obabel rather than babel, which accepts numerical arguments as to how many bonds to fix. As laid out, it will prioritise those bonds that move the fewest atoms, unless moves_many is true, where it will prioritise those that move the most. This is moot for the moment, as either all rotatable bonds are free, or they are all rigid.
@@ -495,12 +497,21 @@ namespace OpenBabel
     }
 
     multimap <unsigned int, unsigned int>::iterator it=how_many_atoms_move.begin();
-    if ((!moves_many) && how_many_atoms_move.size() > 0) {it=how_many_atoms_move.end(); it--;}
+    if ((!moves_many) && !how_many_atoms_move.empty()) {
+      it=how_many_atoms_move.end();
+      if (it!=how_many_atoms_move.begin()) // don't move past begin
+        --it;
+    }
     for (unsigned int i = 1; i <= depth; i++)
     {
       free_bonds.insert((*it).second);
-      if (!moves_many) {it--;}
-      else{it++;}
+      if (!moves_many) {
+        if (it!=how_many_atoms_move.begin())
+          --it;
+      }
+      else{
+        ++it;
+      }
     }
 
 
@@ -524,7 +535,7 @@ namespace OpenBabel
       {
         if (free_bonds.count(i))
         {
-          for (set <unsigned int>::iterator it= (*tree.find(i)).second.rigid_with.begin() ; it != (*tree.find(i)).second.rigid_with.end(); it++)
+          for (set <unsigned int>::iterator it= (*tree.find(i)).second.rigid_with.begin() ; it != (*tree.find(i)).second.rigid_with.end(); ++it)
                                   {
             vector <int> atoms=(*tree.find(*it)).second.atoms;
             for (unsigned int j=0; j < atoms.size(); j++)
@@ -537,13 +548,15 @@ namespace OpenBabel
       }
     }
 
-    ofs << "ROOT" << endl;
-    for (set <unsigned int>::iterator it= (*tree.find(0)).second.rigid_with.begin() ; it != (*tree.find(0)).second.rigid_with.end(); it++)
+    if (!(pConv->IsOption("r",OBConversion::OUTOPTIONS)))
+      ofs << "ROOT" << endl;
+    for (set <unsigned int>::iterator it= (*tree.find(0)).second.rigid_with.begin() ; it != (*tree.find(0)).second.rigid_with.end(); ++it)
     {
       OutputGroup(mol, ofs, (*tree.find(*it)).second.atoms, new_order, !preserve_original_index);
     }
 
-    ofs << "ENDROOT" << endl;
+   if (!(pConv->IsOption("r",OBConversion::OUTOPTIONS)))
+     ofs << "ENDROOT" << endl;
 
     for (unsigned int i=1; i < tree.size(); i++)
     {
@@ -559,7 +572,7 @@ namespace OpenBabel
         if (!preserve_original_index) {ofs << (new_order.find(child_atom))-> second;}
         else {ofs << child_atom;}
         ofs << endl;
-        for (set <unsigned int>::iterator it= (*tree.find(i)).second.rigid_with.begin() ; it != (*tree.find(i)).second.rigid_with.end(); it++)
+        for (set <unsigned int>::iterator it= (*tree.find(i)).second.rigid_with.begin() ; it != (*tree.find(i)).second.rigid_with.end(); ++it)
         {
           OutputGroup(mol, ofs, (*tree.find(*it)).second.atoms, new_order, !preserve_original_index);
         }
@@ -567,10 +580,10 @@ namespace OpenBabel
       unsigned int child=i;
       for (vector <unsigned int>::iterator it=(*tree.find(i)).second.parents.end(); it != (*tree.find(i)).second.parents.begin(); )
       {
-        it--;
+        --it;
         if ((*it)==0) {break;} //do not close the main root; that is closed seperately
         vector <unsigned int>::iterator it_parent=it;
-        it_parent--;
+        --it_parent;
         if ((*tree.find(*it)).second.children.size() == 0)
         {
           if (free_bonds.count(*it))
@@ -663,20 +676,68 @@ namespace OpenBabel
     return count;
   }
 
+  static bool IsImide(OBBond* querybond)
+  {
+    if (querybond->GetBO() != 2)
+      return(false);
+
+    OBAtom* bgn = querybond->GetBeginAtom();
+    OBAtom* end = querybond->GetEndAtom();
+    if ((bgn->GetAtomicNum() == 6 && end->GetAtomicNum() == 7) ||
+      (bgn->GetAtomicNum() == 7 && end->GetAtomicNum() == 6))
+      return(true);
+
+    return(false);
+  }
+
+  static bool IsAmidine(OBBond* querybond)
+  {
+    OBAtom *c, *n;
+    c = n = NULL;
+
+    // Look for C-N bond
+    OBAtom* bgn = querybond->GetBeginAtom();
+    OBAtom* end = querybond->GetEndAtom();
+    if (bgn->GetAtomicNum() == 6 && end->GetAtomicNum() == 7)
+    {
+      c = bgn;
+      n = end;
+    }
+    if (bgn->GetAtomicNum() == 7 && end->GetAtomicNum() == 6)
+    {
+      c = end;
+      n =bgn;
+    }
+    if (!c || !n) return(false);
+    if (querybond->GetBondOrder() != 1) return(false);
+    if (n->GetImplicitValence() != 3) return(false);
+
+    // Make sure C is attached to =N
+    OBBond *bond;
+    vector<OBBond*>::iterator i;
+    for (bond = c->BeginBond(i); bond; bond = c->NextBond(i))
+    {
+      if (IsImide(bond)) return(true);
+    }
+
+    // Return
+    return(false);
+  }
+
 
   /////////////////////////////////////////////////////////////////////////
   bool IsRotBond_PDBQT(OBBond * the_bond)
   //identifies a bond as rotatable if it is a single bond, not amide, not in a ring,
   //and if both atoms it connects have at least one other atom bounded to them
   {
-    if ( !the_bond->IsSingle() || the_bond->IsAmide() || the_bond->IsInRing() ) {return false;}
+    if ( !the_bond->IsSingle() || the_bond->IsAmide() || IsAmidine(the_bond) || the_bond->IsInRing() ) {return false;}
     if ( ((the_bond->GetBeginAtom())->GetValence() == 1) || ((the_bond->GetEndAtom())->GetValence() == 1) ) {return false;}
     return true;
   }
 
   bool IsIn(const vector<int>& vec, const int num) //checks whether a vector of int contains a specific int
   {
-    for (vector<int>::const_iterator itv=vec.begin(); itv != vec.end(); itv++)
+    for (vector<int>::const_iterator itv=vec.begin(); itv != vec.end(); ++itv)
     {
       if ((*itv) == num ) {return true;}
     }
@@ -741,6 +802,29 @@ namespace OpenBabel
     return true;
   }
   /////////////////////////////////////////////////////////////////////////
+  int CompareBondAtoms(const void *a, const void *b)
+  {
+    const OBAtom **da = (const OBAtom **)a;
+    const OBAtom **db = (const OBAtom **)b;
+    unsigned int aIdx = (*da)->GetIdx();
+    unsigned int bIdx = (*db)->GetIdx();
+
+    return ((aIdx > bIdx) - (aIdx < bIdx));
+  }
+  /////////////////////////////////////////////////////////////////////////
+  int CompareBonds(const void *a, const void *b)
+  {
+    const OBAtom ***da = (const OBAtom ***)a;
+    const OBAtom ***db = (const OBAtom ***)b;
+    unsigned int aIdx[2] = { (*da)[0]->GetIdx(), (*da)[1]->GetIdx() };
+    unsigned int bIdx[2] = { (*db)[0]->GetIdx(), (*db)[1]->GetIdx() };
+    int cmp1;
+
+
+    cmp1 = ((aIdx[0] > bIdx[0]) - (aIdx[0] < bIdx[0]));
+    return (cmp1 ? cmp1 : ((aIdx[1] > bIdx[1]) - (aIdx[1] < bIdx[1])));
+  }
+  /////////////////////////////////////////////////////////////////////////
   bool PDBQTFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
@@ -753,7 +837,9 @@ namespace OpenBabel
 
     if (pConv->IsOption("b",OBConversion::OUTOPTIONS)) {mol.ConnectTheDots(); mol.PerceiveBondOrders();}
     vector <OBMol> all_pieces;
-    if ((pConv->IsOption("c",OBConversion::OUTOPTIONS)!=NULL) && (pConv->IsOption("r",OBConversion::OUTOPTIONS)!=NULL))
+    if ( ((pConv->IsOption("c",OBConversion::OUTOPTIONS)!=NULL) && (pConv->IsOption("r",OBConversion::OUTOPTIONS)!=NULL))
+			|| (pConv->IsOption("n",OBConversion::OUTOPTIONS))
+		)
     {
       mol.SetAutomaticPartialCharge(false);
       all_pieces.push_back(mol);
@@ -780,7 +866,9 @@ namespace OpenBabel
       }
 
       all_pieces.at(i).SetAutomaticPartialCharge(false);
-      DeleteHydrogens(all_pieces.at(i));
+      if (!(pConv->IsOption("h",OBConversion::OUTOPTIONS))) {
+      	DeleteHydrogens(all_pieces.at(i));
+			}
 
       int model_num = 0;
       char buffer[BUFF_SIZE];
@@ -794,6 +882,59 @@ namespace OpenBabel
         }
         ofs << "REMARK  Name = " << mol.GetTitle(true) << endl;
 //        ofs << "USER    Name = " << mol.GetTitle(true) << endl;
+        if (!(pConv->IsOption("r",OBConversion::OUTOPTIONS)))
+        {
+          char type_name[10];
+          int nRotBond=RotBond_count(mol);
+          OBAtom ***rotBondTable = new OBAtom **[nRotBond];
+          int rotBondId=0;
+          int bondAtomNum;
+          unsigned int end;
+          OBResidue *res;
+          for (OBBondIterator it=mol.BeginBonds(); it != mol.EndBonds(); it++)
+          {
+            if (IsRotBond_PDBQT((*it)))
+            {
+              rotBondTable[rotBondId] = new OBAtom *[2];
+              rotBondTable[rotBondId][0] = (*it)->GetBeginAtom();
+              rotBondTable[rotBondId][1] = (*it)->GetEndAtom();
+              qsort(rotBondTable[rotBondId], 2, sizeof(OBAtom *), CompareBondAtoms);
+              rotBondId++;
+            }
+          }
+          qsort(rotBondTable, nRotBond, sizeof(OBAtom **), CompareBonds);
+          ofs << "REMARK  " << nRotBond << " active torsions:" << endl;
+          ofs << "REMARK  status: ('A' for Active; 'I' for Inactive)" << endl;
+          for (rotBondId=0; rotBondId < nRotBond; rotBondId++)
+          {
+            snprintf(buffer, BUFF_SIZE, "REMARK  %3d  A    between atoms: ", rotBondId + 1);
+            ofs << buffer;
+            for (bondAtomNum=0; bondAtomNum < 2; bondAtomNum++)
+            {
+              memset(type_name, 0, sizeof(type_name));
+              strncpy(type_name, etab.GetSymbol(rotBondTable[rotBondId][bondAtomNum]->GetAtomicNum()), sizeof(type_name));
+              if (strlen(type_name) > 1)
+                type_name[1] = toupper(type_name[1]);
+              if ((res = rotBondTable[rotBondId][bondAtomNum]->GetResidue()) != 0)
+              {
+                snprintf(type_name,5,"%s",(char*)res->GetAtomID(rotBondTable[rotBondId][bondAtomNum]).c_str());
+                end=0;
+                // Use sizeof() - 1 to ensure there's room for the NULL termination!
+                while (end < sizeof(type_name) - 1 && type_name[end] && !isspace(type_name[end]))
+                  end++;
+                type_name[end] = '\0';
+              }
+              snprintf(buffer, BUFF_SIZE, "%s_%d", type_name,
+                rotBondTable[rotBondId][bondAtomNum]->GetIdx());
+              ofs << buffer;
+              if (bondAtomNum == 0)
+                ofs << "  and  ";
+            }
+            delete [] rotBondTable[rotBondId];
+	    ofs << endl;
+          }
+          delete [] rotBondTable;
+        }
         ofs << "REMARK                            x       y       z     vdW  Elec       q    Type" << endl;
 //        ofs << "USER                              x       y       z     vdW  Elec       q    Type" << endl;
         ofs << "REMARK                         _______ _______ _______ _____ _____    ______ ____" << endl;
@@ -866,7 +1007,7 @@ namespace OpenBabel
 
       bool preserve_original_index = (pConv->IsOption("p",OBConversion::OUTOPTIONS));
       if (!flexible) {preserve_original_index=false;} //no need to relabel if we are preserving the original order anyway
-      if (!OutputTree(all_pieces.at(i), ofs, tree, rotatable_bonds, false, preserve_original_index) )
+      if (!OutputTree(pConv, all_pieces.at(i), ofs, tree, rotatable_bonds, false, preserve_original_index) )
 //      if (!OutputTree(mol, ofs, tree, rotatable_bonds, false, preserve_original_index) )
       {
         stringstream errorMsg;
@@ -879,7 +1020,10 @@ namespace OpenBabel
 
       if (!residue)
       {
-        ofs << "TORSDOF " << torsdof << endl;
+        if (!(pConv->IsOption("r",OBConversion::OUTOPTIONS)))
+          ofs << "TORSDOF " << torsdof << endl;
+        else
+          ofs << "TER " << endl;
 //        ofs << "TER" << endl;
         if (model_num)
         {

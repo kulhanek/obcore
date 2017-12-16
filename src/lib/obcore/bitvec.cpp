@@ -55,7 +55,7 @@ namespace OpenBabel
     \endcode
   */
 
-  static int bitsoff[SETWORD] =
+  static unsigned int bitsoff[SETWORD] =
     {
       0xFFFFFFFF,0xFFFFFFFE,0xFFFFFFFC,0xFFFFFFF8,0xFFFFFFF0,0xFFFFFFE0,0xFFFFFFC0,
       0xFFFFFF80,0xFFFFFF00,0xFFFFFE00,0xFFFFFC00,0xFFFFF800,0xFFFFF000,0xFFFFE000,
@@ -136,7 +136,7 @@ namespace OpenBabel
             for ( unsigned i = lo_bit_offset ; i < SETWORD ; ++ i )
               _set[lo_word_offset] |= (1<<i);
             for ( unsigned i = lo_word_offset + 1 ; i < hi_word_offset ; ++ i )
-              _set[i] = 0xFFFFFFFF;
+              _set[i] = ~0;
             for ( unsigned i = 0 ; i <= hi_bit_offset ; ++ i )
               _set[hi_word_offset] |= (1<<i);
           }
@@ -281,7 +281,7 @@ namespace OpenBabel
     unsigned count = 0;
     for (word_vector::const_iterator sx = _set.begin(), sy = _set.end(); sx != sy; ++ sx)
       {
-      unsigned word = * sx;
+      uint32_t word = *sx;
       while (word)
         {
         count += nibble_bit_count[word & 0xF];
@@ -332,8 +332,10 @@ namespace OpenBabel
       {
         startpos = line.find_first_not_of(" \t\r\n",startpos);
         endpos   = line.find_first_of(" \t\r\n",startpos);
+        if (endpos == std::string::npos)
+          endpos = line.size();
 
-        if (endpos < line.size() && startpos <= line.size())
+        if (startpos <= line.size())
           tokens.push_back(line.substr(startpos,endpos-startpos));
         else
           break;

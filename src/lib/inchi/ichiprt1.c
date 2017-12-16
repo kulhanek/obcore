@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI)
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ *
+ * This library is free software; you can redistribute it and/or modify it under the
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier
+ * (InChI) Software version 1.0; either version 1.0 of the License, or
+ * (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI)
+ * Software version 1.0 for more details.
+ *
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the
+ * International Chemical Identifier (InChI) Software version 1.0 along with
+ * this library; if not, write to:
+ *
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ *
  */
 
 
@@ -42,28 +63,28 @@
 
 #include "ichi_io.h"
 
-int PrintXmlStartTag(char *pStr, 
+int PrintXmlStartTag(char *pStr,
                      int indent, int bEnd, const char *tag,
-                     const char *l1, int v1, const char *l2, int v2, 
-                     const char *l3, int v3, const char *l4, int v4, 
+                     const char *l1, int v1, const char *l2, int v2,
+                     const char *l3, int v3, const char *l4, int v4,
                      const char *l5, int v5, const char *l6, int v6);
 int Needs2addXmlEntityRefs(const char *s );
 int AddXmlEntityRefs(const char *p, char *d );
-#if( TEST_RENUMB_ATOMS == 1 ) /*  { */
+#if ( TEST_RENUMB_ATOMS == 1 ) /*  { */
 int CompareStereoINChI( INChI_Stereo *s1, INChI_Stereo *s2 );
 #endif
 
 int str_LineStart(const char *tag, char *tag2, int val2, char *pStr, int ind );
-int str_LineEnd(const char *tag, int tot_len, int nStrLen, 
+int str_LineEnd(const char *tag, int tot_len, int nStrLen,
                 int *bOverflow, char *pStr, int ind, int bPlainTextTags );
 int CleanOrigCoord(MOL_COORD szCoord, int delim );
-int WriteOrigCoord(int num_inp_atoms, MOL_COORD *szMolCoord, int *i, 
+int WriteOrigCoord(int num_inp_atoms, MOL_COORD *szMolCoord, int *i,
                    char *szBuf, int buf_len);
-int WriteOrigAtoms(int num_inp_atoms, inp_ATOM *at, int *i, 
-                   char *szBuf, int buf_len, 
+int WriteOrigAtoms(int num_inp_atoms, inp_ATOM *at, int *i,
+                   char *szBuf, int buf_len,
                    STRUCT_DATA *sd);
-int WriteOrigBonds(int num_inp_atoms, inp_ATOM *at, int *i, 
-                   char *szBuf, int buf_len, 
+int WriteOrigBonds(int num_inp_atoms, inp_ATOM *at, int *i,
+                   char *szBuf, int buf_len,
                    STRUCT_DATA *sd);
 
 void GetSaveOptLetters(unsigned char save_opt_bits, char* let1, char* let2);
@@ -99,7 +120,7 @@ const char x_warn[]           = "warning";
 const char x_basic[]          = "identifier";
 const char x_tautomeric[]     = "mobile-H";
 const char x_reconnected[]    = "reconnected";
-                        
+
 const char x_ver[]            = "version";
 
 const char x_type_alpha[]     = "alpha";
@@ -125,7 +146,7 @@ const char x_rac[]            = "3";
 
 #define MAX_TAG_LEN 64
 
-typedef struct tagInchiTag 
+typedef struct tagInchiTag
 {
     const char *szPlainLabel;
     const char *szPlainComment;
@@ -134,7 +155,7 @@ typedef struct tagInchiTag
 } INCHI_TAG;
 
 /* identifier */
-const INCHI_TAG IdentLbl[] = 
+const INCHI_TAG IdentLbl[] =
 {
                                                                   /* prefixes: may be combined in this order */
 /* IL_FIXH_ORD, */    { "/",   "fixed_H",        "fixed-H",        0 }, /* fixed H */
@@ -167,17 +188,17 @@ const INCHI_TAG IdentLbl[] =
 
   Parsing plain text InChI (FML is a chemical formula)
   ========================
-  
+
   1.12Beta/FML       /i      /f[FML]  /i   [/o] /rFML      /i      /f[FML]  /i   [/o] end
-          |          |       |        |         |          |       |        |         |  
-Labels    | chqpbtms | hbtms | hqbtms | btms    | chqpbtms | hbtms | hqbtms | btms    |  
-inside:   |          |       |        |         |          |       |        |         |  
-          | non-iso- | iso-  | fix-   | iso-    | non-iso- | iso-  | fix-   | iso-    |  
-meaning:  | topic    | topic | ed H   | topic   | topic    | topic | ed H   | topic   |  
-          |----------+-------+--------+---------|----------+-------+--------+---------|  
-          |        mobile-H  |   fixed-H        |        mobile-H  |   fixed-H        |  
-          |----------+-------+--------+---------|----------+-------+--------+---------|  
-          |                                     |                                     |  
+          |          |       |        |         |          |       |        |         |
+Labels    | chqpbtms | hbtms | hqbtms | btms    | chqpbtms | hbtms | hqbtms | btms    |
+inside:   |          |       |        |         |          |       |        |         |
+          | non-iso- | iso-  | fix-   | iso-    | non-iso- | iso-  | fix-   | iso-    |
+meaning:  | topic    | topic | ed H   | topic   | topic    | topic | ed H   | topic   |
+          |----------+-------+--------+---------|----------+-------+--------+---------|
+          |        mobile-H  |   fixed-H        |        mobile-H  |   fixed-H        |
+          |----------+-------+--------+---------|----------+-------+--------+---------|
+          |                                     |                                     |
           |     normal  or disconected metal    |      reconnected bonds to metal     |
           |_____________________________________|_____________________________________|
 
@@ -190,28 +211,28 @@ meaning:  | topic    | topic | ed H   | topic   | topic    | topic | ed H   | to
 
 */
 
-typedef enum tagIdentLblOrd 
+typedef enum tagIdentLblOrd
 {
     IL_FIXH_ORD,
     IL_ISOT_ORD,
     IL_STER_ORD,
-            
+
     IL_VERS_ORD,
     IL_FML__ORD,
     IL_CONN_ORD,
     IL_ALLH_ORD,
     IL_CHRG_ORD,
     IL_PROT_ORD,
-            
+
     IL_DBND_ORD,
     IL_SP3S_ORD,
     IL_INVS_ORD,
     IL_TYPS_ORD,
-            
+
     IL_ATMS_ORD,
-            
+
     IL_XCGA_ORD,
-            
+
     IL_FMLF_ORD,
     IL_HFIX_ORD,
     IL_TRNS_ORD,
@@ -220,28 +241,28 @@ typedef enum tagIdentLblOrd
     IL_MAX_ORD /* max number of tags */
 } IDENT_LBL_ORD;
 
-typedef enum tagIdentLblBit 
+typedef enum tagIdentLblBit
 {
     IL_FIXH = 1 << IL_FIXH_ORD,
     IL_ISOT = 1 << IL_ISOT_ORD,
     IL_STER = 1 << IL_STER_ORD,
-                           
+
     IL_VERS = 1 << IL_VERS_ORD,
     IL_FML_ = 1 << IL_FML__ORD,
     IL_CONN = 1 << IL_CONN_ORD,
     IL_ALLH = 1 << IL_ALLH_ORD,
     IL_CHRG = 1 << IL_CHRG_ORD,
     IL_PROT = 1 << IL_PROT_ORD,
-                           
+
     IL_DBND = 1 << IL_DBND_ORD,
     IL_SP3S = 1 << IL_SP3S_ORD,
     IL_INVS = 1 << IL_INVS_ORD,
     IL_TYPS = 1 << IL_TYPS_ORD,
-                           
+
     IL_ATMS = 1 << IL_ATMS_ORD,
-                           
+
     IL_XCGA = 1 << IL_XCGA_ORD,
-                           
+
     IL_FMLF = 1 << IL_FMLF_ORD,
     IL_HFIX = 1 << IL_HFIX_ORD,
     IL_TRNS = 1 << IL_TRNS_ORD,
@@ -250,8 +271,8 @@ typedef enum tagIdentLblBit
 } IDENT_LBL_BIT;
 
 /* aux info */
-const INCHI_TAG AuxLbl[] = 
-{                 
+const INCHI_TAG AuxLbl[] =
+{
                                                                     /* prefixes may be combined in this order */
 /* AL_FIXH_ORD, */    { "/",     "fixed_H",                "fixed-H",             0 }, /* fixed-H */
 /* AL_ISOT_ORD, */    { "/",     "isotopic",               "isotopic",            0 }, /* isotopic */
@@ -266,7 +287,7 @@ const INCHI_TAG AuxLbl[] =
                                                                        /* inv abs sp3 stereo */
 /* AL_SP3I_ORD, */    { "/it:",  "sp3",                    "sp3",                 0 },
 /* AL_SP3N_ORD, */    { "/iN:",  "original_atom_numbers",  "atom.orig-nbr",       0 },
-                                        
+
 /* AL_CRV__ORD, */    { "/CRV:", "charge_radical_valence", "charges-rad-val",     0 },
                                                                        /* reversibility */
 /* AL_ATMR_ORD, */    { "/rA:",  "atoms",                  "atoms",               0 },
@@ -281,30 +302,30 @@ const INCHI_TAG AuxLbl[] =
 
 };
 
-typedef enum tagAuxLblOrd 
+typedef enum tagAuxLblOrd
 {
     AL_FIXH_ORD,
     AL_ISOT_ORD,
     AL_STER_ORD,
     AL_REVR_ORD,
-            
+
     AL_VERS_ORD,
     AL_NORM_ORD,
     AL_ANBR_ORD,
     AL_AEQU_ORD,
     AL_GEQU_ORD,
-            
+
     AL_SP3I_ORD,
     AL_SP3N_ORD,
-            
+
     AL_CRV__ORD,
-            
+
     AL_ATMR_ORD,
     AL_BNDR_ORD,
     AL_XYZR_ORD,
-            
+
     AL_FIXN_ORD,
-            
+
     AL_ISON_ORD,
 
     AL_REC__ORD,
@@ -314,30 +335,30 @@ typedef enum tagAuxLblOrd
 } AUX_LBL_ORD;
 
 
-typedef enum tagAuxLblBit 
+typedef enum tagAuxLblBit
 {
     AL_FIXH = 1 << AL_FIXH_ORD,
     AL_ISOT = 1 << AL_ISOT_ORD,
     AL_STER = 1 << AL_STER_ORD,
     AL_REVR = 1 << AL_REVR_ORD,
-                           
+
     AL_VERS = 1 << AL_VERS_ORD,
     AL_NORM = 1 << AL_NORM_ORD,
     AL_ANBR = 1 << AL_ANBR_ORD,
     AL_AEQU = 1 << AL_AEQU_ORD,
     AL_GEQU = 1 << AL_GEQU_ORD,
-                           
+
     AL_SP3I = 1 << AL_SP3I_ORD,
     AL_SP3N = 1 << AL_SP3N_ORD,
-                           
+
     AL_CRV_ = 1 << AL_CRV__ORD,
-                           
+
     AL_ATMR = 1 << AL_ATMR_ORD,
     AL_BNDR = 1 << AL_BNDR_ORD,
     AL_XYZR = 1 << AL_XYZR_ORD,
-                           
+
     AL_FIXN = 1 << AL_FIXN_ORD,
-                           
+
     AL_ISON = 1 << AL_ISON_ORD,
 
     AL_REC_ = 1 << AL_REC__ORD
@@ -350,7 +371,7 @@ char *szGetTag(const INCHI_TAG *Tag, int nTag, int bTag, char *szTag, int *bAlwa
 
 #define SP(N)        (x_space+sizeof(x_space)-1-(N))
 /**********************************************************************************************/
-typedef struct tagXmlEntityRef 
+typedef struct tagXmlEntityRef
 {
     char nChar;
     const char *pRef;
@@ -359,8 +380,8 @@ const X_REF xmlRef[] = { {'<', "&lt;"}, {'&', "&amp;"}, {'>', "&gt;"}, {'"', "&q
 const char szRefChars[sizeof(xmlRef)/sizeof(xmlRef[0])] = {'<', '&', '>', '"', '\'', '\0' };
 /**********************************************************************************************/
 int PrintXmlStartTag(char *pStr, int indent, int bEnd, const char *tag,
-                     const char *l1, int v1, const char *l2, int v2, 
-                     const char *l3, int v3, const char *l4, int v4, 
+                     const char *l1, int v1, const char *l2, int v2,
+                     const char *l3, int v3, const char *l4, int v4,
                      const char *l5, int v5, const char *l6, int v6)
 {
     int len=0;
@@ -399,7 +420,7 @@ int Needs2addXmlEntityRefs( const char *s )
     const char  *p;
     if ( s && *s ) {
         for ( q = xmlRef, len = 0; q->nChar; q ++ ) {
-            for ( p = s; p = strchr( p, q->nChar ); p ++ ) {
+            for ( p = s; (p = strchr( p, q->nChar )); p ++ ) {
                 if ( q->nChar == '&' ) {
                     for ( r = xmlRef; r->nChar; r ++ ) {
                         if ( !memcmp( p, r->pRef, strlen(r->pRef) ) )
@@ -422,7 +443,7 @@ int AddXmlEntityRefs( const char *p, char *d )
 {
     int len_d, n;
     const X_REF *q = xmlRef, *r;
-    
+
     len_d = 0;
     while ( *p ) {
         n = strcspn( p, szRefChars );
@@ -473,7 +494,7 @@ int OutputINChIXmlRootEndTag( INCHI_IOSTREAM *output_file )
 }
 
 /**********************************************************************************************/
-int OutputINChIXmlStructStartTag( INCHI_IOSTREAM *output_file, char *pStr, int ind /* indent*/, 
+int OutputINChIXmlStructStartTag( INCHI_IOSTREAM *output_file, char *pStr, int ind /* indent*/,
                                  int nStrLen, int bNoStructLabels,
                                  int num_input_struct, const char *szSdfLabel, const char *szSdfValue )
 {
@@ -506,19 +527,19 @@ int OutputINChIXmlStructStartTag( INCHI_IOSTREAM *output_file, char *pStr, int i
         inchi_ios_print( output_file, "%s\n", pStr );
         ret = 1; /*  success */
     } else {
-        if ( len = Needs2addXmlEntityRefs( szSdfLabel ) ) {
-            if ( p = (char*)inchi_malloc( len+1 ) ) {
+        if ( (len = Needs2addXmlEntityRefs( szSdfLabel )) ) {
+            if ( (p = (char*) inchi_malloc( len+1 )) ) {
                 AddXmlEntityRefs( szSdfLabel, p );
                 szSdfLabel = pSdfLabel = p;
             }
         }
-        if ( len = Needs2addXmlEntityRefs( szSdfValue ) ) {
-            if ( p = (char*)inchi_malloc( len+1 ) ) {
+        if ( (len = Needs2addXmlEntityRefs( szSdfValue )) ) {
+            if ( (p = (char*) inchi_malloc( len+1 )) ) {
                 AddXmlEntityRefs( szSdfValue, p );
                 szSdfValue = pSdfValue = p;
             }
         }
-        nEstLen1 = ind + 1 + sizeof(x_structure)-1 
+        nEstLen1 = ind + 1 + sizeof(x_structure)-1
                        + 1 + sizeof(x_number)-1 + 1 + sprintf(szBuf,"\"%d\"", num_input_struct)  + 2;
         nEstLen2 = 1 + sizeof(x_header)-1 + 1 + 2 + (szSdfLabel? strlen(szSdfLabel):0)
                  + 1 + sizeof(x_value) -1 + 1 + 2 + (szSdfValue? strlen(szSdfValue):0) + 2;
@@ -548,10 +569,10 @@ int OutputINChIXmlStructStartTag( INCHI_IOSTREAM *output_file, char *pStr, int i
 /**********************************************************************************************/
 int OutputINChIXmlStructEndTag( INCHI_IOSTREAM *output_file, char *pStr, int nStrLen, int ind )
 {
-    if ( output_file && pStr ) 
+    if ( output_file && pStr )
     {
         int nEstLen1 = ind + 1 + 1 + sizeof(x_structure)-1 + 2;
-        if ( nEstLen1 <= nStrLen ) 
+        if ( nEstLen1 <= nStrLen )
         {
             sprintf(pStr, "%s</%s>", SP(ind), x_structure);
             inchi_ios_print( output_file, "%s\n", pStr );
@@ -581,11 +602,11 @@ int OutputINChIXmlError( INCHI_IOSTREAM *output_file, char *pStr, int nStrLen, i
         pErr = x_ferr;
         break;
     }
-    
-#if( ENTITY_REFS_IN_XML_MESSAGES == 1 )   
+
+#if ( ENTITY_REFS_IN_XML_MESSAGES == 1 )
     /*  insert xml entity references if necessary */
-    if ( len = Needs2addXmlEntityRefs( szErrorText ) ) {
-        if ( pNewErrorText = (char*)inchi_malloc( len+1 ) ) {
+    if ( (len = Needs2addXmlEntityRefs( szErrorText )) ) {
+        if ( (pNewErrorText = (char*) inchi_malloc( len+1 )) ) {
             AddXmlEntityRefs( szErrorText, pNewErrorText );
             szErrorText = pNewErrorText;
         }
@@ -595,16 +616,16 @@ int OutputINChIXmlError( INCHI_IOSTREAM *output_file, char *pStr, int nStrLen, i
 #endif
 
 
-    nEstLen = ind + 1 + sizeof(x_message)-1 
+    nEstLen = ind + 1 + sizeof(x_message)-1
                   + 1 + sizeof(x_type)-1 + 1 + 1 + strlen(pErr)-1
                   /* + 1 + sizeof(x_code)-1 + 1 +     sprintf(szBuf, "%d", nErrorNumber) */
                   + 1 + sizeof(x_text)-1 + 1 + 1 + strlen(szErrorText) + 2;
     if ( nEstLen <= nStrLen ) {
         /*
-        sprintf( pStr, "%s<%s %s=\"%s\" %s=\"%d\" %s=\"%s\"/>", 
+        sprintf( pStr, "%s<%s %s=\"%s\" %s=\"%d\" %s=\"%s\"/>",
                  SP(ind), x_message, x_type, pErr, x_code, nErrorNumber, x_text, szErrorText );
         */
-        sprintf( pStr, "%s<%s %s=\"%s\" %s=\"%s\"/>", 
+        sprintf( pStr, "%s<%s %s=\"%s\" %s=\"%s\"/>",
                  SP(ind), x_message, x_type, pErr, x_text, szErrorText );
         inchi_ios_print( output_file, "%s\n", pStr );
         /*
@@ -645,7 +666,7 @@ int OutputINChIPlainError( INCHI_IOSTREAM *output_file, char *pStr, int nStrLen,
                   /* < %s=\"%s\"\n>, x_text, szErrorText */
                   + 1 + sizeof(x_text)-1 + 1 + 1 + strlen(szErrorText) + 1 + 1;
     if ( nEstLen < nStrLen ) {
-        sprintf( pStr, "%s: %s=\"%s\" %s=\"%s\"", 
+        sprintf( pStr, "%s: %s=\"%s\" %s=\"%s\"",
                  x_message, x_type, pErr, x_text, szErrorText );
         inchi_ios_print( output_file, "%s\n", pStr );
         ret = 1;
@@ -938,7 +959,7 @@ const char *EquString( int EquVal )
             break;
         }
         break;
-    
+
     case iiNUMB:           /*------------- Canonical Numbering ------------*/
         switch( bType ) {
         case 0:         /* numb main = ...*/
@@ -1043,17 +1064,17 @@ const char *EquString( int EquVal )
 
 
 /**********************************************************************************************/
-int OutputINChI2(char *pStr, int nStrLen, 
-                 INCHI_SORT *pINChISortTautAndNonTaut2[][TAUT_NUM], 
+int OutputINChI2(char *pStr, int nStrLen,
+                 INCHI_SORT *pINChISortTautAndNonTaut2[][TAUT_NUM],
                  int iINChI,
                  ORIG_STRUCT *pOrigStruct,
-                 int bDisconnectedCoord, int bOutputType, int bINChIOutputOptions, 
-                 int bXml, int bAbcNumbers,int bCtPredecessors, int bNoStructLabels, 
-                 int num_components2[], 
+                 int bDisconnectedCoord, int bOutputType, int bINChIOutputOptions,
+                 int bXml, int bAbcNumbers,int bCtPredecessors, int bNoStructLabels,
+                 int num_components2[],
                  int num_non_taut2[], int num_taut2[],
-                 INCHI_IOSTREAM *output_file, INCHI_IOSTREAM *log_file, 
+                 INCHI_IOSTREAM *output_file, INCHI_IOSTREAM *log_file,
                  int num_input_struct,
-                 const char *szSdfLabel, const char *szSdfValue, long lSdfId, 
+                 const char *szSdfLabel, const char *szSdfValue, long lSdfId,
                  int *pSortPrintINChIFlags,
                  unsigned char save_opt_bits)
 {
@@ -1063,9 +1084,9 @@ int OutputINChI2(char *pStr, int nStrLen,
 
     ret = 0;
 
-    for ( i = 0; i < 3; i ++ ) 
+    for ( i = 0; i < 3; i ++ )
     {
-        switch( i ) 
+        switch( i )
         {
         case 0:
             bCurOption = INCHI_OUT_XML;
@@ -1079,24 +1100,24 @@ int OutputINChI2(char *pStr, int nStrLen,
         default:
             continue;
         }
-        if ( bINChIOutputOptions & bCurOption ) 
+        if ( bINChIOutputOptions & bCurOption )
         {
             bINChIOutputOptionsCur = bINChIOutputOptions0 | bCurOption;
-            if ( i != 1 ) 
+            if ( i != 1 )
             {
                 bINChIOutputOptionsCur  &= ~INCHI_OUT_TABBED_OUTPUT;
             }
-            ret |= OutputINChI1( pStr, nStrLen, 
-                                 pINChISortTautAndNonTaut2, 
+            ret |= OutputINChI1( pStr, nStrLen,
+                                 pINChISortTautAndNonTaut2,
                                  iINChI,
-                                 pOrigStruct, 
-                                 bDisconnectedCoord, bOutputType, bINChIOutputOptionsCur, 
-                                 bXml, bAbcNumbers,bCtPredecessors, bNoStructLabels, 
-                                 num_components2, 
+                                 pOrigStruct,
+                                 bDisconnectedCoord, bOutputType, bINChIOutputOptionsCur,
+                                 bXml, bAbcNumbers,bCtPredecessors, bNoStructLabels,
+                                 num_components2,
                                  num_non_taut2, num_taut2,
-                                 output_file, log_file, 
+                                 output_file, log_file,
                                  num_input_struct,
-                                 szSdfLabel, szSdfValue, lSdfId, 
+                                 szSdfLabel, szSdfValue, lSdfId,
                                  pSortPrintINChIFlags,
                                  save_opt_bits);
         }
@@ -1161,16 +1182,16 @@ char *szGetTag( const INCHI_TAG *Tag, int nTag, int bTag, char *szTag, int *bAlw
 /***************************************************************************************/
 /*  sorting in descending order: return -1 if *p1 > *p2, return +1 if *p1 < *p2               */
 /***************************************************************************************/
-int OutputINChI1(char *pStr, int nStrLen, 
-                 INCHI_SORT *pINChISortTautAndNonTaut2[][TAUT_NUM], 
+int OutputINChI1(char *pStr, int nStrLen,
+                 INCHI_SORT *pINChISortTautAndNonTaut2[][TAUT_NUM],
                  int iINChI,
                  ORIG_STRUCT *pOrigStruct,
-                 int bDisconnectedCoord, int bOutputType, int bINChIOutputOptions, 
-                 int bXml, int bAbcNumbers,int bCtPredecessors, int bNoStructLabels, 
+                 int bDisconnectedCoord, int bOutputType, int bINChIOutputOptions,
+                 int bXml, int bAbcNumbers,int bCtPredecessors, int bNoStructLabels,
                  int num_components2[], int num_non_taut2[], int num_taut2[],
-                 INCHI_IOSTREAM *output_file, INCHI_IOSTREAM *log_file, 
+                 INCHI_IOSTREAM *output_file, INCHI_IOSTREAM *log_file,
                  int num_input_struct,
-                 const char *szSdfLabel, const char *szSdfValue, long lSdfId, 
+                 const char *szSdfLabel, const char *szSdfValue, long lSdfId,
                  int *pSortPrintINChIFlags,
                  unsigned char save_opt_bits)
 {
@@ -1188,10 +1209,10 @@ int OutputINChI1(char *pStr, int nStrLen,
     int ATOM_MODE = ((bAbcNumbers?CT_MODE_ABC_NUMBERS:0)
                     | CT_MODE_ATOM_COUNTS
                     | CT_MODE_NO_ORPHANS
-#if( EQL_H_NUM_TOGETHER == 1 )
+#if ( EQL_H_NUM_TOGETHER == 1 )
                     | CT_MODE_EQL_H_TOGETHER
 #endif
-#if( ABC_CT_NUM_CLOSURES == 1 )
+#if ( ABC_CT_NUM_CLOSURES == 1 )
                     | (bAbcNumbers && bCtPredecessors? CT_MODE_ABC_NUM_CLOSURES:0)
 #endif
                     | (bCtPredecessors?CT_MODE_PREDECESSORS:0));
@@ -1227,7 +1248,7 @@ int OutputINChI1(char *pStr, int nStrLen,
     INCHI_SORT   *is, *is2;
     INChI        *pINChI /*, *pINChI2*/;
     INChI_Aux    *pINChI_Aux = NULL;
-    
+
 
     int  ret = 0; /*  0=>failed, 1=>success */
     int  bOutType = bOutputType; /* ??? */
@@ -1253,7 +1274,7 @@ int OutputINChI1(char *pStr, int nStrLen,
 
     /*^^^ 15 April, 2008 */
     int bFixTranspChargeBug = 0;
-#if( FIX_TRANSPOSITION_CHARGE_BUG == 1 ) /* 2008-01-02 */
+#if ( FIX_TRANSPOSITION_CHARGE_BUG == 1 ) /* 2008-01-02 */
     if ( INCHI_OUT_FIX_TRANSPOSITION_CHARGE_BUG & bINChIOutputOptions )
         bFixTranspChargeBug = 1;
 #endif
@@ -1267,7 +1288,7 @@ int OutputINChI1(char *pStr, int nStrLen,
     bFhTag                 = 0;
     bPlainTabbedOutput     = 0 != (bINChIOutputOptions & INCHI_OUT_TABBED_OUTPUT) &&
                              bPlainText && !bXml && !bPlainTextCommnts;
-#if ( !defined(INCHI_LIBRARY) && !defined(INCHI_LIB) )    
+#if ( !defined(TARGET_API_LIB) && !defined(TARGET_LIB_FOR_WINCHI) )
     pTAB                   = bPlainTabbedOutput? "\t" : "\n";
 #else
     pTAB                   = "\n";
@@ -1277,33 +1298,33 @@ int OutputINChI1(char *pStr, int nStrLen,
     memset( sDifSegs, DIFV_BOTH_EMPTY, sizeof(sDifSegs) );
 
     if ( !pStr ) {
-        inchi_ios_eprint(log_file, 
-            "Cannot allocate output buffer. No output for structure #%d.%s%s%s%s\n", 
+        inchi_ios_eprint(log_file,
+            "Cannot allocate output buffer. No output for structure #%d.%s%s%s%s\n",
             num_input_struct, SDF_LBL_VAL(szSdfLabel, szSdfValue));
         return ret;
     }
 
     bSecondNonTautPass = 0;
 /* -- commented out to allow empty InChI --
-    if (!num_components ) 
+    if (!num_components )
     {
         return 0;
     }
 */
 
     /* init version string */
-    if ( !VER_STRING[0] ) 
+    if ( !VER_STRING[0] )
     {
         strcpy(VER_STRING,  "(V");
         strcat(VER_STRING,  INCHI_VERSION);
         strcat(VER_STRING,  ")");
     }
-    for ( i = 0; i < TAUT_NUM; i ++ ) 
+    for ( i = 0; i < TAUT_NUM; i ++ )
     {
         bHasIsotopicAtoms[i]      = num_comp[i]                  =
         bStereoSp2[i]             = bStereoSp3[i]                =
         bIsotopicStereoSp2[i]     = bIsotopicStereoSp3[i]        =
-        bIsotopicOrigNumb[i]      = 
+        bIsotopicOrigNumb[i]      =
         bStereoAbs[i]             = bIsotopicStereoAbs[i]         =
         bStereoAbsInverted[i]     = bIsotopicStereoAbsInverted[i] =
         bRacemicStereo[i]         = bRelativeStereo[i]            =
@@ -1318,18 +1339,18 @@ int OutputINChI1(char *pStr, int nStrLen,
     }
 
     /*  find if it is isotopic */
-    bIsotopic       = bTautomeric = bNonTautomeric = bTautomericAcid = 
+    bIsotopic       = bTautomeric = bNonTautomeric = bTautomericAcid =
                       bHardAddRemProton = bTautIsoHNum = bTautIsoAt = 0;
     bTautAndNonTaut = bTautIsNonTaut = 0;
     /*
          x = bStereo, bStereoSp2, bStereoSp3, bStereoAbsInverted,
-             bIsotopicStereo, bIsotopicStereoSp2, bIsotopicStereoSp3, bIsotopicStereoAbsInverted 
+             bIsotopicStereo, bIsotopicStereoSp2, bIsotopicStereoSp3, bIsotopicStereoAbsInverted
 
          OUT_N1: x[TAUT_NON] refers to non-tautomeric only
          OUT_T1: x[TAUT_YES] refers to tautomeric if exists otherwise non-tautomeric
          OUT_NT: x[TAUT_NON] refers to non-taut representations of tautomeric
          OUT_TN: x[TAUT_YES] refers to tautomeric if exists otherwise non-tautomeric
-                 x[TAUT_NON] refers to non-taut representations of tautomeric       
+                 x[TAUT_NON] refers to non-taut representations of tautomeric
      */
 
     memset( num_iso_H, 0, sizeof(num_iso_H) );
@@ -1341,13 +1362,13 @@ int OutputINChI1(char *pStr, int nStrLen,
     is  = pINChISort;
     is2 = (bOutType== OUT_TN)? pINChISortTautAndNonTaut[TAUT_NON] : NULL;
 
-    for ( i = 0, is2 = pINChISortTautAndNonTaut[TAUT_NON]; i < num_components; i ++, is ++, is2? is2++:NULL ) 
+    for ( i = 0, is2 = pINChISortTautAndNonTaut[TAUT_NON]; i < num_components; i ++, is ++, is2? is2++:NULL )
     {
         CompINChILayers( is, is2, sDifSegs, bFixTranspChargeBug );
         bNonTautIsIdenticalToTaut = bNonTautIsIdenticalToTaut && !CompINChITautVsNonTaut(is, is2, 1);
-        if ( is && (pINChI_Aux = is->pINChI_Aux[TAUT_YES]) ) 
+        if ( is && (pINChI_Aux = is->pINChI_Aux[TAUT_YES]) )
         {
-            for ( j = 0; j < NUM_H_ISOTOPES; j ++ ) 
+            for ( j = 0; j < NUM_H_ISOTOPES; j ++ )
             {
                 bHasIsoH     += abs(pINChI_Aux->nNumRemovedIsotopicH[j]);
                 num_iso_H[j] += pINChI_Aux->nNumRemovedIsotopicH[j];
@@ -1355,10 +1376,10 @@ int OutputINChI1(char *pStr, int nStrLen,
             nNumRemovedProtons += pINChI_Aux->nNumRemovedProtons;
             nNumMovedProtons   += abs(pINChI_Aux->nNumRemovedProtons);
         }
-        if ( bTautomericOutputAllowed ) 
+        if ( bTautomericOutputAllowed )
         {
             /* check for removed isotopic H */
-            for ( j = TAUT_YES; j < TAUT_NUM; j ++ ) 
+            for ( j = TAUT_YES; j < TAUT_NUM; j ++ )
             {
                 switch ( bOutType ) {
                 case OUT_N1: /* x[TAUT_NON]: non-tautomeric only -- never happens */
@@ -1383,13 +1404,13 @@ int OutputINChI1(char *pStr, int nStrLen,
                 case OUT_TN: /* x[TAUT_YES]: tautomeric if present otherwise non-tautomeric;
                               * x[TAUT_NON]: non-taut only if tautomeric is present */
                     jj = ( j == TAUT_YES )? GET_II(OUT_T1,is) : ( j == TAUT_NON )? GET_II(OUT_NT,is) : -1;
-                    if ( jj == TAUT_YES ) 
-                    {   
+                    if ( jj == TAUT_YES )
+                    {
                         /* Fix12 */
-                        if ( is->pINChI[jj]->lenTautomer > 0 ) 
+                        if ( is->pINChI[jj]->lenTautomer > 0 )
                         {
                             bTautAndNonTaut += (!is->pINChI[jj]->bDeleted && HAS_N(is));
-                        } else 
+                        } else
                         {
                             bTautIsNonTaut ++;
                         }
@@ -1403,7 +1424,7 @@ int OutputINChI1(char *pStr, int nStrLen,
                 }
                 if ( jj != j )
                     continue;
-                if ( (pINChI = is->pINChI[jj]) && pINChI->nNumberOfAtoms > 0 && (pINChI_Aux = is->pINChI_Aux[jj]) ) 
+                if ( (pINChI = is->pINChI[jj]) && pINChI->nNumberOfAtoms > 0 && (pINChI_Aux = is->pINChI_Aux[jj]) )
                 {
                     bTautIsoHNum += (pINChI_Aux->nNumRemovedIsotopicH[0] +
                                      pINChI_Aux->nNumRemovedIsotopicH[1] +
@@ -1415,11 +1436,11 @@ int OutputINChI1(char *pStr, int nStrLen,
     }
     sDifSegs[DIFL_M ][DIFS_p_PROTONS] = nNumRemovedProtons? DIFV_NEQ2PRECED : DIFV_BOTH_EMPTY;
     sDifSegs[DIFL_MI][DIFS_h_H_ATOMS] = bHasIsoH?           DIFV_NEQ2PRECED : DIFV_BOTH_EMPTY;
-    
+
     MarkUnusedAndEmptyLayers( sDifSegs );
 
 
-    
+
     bNonTautIsIdenticalToTaut = bNonTautIsIdenticalToTaut && !bTautIsoHNum;
     /*********************************************************************************************/
     for ( i = 0, is = pINChISort; i < num_components; i ++, is ++ )
@@ -1429,7 +1450,7 @@ int OutputINChI1(char *pStr, int nStrLen,
         int bCurStereoSp2, bCurIsoStereoSp2, bCurStereoSp3, bCurIsoStereoSp3, bCurIsoStereoSp3Inv;
         int bCurRacemic, bCurRelative, bCurIsoRacemic, bCurIsoRelative;
         bCompExists = 0;
-        for ( j = TAUT_NON; j < TAUT_NUM; j ++ ) 
+        for ( j = TAUT_NON; j < TAUT_NUM; j ++ )
         {
             switch ( bOutType ) {
             case OUT_N1: /* x[TAUT_NON]: non-tautomeric only */
@@ -1454,18 +1475,18 @@ int OutputINChI1(char *pStr, int nStrLen,
             case OUT_TN: /* x[TAUT_YES]: tautomeric if present otherwise non-tautomeric;
                           * x[TAUT_NON]: non-taut only if tautomeric is present */
                 jj = ( j == TAUT_YES )? GET_II(OUT_T1,is) : ( j == TAUT_NON )? GET_II(OUT_NT,is) : -1;
-                if ( jj < 0 )  
+                if ( jj < 0 )
                 {
                     /* Fix12 */
                     if ( bTautAndNonTaut && bTautIsNonTaut &&
                          j == TAUT_NON && 0 <= (jj = GET_II(OUT_T1,is)) &&
-                         !is->pINChI[jj]->bDeleted && !is->pINChI[jj]->lenTautomer ) 
+                         !is->pINChI[jj]->bDeleted && !is->pINChI[jj]->lenTautomer )
                     {
                         ; /* the requested non-tautomeric component is in tautomeric position
                              (is->pINChI[TAUT_YES]);
                              process it also as non-tautomeric if Fixed-H layer was requested */
-                    } 
-                    else 
+                    }
+                    else
                     {
                         continue;
                     }
@@ -1487,19 +1508,19 @@ int OutputINChI1(char *pStr, int nStrLen,
             default:
                 continue;
             }
-            if ( (pINChI = is->pINChI[jj]) && pINChI->nNumberOfAtoms > 0 ) 
+            if ( (pINChI = is->pINChI[jj]) && pINChI->nNumberOfAtoms > 0 )
             {
                 /*pINChI_Aux = is->pINChI_Aux[jj];*/
                 bCompExists ++;
                 bCurTaut            = (pINChI->lenTautomer > 0);
                 bCurIso             = (pINChI->nNumberOfIsotopicAtoms>0 || pINChI->nNumberOfIsotopicTGroups > 0 );
-                bCurIsoHPos         = (pINChI->nPossibleLocationsOfIsotopicH && pINChI->nPossibleLocationsOfIsotopicH[0] > 1 || pINChI->lenTautomer > 1);
+                bCurIsoHPos         = ((pINChI->nPossibleLocationsOfIsotopicH && pINChI->nPossibleLocationsOfIsotopicH[0] > 1) || pINChI->lenTautomer > 1);
                 /* present isotopic H + their possible positions AND/OR isotopic atoms */
-                bCurIsoHStereo      = bCurIsoHPos && (bTautIsoHNum || bTautIsoAt) || bCurIso;
-                if ( jj == j && pINChI->bDeleted ) 
+                bCurIsoHStereo      = (bCurIsoHPos && (bTautIsoHNum || bTautIsoAt)) || bCurIso;
+                if ( jj == j && pINChI->bDeleted )
                 {
                     num_comp[j] --;
-                    if ( bCurTaut ) 
+                    if ( bCurTaut )
                     {
                         bTautomeric        |= 1; /* tautomeric representation is present */
                         bNonTautomeric     |= HAS_N(is);
@@ -1517,11 +1538,11 @@ int OutputINChI1(char *pStr, int nStrLen,
 
                 bRequestedRelativeStereo        |= (0!=(pINChI->nFlags & INCHI_FLAG_REL_STEREO));
                 /* check whether isotopic stereo is same as non-isotopic; if same than do not output isotopic stereo */
-                if ( bCurStereoSp2 && bCurIsoStereoSp2 ) 
+                if ( bCurStereoSp2 && bCurIsoStereoSp2 )
                 {
                     bCurIsoStereoSp2 = !Eql_INChI_Stereo( pINChI->Stereo, EQL_SP2, pINChI->StereoIsotopic, EQL_SP2, 0 );
                 }
-                if ( bCurStereoSp3 && bCurIsoStereoSp3 ) 
+                if ( bCurStereoSp3 && bCurIsoStereoSp3 )
                 {
                     /* bCurIsoStereoSp3=0 means (iso stereo sp3) = (non-iso stereo sp3) or (iso stereo sp3) = Inv(non-iso stereo sp3) */
                     bCurIsoStereoSp3 = !Eql_INChI_Stereo( pINChI->Stereo, EQL_SP3, pINChI->StereoIsotopic, EQL_SP3,
@@ -1533,24 +1554,24 @@ int OutputINChI1(char *pStr, int nStrLen,
                 }
 
                 bCurRelative        =  bRequestedRelativeStereo && bCurStereoSp3;
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
                 bCurRelative        =  bCurRelative &&
                                       (pINChI->Stereo->nNumberOfStereoCenters > 1 ) &&
                                       (pINChI->Stereo->nCompInv2Abs != 0) &&
 #endif
-                                      
+
 
 
                 bCurIsoRelative     = bRequestedRelativeStereo && (bCurIsoStereoSp3 || bCurIsoStereoSp3Inv);
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
                 bCurIsoRelative     = bCurIsoRelative &&
                                       (pINChI->StereoIsotopic->nNumberOfStereoCenters > 1 ) &&
                                       (pINChI->StereoIsotopic->nCompInv2Abs != 0) &&
 #endif
-                                      
+
 
                 bCurRacemic         = bRequestedRacemicStereo && bCurStereoSp3;
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
                 bCurRacemic         = bCurRacemic &&
                                       (pINChI->Stereo->nCompInv2Abs != 0) &&
                                       (pINChI->Stereo->nNumberOfStereoCenters > 0 ) ?
@@ -1558,22 +1579,22 @@ int OutputINChI1(char *pStr, int nStrLen,
 #endif
 
                 bCurIsoRacemic      = bRequestedRacemicStereo && (bCurIsoStereoSp3 || bCurIsoStereoSp3Inv);
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
                 bCurIsoRacemic      = bCurIsoRacemic &
                                       (pINChI->StereoIsotopic->nCompInv2Abs != 0) &&
                                       (pINChI->StereoIsotopic->nNumberOfStereoCenters > 0 ) ?
                                        pINChI->StereoIsotopic->nNumberOfStereoCenters : 0;
 #endif
-                if ( bRequestedRelativeStereo ) 
+                if ( bRequestedRelativeStereo )
                 {
-                    bCurStereoSp3     = bCurRelative || bCurStereoSp3 && (pINChI->Stereo->nNumberOfStereoCenters > 1 ); /* Fix11 */
+                    bCurStereoSp3     = bCurRelative || (bCurStereoSp3 && (pINChI->Stereo->nNumberOfStereoCenters > 1 )); /* Fix11 */
                     bCurIsoStereoSp3  = bCurIsoRelative   ? bCurIsoStereoSp3 : 0;
-                } 
+                }
                 else
                 {
-                    if ( bRequestedRacemicStereo ) 
+                    if ( bRequestedRacemicStereo )
                     {
-                        bCurStereoSp3     = bCurRacemic    > 1 || bCurStereoSp3 && (pINChI->Stereo->nNumberOfStereoCenters > 1 ); /* Fix11 */
+                        bCurStereoSp3     = bCurRacemic    > 1 || (bCurStereoSp3 && (pINChI->Stereo->nNumberOfStereoCenters > 1 )); /* Fix11 */
                         bCurIsoStereoSp3  = bCurIsoRacemic > 1? bCurIsoStereoSp3 : 0;
                     }
                 }
@@ -1593,15 +1614,15 @@ int OutputINChI1(char *pStr, int nStrLen,
                 bStereoAbs[ii]                  |= bCurStereoSp3 && (pINChI->Stereo->nCompInv2Abs != 0);
                 bStereoAbsInverted[ii]          |= bCurStereoSp3 && (pINChI->Stereo->nCompInv2Abs < 0);
                 /* Fix08: missing isotopic inverted flag if isotopic = inverted non-isotopic */
-                bIsotopicStereoAbsInverted[ii]  |= bCurIsoStereoSp3 && (pINChI->StereoIsotopic->nCompInv2Abs < 0) ||
-                                                   !bCurIsoStereoSp3  && pINChI->StereoIsotopic  && pINChI->Stereo &&
+                bIsotopicStereoAbsInverted[ii]  |= (bCurIsoStereoSp3 && (pINChI->StereoIsotopic->nCompInv2Abs < 0)) ||
+                                                   (!bCurIsoStereoSp3  && pINChI->StereoIsotopic  && pINChI->Stereo &&
                                                    pINChI->StereoIsotopic->nCompInv2Abs &&
-                                                   pINChI->StereoIsotopic->nCompInv2Abs != pINChI->Stereo->nCompInv2Abs;
+                                                   pINChI->StereoIsotopic->nCompInv2Abs != pINChI->Stereo->nCompInv2Abs);
                 /* Fix 11: missing /s1 if only isotopic stereo is inverted */
-                bIsotopicStereoAbs[ii]          |= bCurIsoStereoSp3 && (pINChI->StereoIsotopic->nCompInv2Abs != 0) ||
-                                                   !bCurIsoStereoSp3  && pINChI->StereoIsotopic  && pINChI->Stereo &&
+                bIsotopicStereoAbs[ii]          |= (bCurIsoStereoSp3 && (pINChI->StereoIsotopic->nCompInv2Abs != 0)) ||
+                                                   (!bCurIsoStereoSp3  && pINChI->StereoIsotopic  && pINChI->Stereo &&
                                                    pINChI->StereoIsotopic->nCompInv2Abs &&
-                                                   pINChI->StereoIsotopic->nCompInv2Abs != pINChI->Stereo->nCompInv2Abs;
+                                                   pINChI->StereoIsotopic->nCompInv2Abs != pINChI->Stereo->nCompInv2Abs);
 
                 bRelativeStereo[ii]             |= bCurRelative;
                 bIsotopicRelativeStereo[ii]     |= bCurIsoRelative;
@@ -1610,30 +1631,30 @@ int OutputINChI1(char *pStr, int nStrLen,
 
                 bTautomericAcid                 |= (0!=(pINChI->nFlags & INCHI_FLAG_ACID_TAUT));
                 bHardAddRemProton               |= (0!=(pINChI->nFlags & INCHI_FLAG_HARD_ADD_REM_PROTON));
-                if ( bCurTaut ) 
+                if ( bCurTaut )
                 {
                     bTautomeric        |= 1; /* tautomeric representation is present */
                     /* does tautomeric structure have also a non-tautomeric repesentation? */
                     bNonTautomeric     |= HAS_N(is);
                 }
-                
+
                 /* auxiliary info */
-                if ( !(bINChIOutputOptions & INCHI_OUT_NO_AUX_INFO) && (pINChI_Aux = is->pINChI_Aux[jj]) ) 
+                if ( !(bINChIOutputOptions & INCHI_OUT_NO_AUX_INFO) && (pINChI_Aux = is->pINChI_Aux[jj]) )
                 {
                     /* detect presence of constitutional equivalence onfo */
                     int bCurEqu, bCurTautEqu=0, bCurIsoEqu=0, bCurIsoTautEqu=0; /* Fix15-disabled */
                     bAtomEqu[ii] |= (bCurEqu = bHasEquString( pINChI_Aux->nConstitEquNumbers,
                                                    pINChI_Aux->nNumberOfAtoms));
-                    if ( bCurTaut ) 
+                    if ( bCurTaut )
                     {
                         bTautEqu[ii] |= (bCurTautEqu = bHasEquString( pINChI_Aux->nConstitEquTGroupNumbers,
                                                        pINChI_Aux->nNumberOfTGroups));
                     }
-                    if ( bCurIso ) 
+                    if ( bCurIso )
                     {
                         bIsotopicAtomEqu[ii] |= (bCurIsoEqu = bHasEquString( pINChI_Aux->nConstitEquIsotopicNumbers,
                                                                pINChI_Aux->nNumberOfAtoms)) /*|| bCurEqu*/;
-                        if ( bCurTaut ) 
+                        if ( bCurTaut )
                         {
                             bIsotopicTautEqu[ii] |= (bCurIsoTautEqu = bHasEquString( pINChI_Aux->nConstitEquIsotopicTGroupNumbers,
                                                                    pINChI_Aux->nNumberOfTGroups)) /*|| bCurTautEqu*/;
@@ -1649,7 +1670,7 @@ int OutputINChI1(char *pStr, int nStrLen,
 
                     }
                     /* inverted stereo */
-                    if ( bCurStereoSp3 && pINChI->Stereo->nCompInv2Abs ) 
+                    if ( bCurStereoSp3 && pINChI->Stereo->nCompInv2Abs )
                     {
                         bInvStereo[ii]         |= 1;
                         bInvStereoOrigNumb[ii] |= pINChI_Aux->nOrigAtNosInCanonOrd &&
@@ -1660,7 +1681,7 @@ int OutputINChI1(char *pStr, int nStrLen,
                                           * pINChI_Aux->nNumberOfAtoms));
                     }
                     /* inverted isotopic stereo */
-                    if ( bCurIsoStereoSp3 && pINChI->StereoIsotopic->nCompInv2Abs ) 
+                    if ( bCurIsoStereoSp3 && pINChI->StereoIsotopic->nCompInv2Abs )
                     {
                         bInvIsotopicStereo[ii]         |= 1;
                         bInvIsotopicStereoOrigNumb[ii] |= pINChI_Aux->nIsotopicOrigAtNosInCanonOrd &&
@@ -1670,35 +1691,35 @@ int OutputINChI1(char *pStr, int nStrLen,
                                           sizeof(pINChI_Aux->nIsotopicOrigAtNosInCanonOrd[0])
                                           * pINChI_Aux->nNumberOfAtoms));
                     }
-                    if ( pINChI_Aux->OrigInfo && bHasOrigInfo(pINChI_Aux->OrigInfo, pINChI_Aux->nNumberOfAtoms) ) 
+                    if ( pINChI_Aux->OrigInfo && bHasOrigInfo(pINChI_Aux->OrigInfo, pINChI_Aux->nNumberOfAtoms) )
                     {
                         bChargesRadVal[ii] |= 1;
                     }
                 }
             }
         }
-        if ( bCompExists ) 
+        if ( bCompExists )
         {
-            for ( j = TAUT_NON; j < TAUT_NUM; j ++ ) 
+            for ( j = TAUT_NON; j < TAUT_NUM; j ++ )
             {
                 num_comp[j] ++;
             }
         }
     }
     if ( bTautomeric /*&& bTautomericAcid*/ ) /* "&& bTautomericAcid" commented out 2004-06-02 */
-    {   
+    {
         bTautomeric += bTautomericAcid; /* long-range tautomerism */
         bTautomeric += (bHardAddRemProton? 4 : 0);
     }
-    if ( bRequestedRacemicStereo || bRequestedRelativeStereo ) 
+    if ( bRequestedRacemicStereo || bRequestedRelativeStereo )
     {
         /* do not output inverted stereo info */
-        for ( i = 0; i < TAUT_NUM; i ++ ) 
+        for ( i = 0; i < TAUT_NUM; i ++ )
         {
             /* Fix11 */
-            bStereoAbsInverted[i] = 
+            bStereoAbsInverted[i] =
             bStereoAbs[i]         =
-            bInvStereo[i]         = 
+            bInvStereo[i]         =
             bInvStereoOrigNumb[i] =  0;
             /* bIsotopicRelativeStereo[i]=0 may happen because iso stereo is same or inverted non-iso stereo */
             bIsotopicStereoAbsInverted[i] =
@@ -1706,14 +1727,14 @@ int OutputINChI1(char *pStr, int nStrLen,
             bInvIsotopicStereo[i]         =
             bInvIsotopicStereoOrigNumb[i] = 0;
             /* -- commented out: Fix11--
-            if ( bRacemicStereo[i] || bRelativeStereo[i] ) 
+            if ( bRacemicStereo[i] || bRelativeStereo[i] )
             {
-                bStereoAbsInverted[i] = 
+                bStereoAbsInverted[i] =
                 bStereoAbs[i]         =
-                bInvStereo[i]         = 
+                bInvStereo[i]         =
                 bInvStereoOrigNumb[i] =  0;
             }
-            if ( bIsotopicRacemicStereo[i] || bIsotopicRelativeStereo[i] ) 
+            if ( bIsotopicRacemicStereo[i] || bIsotopicRelativeStereo[i] )
             {
                 bIsotopicStereoAbsInverted[i] =
                 bIsotopicStereoAbs[i]         =
@@ -1730,13 +1751,13 @@ int OutputINChI1(char *pStr, int nStrLen,
                    bOutType == OUT_NT? TAUT_NON:  /* only non-taut representations of tautomeric */
                    bOutType == OUT_TN? TAUT_YES:  /* tautomeric if present otherwise non-tautomeric; */
                                              -1;   /* separately output non-taut representations of tautomeric if present */
-                                             
-    if ( iCurTautMode < 0 ) 
+
+    if ( iCurTautMode < 0 )
     {
         return 0;  /* error */
     }
 
-    if ( bXml ) 
+    if ( bXml )
     {
         ind += inc* (1+iINChI);
     }
@@ -1747,7 +1768,7 @@ int OutputINChI1(char *pStr, int nStrLen,
 
     max_num_comp   = inchi_max(num_comp[TAUT_NON], num_comp[TAUT_YES]);
 
-    if ( bINChIOutputOptions & INCHI_OUT_ONLY_AUX_INFO ) 
+    if ( bINChIOutputOptions & INCHI_OUT_ONLY_AUX_INFO )
     {
         goto output_aux_info;
     }
@@ -1759,32 +1780,32 @@ int OutputINChI1(char *pStr, int nStrLen,
      *  Structure (Compound) Header
      *
      ******************************************/
-    if ( bXml ) 
+    if ( bXml )
     {
         /* -- moved to the line above goto output_aux_info;
         ind += inc* (1+iINChI);
         */
         /*  basic title, version */
-        if ( INCHI_BAS == iINChI ) 
+        if ( INCHI_BAS == iINChI )
         {
             inchi_ios_print( output_file, "\n" );   /*  empty line */
         }
         tot_len = sprintf(pStr, "%s<%s %s=\"%s\"",
             SP(ind), x_basic, x_ver, x_curr_ver);
-        if ( INCHI_REC == iINChI || INCHI_BAS == iINChI && bDisconnectedCoord ) 
+        if ( INCHI_REC == iINChI || (INCHI_BAS == iINChI && bDisconnectedCoord) )
         {
             tot_len += sprintf(pStr+tot_len, " %s=\"%d\"", x_reconnected, iINChI );
         }
-        if ( bAbcNumbers || bCtPredecessors ) 
+        if ( bAbcNumbers || bCtPredecessors )
         {
             const char *pNumber = "";
             const char *pDelim  = "";
             const char *pCtType = "";
-            if ( bAbcNumbers && bCtPredecessors ) 
+            if ( bAbcNumbers && bCtPredecessors )
             {
                 pNumber = x_type_short;
-            } 
-            else 
+            }
+            else
             {
                 pNumber = bAbcNumbers? x_type_alpha : x_type_numer;
                 pDelim  = (bAbcNumbers && bCtPredecessors)? "-":"";
@@ -1796,36 +1817,36 @@ int OutputINChI1(char *pStr, int nStrLen,
         sprintf(pStr+tot_len,">");
         inchi_ios_print( output_file, "%s\n", pStr );
         ind += inc;
-    } 
+    }
     else
-    if ( INCHI_BAS == iINChI ) 
-    { 
+    if ( INCHI_BAS == iINChI )
+    {
         /* eliminate empty line in plain text output */
-        if ( bNoStructLabels ) 
+        if ( bNoStructLabels )
         {
             ;
 /* -- removed empty line before InChI ---
-#ifndef INCHI_LIBRARY
+#ifndef TARGET_API_LIB
             inchi_ios_print( output_file, "\n" );
 #else
             ;
 #endif
 */
-        } 
+        }
         else
         {
-            if ( !(szSdfLabel && szSdfLabel[0]) && !(szSdfValue && szSdfValue[0]) ) 
+            if ( !(szSdfLabel && szSdfLabel[0]) && !(szSdfValue && szSdfValue[0]) )
             {
                 tot_len = sprintf( pStr, "%sStructure: %d", pLF, num_input_struct );
                 inchi_ios_print( output_file, "%s%s", pStr, pTAB );
-            } 
-            else 
+            }
+            else
             {
                 tot_len = sprintf( pStr, "%sStructure: %d.%s%s%s%s",
                                          pLF,
                                         num_input_struct,
                                         SDF_LBL_VAL(szSdfLabel, szSdfValue) );
-                if ( lSdfId ) 
+                if ( lSdfId )
                 {
                     tot_len --;
                     tot_len += sprintf( pStr + tot_len, ":%ld", lSdfId );
@@ -1833,7 +1854,8 @@ int OutputINChI1(char *pStr, int nStrLen,
                 inchi_ios_print( output_file, "%s%s", pStr, pTAB );
             }
         }
-        inchi_ios_print( output_file, "%s%s=%s", pLF, (FLAG_SORT_PRINT_ReChI_PREFIX & *pSortPrintINChIFlags)? INCHI_REC_NAME : INCHI_NAME, pLF );
+        /* inchi_ios_print( output_file, "%s%s=%s", pLF, (FLAG_SORT_PRINT_ReChI_PREFIX & *pSortPrintINChIFlags)? INCHI_REC_NAME : INCHI_NAME, pLF ); */
+        inchi_ios_print( output_file, "%s%s=%s", pLF, INCHI_NAME, pLF );
     }
 
 
@@ -1842,7 +1864,7 @@ int OutputINChI1(char *pStr, int nStrLen,
      * version  (10-29-2003)
      *
      ****************************************************/
-    if ( INCHI_BAS == iINChI || !(bINChIOutputOptions & INCHI_OUT_EMBED_REC) /* || !bXml */) 
+    if ( INCHI_BAS == iINChI || !(bINChIOutputOptions & INCHI_OUT_EMBED_REC) /* || !bXml */)
     {
         /* xml: only if the first or not embedded; plain: always */
         szGetTag( IdentLbl, nTag,  bTag1 = IL_VERS, szTag1, &bAlways );
@@ -1867,13 +1889,13 @@ int OutputINChI1(char *pStr, int nStrLen,
      *
      ****************************************************/
     /******************* constitution: dot-disconnected Hill formulas: <formula> */
-    if ( num_components2[0] || num_components2[1] ) 
+    if ( num_components2[0] || num_components2[1] )
     {
         szGetTag( IdentLbl, nTag,  bTag1 = INCHI_REC == iINChI? IL_REC_ : IL_FML_, szTag1, &bAlways );
         tot_len = str_LineStart( szTag1, NULL, 0, pStr, ind );
         tot_len = str_HillFormula(pINChISort, pStr, nStrLen, tot_len,
                                   &bOverflow, bOutType, num_components, bUseMulipliers);
-    
+
         if ( str_LineEnd( szTag1, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -1, 1 ) )
             goto exit_function;
         inchi_ios_print( output_file, "%s%s", pStr, pLF );
@@ -1891,7 +1913,7 @@ int OutputINChI1(char *pStr, int nStrLen,
         inchi_ios_print( output_file, "%s%s", pStr, pLF );
     }
     /************** hydrogen atoms; do not output empty */
-    if ( INCHI_SEGM_FILL == INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_h_H_ATOMS] ) ) 
+    if ( INCHI_SEGM_FILL == INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_h_H_ATOMS] ) )
     {
         szGetTag( IdentLbl, nTag,  bTag1 = IL_ALLH, szTag1, &bAlways );
         tot_len  = str_LineStart( szTag1, NULL, 0, pStr, ind );
@@ -1911,17 +1933,17 @@ int OutputINChI1(char *pStr, int nStrLen,
 
 
 repeat_INChI_output:
-    
+
     /*****************************************************
      * charge
      */
-    
+
     nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_q_CHARGE] );
-    if ( nSegmAction ) 
+    if ( nSegmAction )
     {
         szGetTag( IdentLbl, nTag,  bTag1 = IL_CHRG | bFhTag, szTag1, &bAlways );
         tot_len = str_LineStart( szTag1, NULL, 0, pStr, ind );
-        if ( INCHI_SEGM_FILL == nSegmAction ) 
+        if ( INCHI_SEGM_FILL == nSegmAction )
         {
             tot_len = str_Charge2(pINChISort, pINChISort2, pStr, nStrLen, tot_len,
                                   &bOverflow, bOutType, num_components,
@@ -1931,10 +1953,10 @@ repeat_INChI_output:
         if ( str_LineEnd( szTag1, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -nSegmAction, bPlainTextTags ) )
             goto exit_function;
         inchi_ios_print( output_file, "%s%s", pStr, pLF );
-    } 
+    }
     else
     {
-        if ( !bXml ) 
+        if ( !bXml )
         {
             if ( bPlainTextTags == 1 ) inchi_ios_print( output_file, "/" );
         }
@@ -1943,11 +1965,11 @@ repeat_INChI_output:
     /*****************************************************
      * removed protons
      */
-    if ( iCurTautMode == TAUT_YES && !bSecondNonTautPass ) 
+    if ( iCurTautMode == TAUT_YES && !bSecondNonTautPass )
     {
-    
+
         nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_p_PROTONS] );
-        if ( nSegmAction ) 
+        if ( nSegmAction )
         {
             szGetTag( IdentLbl, nTag,  bTag1 = IL_PROT | bFhTag, szTag1, &bAlways );
             tot_len = str_LineStart( szTag1, NULL, 0, pStr, ind );
@@ -1955,15 +1977,15 @@ repeat_INChI_output:
             if ( str_LineEnd( szTag1, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -nSegmAction, bPlainTextTags ) )
                 goto exit_function;
             inchi_ios_print( output_file, "%s%s", pStr, pLF );
-        } 
+        }
         else
         {
-            if ( !bXml ) 
+            if ( !bXml )
             {
                 if ( bPlainTextTags == 1 ) inchi_ios_print( output_file, "/" );
             }
         }
-    
+
     }
 
 
@@ -1971,7 +1993,7 @@ repeat_INChI_output:
      *
      *    non-isotopic stereo
      */
-    
+
     {
         int i;
         i = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_t_SATOMS] );
@@ -1985,20 +2007,20 @@ repeat_INChI_output:
     {
         /*  stereo */
         szGetTag( IdentLbl, nTag,  bTag1 = IL_STER | bFhTag, szTag1, &bAlways );
-        if ( bXml ) 
+        if ( bXml )
         {
             str_LineStart( szTag1, NULL, 0, pStr, ind );
             inchi_ios_print( output_file, "%s\n", pStr );
             ind += inc;
         }
-        
+
         /*  sp2 */
         /*if ( bStereoSp2[iCurTautMode]  )*/
-        if ( nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_b_SBONDS] ) )
+        if ( (nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_b_SBONDS] )) )
         {
             szGetTag( IdentLbl, nTag,  bTag2 = bTag1 | IL_DBND, szTag2, &bAlways );
             tot_len = str_LineStart( szTag2, NULL, 0, pStr, ind );
-            if ( INCHI_SEGM_FILL == nSegmAction ) 
+            if ( INCHI_SEGM_FILL == nSegmAction )
             {
                 tot_len = str_Sp2(pINChISort, pINChISort2, pStr, nStrLen, tot_len,
                                    &bOverflow, bOutType, TAUT_MODE, num_components,
@@ -2008,10 +2030,10 @@ repeat_INChI_output:
             if ( str_LineEnd( szTag2, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -nSegmAction, bPlainTextTags ) )
                 goto exit_function;
             inchi_ios_print( output_file, "%s%s", pStr, pLF );
-        } 
+        }
         else
         {
-            if ( !bXml ) 
+            if ( !bXml )
             {
                 if ( bPlainTextTags == 1 ) inchi_ios_print( output_file, "/" ); /* sp2 */
             }
@@ -2019,7 +2041,7 @@ repeat_INChI_output:
 
         /*  sp3 */
         /*if ( bStereoSp3[iCurTautMode]  )*/
-        if ( nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_t_SATOMS] ) )
+        if ( (nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_t_SATOMS] )) )
         {
             bRelRac     = bRelativeStereo[iCurTautMode] || bRacemicStereo[iCurTautMode];
             szGetTag( IdentLbl, nTag,  bTag2 = bTag1 | IL_SP3S, szTag2, &bAlways );
@@ -2029,15 +2051,15 @@ repeat_INChI_output:
                                   &bOverflow, bOutType, TAUT_MODE, num_components, bRelRac,
                                   bSecondNonTautPass, bOmitRepetitions, bUseMulipliers);
                 bNonTautNonIsoIdentifierNotEmpty += bSecondNonTautPass;
-            }			
+            }
 
             if (str_LineEnd( szTag2, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -nSegmAction, bPlainTextTags ))
                 goto exit_function;
             inchi_ios_print( output_file, "%s%s", pStr, pLF );
-        }  
+        }
         else
         {
-            if ( !bXml ) 
+            if ( !bXml )
             {
                 if ( bPlainTextTags == 1 ) inchi_ios_print( output_file, "/" ); /* sp3 */
             }
@@ -2046,7 +2068,7 @@ repeat_INChI_output:
         /* bStereoAbsInverted[iCurTautMode]  */
 
         /* if ( bStereoAbs[iCurTautMode]  ) */
-        if ( nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_m_SP3INV] ) )
+        if ( (nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_m_SP3INV] )) )
         {
             szGetTag( IdentLbl, nTag,  bTag2 = bTag1 | IL_INVS, szTag2, &bAlways );
             tot_len = str_LineStart( szTag2, NULL, 0, pStr, ind );
@@ -2059,10 +2081,10 @@ repeat_INChI_output:
             if (str_LineEnd( szTag2, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -nSegmAction, bPlainTextTags ))
                 goto exit_function;
             inchi_ios_print( output_file, "%s%s", pStr, pLF );
-        }  
+        }
         else
         {
-            if ( !bXml ) 
+            if ( !bXml )
             {
                 if ( bPlainTextTags == 1 ) inchi_ios_print( output_file, "/" ); /* stereo-abs-inv */
             }
@@ -2070,7 +2092,7 @@ repeat_INChI_output:
 
         /* stereo type */
         /*if ( bRacemicStereo[iCurTautMode] || bRelativeStereo[iCurTautMode] || bStereoAbs[iCurTautMode] )*/
-        if ( nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_s_STYPE] ) )
+        if ( (nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_s_STYPE] )) )
         {
             const char *p_stereo = bRelativeStereo[iCurTautMode]? x_rel :
                                    bRacemicStereo[iCurTautMode] ? x_rac : x_abs;
@@ -2079,17 +2101,17 @@ repeat_INChI_output:
             if ( INCHI_SEGM_FILL == nSegmAction ) {
                 tot_len += MakeDelim( p_stereo, pStr + tot_len, nStrLen-tot_len, &bOverflow);
                 bNonTautNonIsoIdentifierNotEmpty += bSecondNonTautPass;
-            }            
+            }
             if (str_LineEnd( szTag2, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -nSegmAction, bPlainTextTags ))
                 goto exit_function;
             inchi_ios_print( output_file, "%s%s", pStr, pLF );
         }
-        if ( !bXml ) 
+        if ( !bXml )
         {
             if ( bPlainTextTags == 1 ) inchi_ios_print( output_file, "/" );  /* no abs, inv or racemic stereo */
         }
-        
-        if ( bXml ) 
+
+        if ( bXml )
         {
             /* close stereo */
             ind -= inc;
@@ -2097,10 +2119,10 @@ repeat_INChI_output:
                 goto exit_function;
             inchi_ios_print( output_file, "%s", pStr );
         }
-    } 
+    }
     else
     {
-        if ( !bXml ) 
+        if ( !bXml )
         {
             if ( bPlainTextTags == 1 ) inchi_ios_print( output_file, "////" ); /* sp3, sp2, abs-inv, stereo.type */
         }
@@ -2113,13 +2135,13 @@ repeat_INChI_output:
      *
      ****************************************************/
     nCurINChISegment ++; /* switch from M to MI or from F to FI */
-    
+
     /*if ( bIsotopic || !bSecondNonTautPass && bHasIsoH )*/
     if ( INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_i_IATOMS] ) )
     {
         /*  isotopic #1:  composition -- atoms -- do not output in xml if empty */
         szGetTag( IdentLbl, nTag,  bTag1 = IL_ISOT | bFhTag, szTag1, &bAlways );
-        if ( bXml ) 
+        if ( bXml )
         {
             str_LineStart( szTag1, NULL, 0, pStr, ind );
             inchi_ios_print( output_file, "%s\n", pStr );
@@ -2130,7 +2152,7 @@ repeat_INChI_output:
          * Previous condition if( bHasIsotopicAtoms[iCurTautMode] || bIsotopic && !bXml)
          * did not optput /i in case of only mobile isotopic H
          */
-        if ( nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_i_IATOMS] ) )
+        if ( (nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_i_IATOMS] )) )
         {
             szGetTag( IdentLbl, nTag,  bTag2 = bTag1 | IL_ATMS, szTag2, &bAlways );
             tot_len = str_LineStart( szTag2, NULL, 0, pStr, ind );
@@ -2141,8 +2163,8 @@ repeat_INChI_output:
                                        &bOverflow, bOutType, TAUT_MODE, num_components, bAbcNumbers,
                                        bSecondNonTautPass, bOmitRepetitions, bUseMulipliers);
                 bNonTautIsoIdentifierNotEmpty += bSecondNonTautPass;
-            } 
-            else 
+            }
+            else
             {
                 tot_len2 = tot_len;
             }
@@ -2156,7 +2178,7 @@ repeat_INChI_output:
 
         /*  isotopic #1a:  composition -- exchangeable isotopic H (mobile H only) */
         /*if ( !bSecondNonTautPass && bHasIsoH )*/
-        if ( nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_h_H_ATOMS] ) )
+        if ( (nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_h_H_ATOMS] )) )
         {
             szGetTag( IdentLbl, nTag,  bTag2 = bTag1 | IL_XCGA, szTag2, &bAlways );
             tot_len = str_LineStart( szTag2, NULL, 0, pStr, ind );
@@ -2173,7 +2195,7 @@ repeat_INChI_output:
          *
          ***************************************************/
 
-        /*if ( bIsotopicStereo[iCurTautMode] )*/ 
+        /*if ( bIsotopicStereo[iCurTautMode] )*/
         if ( INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_b_SBONDS] ) ||
              INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_t_SATOMS] ) ||
              INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_m_SP3INV] ) ||
@@ -2181,18 +2203,18 @@ repeat_INChI_output:
         {
             /*  stereo */
             szGetTag( IdentLbl, nTag,  bTag2 = bTag1 | IL_STER, szTag2, &bAlways );
-            if ( bXml ) 
+            if ( bXml )
             {
                 str_LineStart( szTag2, NULL, 0, pStr, ind );
                 inchi_ios_print( output_file, "%s\n", pStr );
                 ind += inc;
             }
-            
+
             /************************
               isotopic #2:  sp2
              ************************/
             /*if ( bIsotopicStereoSp2[iCurTautMode]  )*/
-            if ( nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_b_SBONDS] ) )
+            if ( (nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_b_SBONDS] )) )
             {
                 szGetTag( IdentLbl, nTag,  bTag3 = bTag2 | IL_DBND, szTag3, &bAlways );
                 tot_len = str_LineStart( szTag3, NULL, 0, pStr, ind );
@@ -2205,10 +2227,10 @@ repeat_INChI_output:
                 if ( str_LineEnd( szTag3, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -nSegmAction, bPlainTextTags ) )
                     goto exit_function;
                 inchi_ios_print( output_file, "%s%s", pStr, pLF );
-            } 
+            }
             else
             {
-                if ( !bXml ) 
+                if ( !bXml )
                 {
                     if ( bPlainTextTags == 1 ) inchi_ios_print( output_file, "/" ); /* iso sp2 */
                 }
@@ -2218,7 +2240,7 @@ repeat_INChI_output:
               isotopic #3:  sp3
              ************************/
             /*if ( bIsotopicStereoSp3[iCurTautMode]  )*/
-            if ( nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_t_SATOMS] ) )
+            if ( (nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_t_SATOMS] )) )
             {
                 bRelRac = bIsotopicRelativeStereo[iCurTautMode] || bIsotopicRacemicStereo[iCurTautMode];
                 szGetTag( IdentLbl, nTag,  bTag3 = bTag2 | IL_SP3S, szTag3, &bAlways );
@@ -2234,15 +2256,15 @@ repeat_INChI_output:
                 inchi_ios_print( output_file, "%s%s", pStr, pLF );
             } else
             {
-                if ( !bXml ) 
+                if ( !bXml )
                 {
-                    if ( bPlainTextTags == 1 ) 
+                    if ( bPlainTextTags == 1 )
                         inchi_ios_print( output_file, "/" ); /* iso-sp3 */
                 }
             }
 
             /* isotopic #4: abs inverted */
-            if ( nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_m_SP3INV] ) )
+            if ( (nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_m_SP3INV] )) )
             {
                 szGetTag( IdentLbl, nTag,  bTag3 = bTag2 | IL_INVS, szTag3, &bAlways );
                 tot_len = str_LineStart( szTag3, NULL, 0, pStr, ind );
@@ -2254,18 +2276,18 @@ repeat_INChI_output:
                 if ( str_LineEnd( szTag3, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -nSegmAction, bPlainTextTags ) )
                     goto exit_function;
                 inchi_ios_print( output_file, "%s%s", pStr, pLF );
-            }  
+            }
             else
             {
-                if ( !bXml ) 
+                if ( !bXml )
                 {
-                    if ( bPlainTextTags == 1 ) 
+                    if ( bPlainTextTags == 1 )
                         inchi_ios_print( output_file, "/" );
                 }
             }
 
-            /* isotopic #5: stereo type. Do not output if it has already been output in non-iso */ 
-            if ( nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_s_STYPE] ) )
+            /* isotopic #5: stereo type. Do not output if it has already been output in non-iso */
+            if ( (nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_s_STYPE] )) )
             {
                 const char *p_stereo = bIsotopicRelativeStereo[iCurTautMode]? x_rel :
                                        bIsotopicRacemicStereo[iCurTautMode] ? x_rac : x_abs;
@@ -2279,12 +2301,12 @@ repeat_INChI_output:
                     goto exit_function;
                 inchi_ios_print( output_file, "%s%s", pStr, pLF );
             }
-            if ( !bXml ) 
+            if ( !bXml )
             {
-                if ( bPlainTextTags == 1 ) 
+                if ( bPlainTextTags == 1 )
                     inchi_ios_print( output_file, "/" );  /* no abs, inv or racemic stereo */
             }
-            if ( bXml ) 
+            if ( bXml )
             {
                 /************************
                   close isotopic stereo
@@ -2297,42 +2319,42 @@ repeat_INChI_output:
         }
         else
         {
-            if ( !bXml ) 
-            {  
+            if ( !bXml )
+            {
                 /* no isotopic stereo */
-                if ( bPlainTextTags == 1 ) 
+                if ( bPlainTextTags == 1 )
                     inchi_ios_print( output_file, "////" ); /* sp3, sp2, abs-inv, stereo.type */
             }
         }
 
         /*  close isotopic */
-        if ( bXml ) 
+        if ( bXml )
         {
             ind -= inc;
             if ( str_LineEnd( szTag1, 0, nStrLen, &bOverflow, pStr, ind, bPlainTextTags ) )
                 goto exit_function;
             inchi_ios_print( output_file, "%s", pStr );
         }
-    }  
+    }
     else
     {
-        if ( !bXml ) 
+        if ( !bXml )
         {
-            if ( bPlainTextTags == 1 ) 
+            if ( bPlainTextTags == 1 )
                 inchi_ios_print( output_file, "///" ); /* isotopic composition, sp2, sp3 */
-            if ( bPlainTextTags == 1 ) 
+            if ( bPlainTextTags == 1 )
                 inchi_ios_print( output_file, "//" );   /* inv or racemic stereo */
         }
     }
 
-#if( CANON_FIXH_TRANS == 1 )
+#if ( CANON_FIXH_TRANS == 1 )
     if ( bOutType == OUT_NONTAUT && bOutputType == OUT_TN && bSecondNonTautPass &&
-         INCHI_SEGM_FILL == INChI_SegmentAction( sDifSegs[DIFL_F][DIFS_o_TRANSP] )) 
+         INCHI_SEGM_FILL == INChI_SegmentAction( sDifSegs[DIFL_F][DIFS_o_TRANSP] ))
     {
         /* find and print non-tautomeric components transposition, if non-trivial */
         AT_NUMB *nTrans_n, *nTrans_s;
 
-        if ( 0 < bin_AuxTautTrans(pINChISort, pINChISort2, &nTrans_n, &nTrans_s, bOutType,  num_components) ) 
+        if ( 0 < bin_AuxTautTrans(pINChISort, pINChISort2, &nTrans_n, &nTrans_s, bOutType,  num_components) )
         {
             /* a non-trivial transposition does exist; output start tag */
             szGetTag( IdentLbl, nTag,  bTag1 = IL_TRNS | bFhTag, szTag1, &bAlways );
@@ -2347,12 +2369,12 @@ repeat_INChI_output:
              /* detected transposition */
             *pSortPrintINChIFlags |= (INCHI_BAS == iINChI)? FLAG_SORT_PRINT_TRANSPOS_BAS :
                                                             FLAG_SORT_PRINT_TRANSPOS_REC;
-        }  
+        }
         else
         {
-            if ( !bXml ) 
+            if ( !bXml )
             {
-                if ( bPlainTextTags == 1 ) 
+                if ( bPlainTextTags == 1 )
                     inchi_ios_print( output_file, "/" );
             }
         }
@@ -2370,7 +2392,7 @@ repeat_INChI_output:
          isotopic stereo
     ***************************************************************/
     if ( bOutType == OUT_TN && !bSecondNonTautPass &&
-         bNonTautIsIdenticalToTaut && bTautomeric && bNonTautomeric ) 
+         bNonTautIsIdenticalToTaut && bTautomeric && bNonTautomeric )
     {
             /* Fixed-H layer is empty in the Identifier */
             *pSortPrintINChIFlags |= (INCHI_BAS == iINChI)? FLAG_SORT_PRINT_NO_NFIX_H_BAS :
@@ -2378,16 +2400,16 @@ repeat_INChI_output:
             *pSortPrintINChIFlags |= (INCHI_BAS == iINChI)? FLAG_SORT_PRINT_NO_IFIX_H_BAS :
                                                             FLAG_SORT_PRINT_NO_IFIX_H_REC;
     }
-    
+
     if ( bOutType == OUT_TN && !bNonTautIsIdenticalToTaut /* added 2004-10-04 Fix16 */
-#ifdef OLD_ITEM_DISCOVERY                            
-                            && bTautomeric && bNonTautomeric 
+#ifdef OLD_ITEM_DISCOVERY
+                            && bTautomeric && bNonTautomeric
 #endif
                             && INChI_SegmentAction( sDifSegs[DIFL_F][DIFS_f_FORMULA] )
                        /* special case: removed isolated H(+): */
                        /* || iCurTautMode == TAUT_YES && num_comp[TAUT_YES] < num_comp[TAUT_NON] &&
-                             0 < num_comp[TAUT_NON]*/ 
-       ) 
+                             0 < num_comp[TAUT_NON]*/
+       )
     {
         /* add the second (non-tautomeric) output */
         bOutType     = OUT_NONTAUT;    /* pick up only non-tautomeric representation of tautomeric */
@@ -2398,8 +2420,8 @@ repeat_INChI_output:
         num_components = num_comp[iCurTautMode]; /* number of components could change due to removal of isolated H(+) from tautomeric */
         bFhTag = IL_FIXH;
         szGetTag( IdentLbl, nTag,  bTag1 = bFhTag, szTag1, &bAlways );
-        if ( bXml ) 
-        {  
+        if ( bXml )
+        {
             /* open non-tautomeric */
             str_LineStart( szTag1, NULL, 0, pStr, ind );
             inchi_ios_print( output_file, "%s\n", pStr );
@@ -2409,13 +2431,13 @@ repeat_INChI_output:
         szGetTag( IdentLbl, nTag,  bTag1 = IL_FMLF | bFhTag, szTag1, &bAlways );
         tot_len = str_LineStart( szTag1, NULL, 0, pStr, ind );
         nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_f_FORMULA] );
-        if ( INCHI_SEGM_FILL == nSegmAction ) 
+        if ( INCHI_SEGM_FILL == nSegmAction )
         {
             tot_len2 = str_HillFormula2(pINChISort, pINChISort2, pStr, nStrLen, tot_len,
                                       &bOverflow, bOutType, num_components, bUseMulipliers);
             bNonTautNonIsoIdentifierNotEmpty += bSecondNonTautPass;
-        } 
-        else 
+        }
+        else
         {
             tot_len2 = tot_len;
         }
@@ -2425,7 +2447,7 @@ repeat_INChI_output:
         inchi_ios_print( output_file, "%s%s", pStr, pLF );
 
         nSegmAction = INChI_SegmentAction( sDifSegs[nCurINChISegment][DIFS_h_H_ATOMS] );
-        if ( INCHI_SEGM_FILL == nSegmAction ) 
+        if ( INCHI_SEGM_FILL == nSegmAction )
         {
             szGetTag( IdentLbl, nTag,  bTag1 = IL_HFIX | bFhTag, szTag1, &bAlways );
             tot_len = str_LineStart( szTag1, NULL, 0, pStr, ind ); /* open H-fixed */
@@ -2439,10 +2461,10 @@ repeat_INChI_output:
             bNonTautNonIsoIdentifierNotEmpty += bSecondNonTautPass;
         }
         goto repeat_INChI_output;
-    } 
+    }
     else
     {
-        if ( bOutType == OUT_NONTAUT && bOutputType == OUT_TN && bSecondNonTautPass /* && bTautomeric && bNonTautomeric*/ ) 
+        if ( bOutType == OUT_NONTAUT && bOutputType == OUT_TN && bSecondNonTautPass /* && bTautomeric && bNonTautomeric*/ )
         {
             /* the second (non-taut) output has been done; restore variables */
             bOutType           = OUT_TN;
@@ -2450,19 +2472,19 @@ repeat_INChI_output:
             pINChISort         = pINChISortTautAndNonTaut[TAUT_YES];
             bSecondNonTautPass = 0;
             num_components     = num_comp[iCurTautMode];
-            if ( !bNonTautNonIsoIdentifierNotEmpty ) 
+            if ( !bNonTautNonIsoIdentifierNotEmpty )
             {
                 /* Fixed-H layer is empty in the Identifier */
                 *pSortPrintINChIFlags |= (INCHI_BAS == iINChI)? FLAG_SORT_PRINT_NO_NFIX_H_BAS :
                                                             FLAG_SORT_PRINT_NO_NFIX_H_REC;
             }
-            if ( !bNonTautIsoIdentifierNotEmpty ) 
+            if ( !bNonTautIsoIdentifierNotEmpty )
             {
                 /* Fixed-H layer is empty in the Identifier */
                 *pSortPrintINChIFlags |= (INCHI_BAS == iINChI)? FLAG_SORT_PRINT_NO_IFIX_H_BAS :
                                                                 FLAG_SORT_PRINT_NO_IFIX_H_REC;
             }
-            if ( bXml ) 
+            if ( bXml )
             {
                 /*  close non-tautomeric */
                 ind -= inc;
@@ -2481,42 +2503,42 @@ repeat_INChI_output:
      ************************************************/
     bEmbeddedOutputCalled = 0;
     if ( bDisconnectedCoord && INCHI_BAS == iINChI &&
-         (bINChIOutputOptions & INCHI_OUT_EMBED_REC) && num_components2[INCHI_REC] ) 
+         (bINChIOutputOptions & INCHI_OUT_EMBED_REC) && num_components2[INCHI_REC] )
     {
         int nRet;
         bEmbeddedOutputCalled = 1;
-        
-        if ( !bXml ) 
+
+        if ( !bXml )
         {
              /* output blank line before /R: in case of bPlainTextCommnts=1 */
             inchi_ios_print( output_file, "%s", pLF );
         }
         /* end of disconnected INChI output */
 
-        nRet = OutputINChI1( pStr, nStrLen, 
-                             pINChISortTautAndNonTaut2, 
+        nRet = OutputINChI1( pStr, nStrLen,
+                             pINChISortTautAndNonTaut2,
                              INCHI_REC, NULL,
-                             0 /*bDisconnectedCoord*/, bOutputType, 
+                             0 /*bDisconnectedCoord*/, bOutputType,
                              bINChIOutputOptions | INCHI_OUT_NO_AUX_INFO,
-                             bXml, bAbcNumbers, bCtPredecessors, bNoStructLabels, 
+                             bXml, bAbcNumbers, bCtPredecessors, bNoStructLabels,
                              num_components2, num_non_taut2, num_taut2,
-                             output_file, log_file, 
+                             output_file, log_file,
                              num_input_struct,
-                             szSdfLabel, szSdfValue, lSdfId, 
+                             szSdfLabel, szSdfValue, lSdfId,
                              pSortPrintINChIFlags,
                              save_opt_bits);
-        if ( !nRet ) 
+        if ( !nRet )
             goto exit_function; /* error */
     }
 
-    if ( bXml ) 
+    if ( bXml )
     {
         /*  close INChI identifier (basic) */
         ind -= inc;
         if ( str_LineEnd( x_basic, 0, nStrLen, &bOverflow, pStr, ind, bPlainTextTags ) )
             goto exit_function;
         inchi_ios_print( output_file, "%s", pStr );
-    } 
+    }
     else
     {
         /* save InChI creation options if requested ...*/
@@ -2534,9 +2556,9 @@ repeat_INChI_output:
             }
         }
 
-        if ( !bEmbeddedOutputCalled && !bPlainTextCommnts ) 
+        if ( !bEmbeddedOutputCalled && !bPlainTextCommnts )
         { /* plain text comment earlier ended with LF */
-            inchi_ios_print( output_file, "%s%s", 
+            inchi_ios_print( output_file, "%s%s",
                                 (!num_components2[0] && !num_components2[1])? "//":"", /* empty InChI=// */
                                 (bINChIOutputOptions & INCHI_OUT_NO_AUX_INFO)? "\n" : pTAB );
         /* end of INChI= output */
@@ -2546,11 +2568,11 @@ repeat_INChI_output:
     }
 
 output_aux_info:
-    
+
     bFhTag = 0;
-    
-    if( !(bINChIOutputOptions & INCHI_OUT_NO_AUX_INFO) )  
-    { 
+
+    if( !(bINChIOutputOptions & INCHI_OUT_NO_AUX_INFO) )
+    {
         /* output aux info */
 
         /*************************************************************
@@ -2558,24 +2580,24 @@ output_aux_info:
          *   Aux info non-isotopic
          *
          *************************************************************/
-        
+
         num_components = num_comp[iCurTautMode];
-        if ( bXml ) 
+        if ( bXml )
         {
             /*  aux. info header */
             /*  empty line if INChI output has been printed */
-            if ( !(bINChIOutputOptions & INCHI_OUT_ONLY_AUX_INFO) ) 
+            if ( !(bINChIOutputOptions & INCHI_OUT_ONLY_AUX_INFO) )
             {
                 inchi_ios_print( output_file, "\n" );
             }
             /*  basic.aux-info title, version */
             tot_len = sprintf(pStr, "%s<%s %s=\"%s\"",
                 SP(ind), x_aux_basic, x_ver, x_curr_ver );
-            if ( INCHI_REC == iINChI || INCHI_BAS == iINChI && bDisconnectedCoord ) 
+            if ( INCHI_REC == iINChI || (INCHI_BAS == iINChI && bDisconnectedCoord) )
             {
                 tot_len += sprintf(pStr+tot_len, " %s=\"%d\"", x_reconnected, iINChI );
             }
-            if ( bAbcNumbers ) 
+            if ( bAbcNumbers )
             {
                 /*  type */
                 const char *pNumber = x_type_short;
@@ -2585,16 +2607,16 @@ output_aux_info:
             sprintf(pStr+tot_len,">");
             inchi_ios_print( output_file, "%s\n", pStr );
             ind += inc;
-            if ( !(bINChIOutputOptions & INCHI_OUT_ONLY_AUX_INFO) ) 
+            if ( !(bINChIOutputOptions & INCHI_OUT_ONLY_AUX_INFO) )
             {
                 /*  comment */
                 tot_len = sprintf( pStr, "%s<%s>", SP(ind), x_aux_comm );
                 inchi_ios_print( output_file, "%s\n", pStr );
             }
-        } 
-        else 
+        }
+        else
         {
-            if ( INCHI_BAS == iINChI ) 
+            if ( INCHI_BAS == iINChI )
             {
                 tot_len = sprintf( pStr, "AuxInfo=" ); /* in wINChI window, separate INChI: from AuxInfo: with blank line */
                 inchi_ios_print( output_file, "%s%s%s",
@@ -2609,10 +2631,10 @@ output_aux_info:
                 if ( str_LineEnd( szTag1, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -1, bPlainTextTags ) )
                     goto exit_function;
                 inchi_ios_print( output_file, "%s%s", pStr, pLF );
-            } 
+            }
             else
             {
-                if ( INCHI_REC == iINChI ) 
+                if ( INCHI_REC == iINChI )
                 {
                     szGetTag( AuxLbl, nTag,  bTag1 = AL_REC_, szTag1, &bAlways );
                     inchi_ios_print( output_file, "%s%s", szTag1, pLF );
@@ -2621,11 +2643,11 @@ output_aux_info:
 
         }
         /* normalization type */
-        if ( num_components2[0] || num_components2[1] ) 
+        if ( num_components2[0] || num_components2[1] )
         {
             szGetTag( AuxLbl, nTag,  bTag1 = AL_NORM, szTag1, &bAlways );
             tot_len = str_LineStart( szTag1, NULL, 0, pStr, ind );
-            tot_len += sprintf( pStr + tot_len, "%d", (bTautomeric && bTautomericOutputAllowed)? bTautomeric : 0); 
+            tot_len += sprintf( pStr + tot_len, "%d", (bTautomeric && bTautomericOutputAllowed)? bTautomeric : 0);
             if ( str_LineEnd( szTag1, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -1, bPlainTextTags ) )
                 goto exit_function;
             inchi_ios_print( output_file, "%s%s", pStr, pLF );
@@ -2638,7 +2660,7 @@ repeat_INChI_Aux_output:
         /**************************************************************
          *   Original atom numbers in order of canonical numbers
          **************************************************************/
-        if ( num_components2[0] || num_components2[1] ) 
+        if ( num_components2[0] || num_components2[1] )
         {
             szGetTag( AuxLbl, nTag,  bTag1 = (bSecondNonTautPass? AL_FIXN : AL_ANBR) | bFhTag, szTag1, &bAlways );
             tot_len = str_LineStart( szTag1, NULL, 0, pStr, ind );
@@ -2654,7 +2676,7 @@ repeat_INChI_Aux_output:
         /**********************************************
          *   Symmetry numbers (constit. equivalence)
          **********************************************/
-        if ( bAtomEqu[iCurTautMode] ) 
+        if ( bAtomEqu[iCurTautMode] )
         {
             /*  aux equ atoms */
             /* 1. Compare to tautomeric equivalence (in case of second, non-taut, pass only) */
@@ -2668,19 +2690,19 @@ repeat_INChI_Aux_output:
             if ( str_LineEnd( szTag1, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -1, bPlainTextTags ) )
                 goto exit_function;
             inchi_ios_print( output_file, "%s%s", pStr, pLF );
-        } 
+        }
         else
         {
-            if ( !bXml ) 
+            if ( !bXml )
             {
-                if ( bPlainTextTags == 1 ) 
+                if ( bPlainTextTags == 1 )
                     inchi_ios_print( output_file, "/" );
             }
         }
         /*****************************************************
          *    Tautomeric groups equivalence
          *****************************************************/
-        if ( bTautomericOutputAllowed && bTautomeric && bTautEqu[iCurTautMode] && !bSecondNonTautPass ) 
+        if ( bTautomericOutputAllowed && bTautomeric && bTautEqu[iCurTautMode] && !bSecondNonTautPass )
         {
             /*****************************************************
              *    Tautomeric groups constitutional equivalence
@@ -2694,12 +2716,12 @@ repeat_INChI_Aux_output:
             if ( str_LineEnd( szTag1, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -1, bPlainTextTags ) )
                 goto exit_function;
             inchi_ios_print( output_file, "%s", pStr );
-        } 
+        }
         else
         {
-            if ( !bXml && bTautomericOutputAllowed && bTautomeric ) 
+            if ( !bXml && bTautomericOutputAllowed && bTautomeric )
             {
-                if ( bPlainTextTags == 1 ) 
+                if ( bPlainTextTags == 1 )
                     inchi_ios_print( output_file, "/" );
             }
         }
@@ -2707,10 +2729,10 @@ repeat_INChI_Aux_output:
         /****************************************************
          * Inverted stereo -- sp3 only + canonical numbering
          ****************************************************/
-        if ( bInvStereo[iCurTautMode] ) 
+        if ( bInvStereo[iCurTautMode] )
         {
             szGetTag( AuxLbl, nTag,  bTag1 = AL_STER | bFhTag, szTag1, &bAlways );
-            if ( bXml ) 
+            if ( bXml )
             {
                 /***************************
                      inv stereo start  tag
@@ -2730,11 +2752,11 @@ repeat_INChI_Aux_output:
             if ( str_LineEnd( szTag2, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -1, bPlainTextTags ) )
                 goto exit_function;
             inchi_ios_print( output_file, "%s%s", pStr, pLF );
-            
+
             /*************************************
-              inverted sp3  canonical numbering 
+              inverted sp3  canonical numbering
             **************************************/
-            if ( bInvStereoOrigNumb[iCurTautMode] ) 
+            if ( bInvStereoOrigNumb[iCurTautMode] )
             {
                 szGetTag( AuxLbl, nTag,  bTag2 = bTag1 | AL_SP3N, szTag2, &bAlways );
                 tot_len = str_LineStart( szTag2, NULL, 0, pStr, ind );
@@ -2744,16 +2766,16 @@ repeat_INChI_Aux_output:
                 if ( str_LineEnd( szTag2, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -1, bPlainTextTags ) )
                     goto exit_function;
                 inchi_ios_print( output_file, "%s%s", pStr, pLF );
-            }   
+            }
             else
             {
-                if ( !bXml ) 
+                if ( !bXml )
                 {
                     if ( bPlainTextTags == 1 ) inchi_ios_print( output_file, "/" );
                 }
             }
-              
-            if ( bXml ) 
+
+            if ( bXml )
             {
                 /* close sp3 inv */
                 ind -= inc;
@@ -2761,21 +2783,21 @@ repeat_INChI_Aux_output:
                     goto exit_function;
                 inchi_ios_print( output_file, "%s%s", pStr, pLF );
             }
-        }  
+        }
         else
         {
-            if ( !bXml ) 
+            if ( !bXml )
             {
-                if ( bPlainTextTags == 1 ) 
+                if ( bPlainTextTags == 1 )
                     inchi_ios_print( output_file, "//" );
             } /* Inverted stereo -- sp3 only + canonical numbering */
         }
-    
+
 
         /* omitted undefined/unknown non-isotopic stereo */
-        if ( bXml ) 
+        if ( bXml )
         {
-            if ( bIgn_UU_Sp2[iCurTautMode] || bIgn_UU_Sp3[iCurTautMode] ) 
+            if ( bIgn_UU_Sp2[iCurTautMode] || bIgn_UU_Sp3[iCurTautMode] )
             {
                 /* <stereo omit_undef_dbond="1" omit_undef_sp3="1"/> */
                 szGetTag( IdentLbl, nTag,  bTag1 = IL_STER, szTag1, &bAlways );
@@ -2807,21 +2829,21 @@ repeat_INChI_Aux_Iso_output:
         if ( bIsotopic && !i &&
                           (bIsotopicOrigNumb[iCurTautMode] ||
                            bIsotopicAtomEqu[iCurTautMode] ||
-                           bTautomericOutputAllowed && bTautomeric && bIsotopicTautEqu[iCurTautMode] ||
+                           (bTautomericOutputAllowed && bTautomeric && bIsotopicTautEqu[iCurTautMode]) ||
                            bInvIsotopicStereo[iCurTautMode] ||
-                           bXml && ( bIgn_UU_Sp3_Iso[iCurTautMode] || bIgn_UU_Sp2_Iso[iCurTautMode] ) ) ) 
+                           (bXml && ( bIgn_UU_Sp3_Iso[iCurTautMode] || bIgn_UU_Sp2_Iso[iCurTautMode] )) ) )
         {
             /*************************************/
             /*   isotopic aux info header        */
             /*************************************/
             szGetTag( AuxLbl, nTag,  bTag1 = AL_ISOT | bFhTag, szTag1, &bAlways );
-            if ( bXml ) 
+            if ( bXml )
             {
                 str_LineStart( szTag1, NULL, 0, pStr, ind );
                 inchi_ios_print( output_file, "%s\n", pStr );
                 ind += inc;
-            } 
-            else 
+            }
+            else
             {
                 pStr[tot_len = 0] = '\0';
             }
@@ -2829,7 +2851,7 @@ repeat_INChI_Aux_Iso_output:
              *   Original atom numbers in order of isotopic canonical numbers
              *****************************************************************/
             szGetTag( AuxLbl, nTag,  bTag2 = bTag1 | AL_ISON, szTag2, &bAlways );
-            if ( bIsotopicOrigNumb[iCurTautMode] ) 
+            if ( bIsotopicOrigNumb[iCurTautMode] )
             {
                 tot_len = str_LineStart( szTag2, NULL, 0, pStr, ind );
                 tot_len = str_AuxIsoNumb(pINChISort, pINChISort2, pStr, nStrLen, tot_len,
@@ -2838,10 +2860,10 @@ repeat_INChI_Aux_Iso_output:
                 if ( str_LineEnd( szTag2, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -1, bPlainTextTags ) )
                     goto exit_function;
                 inchi_ios_print( output_file, "%s%s", pStr, pLF );
-            } 
+            }
             else
             {
-                if ( !bXml ) 
+                if ( !bXml )
                 {
                     /*if ( bPlainTextTags == 1 ) inchi_ios_print( output_file, "/" );*/
                     inchi_ios_print( output_file, "%s%s", szTag2, pLF ); /* mark isotopic output */
@@ -2851,7 +2873,7 @@ repeat_INChI_Aux_Iso_output:
             /*************************/
             /*  Isotopic symmetry    */
             /*************************/
-            if ( bIsotopicAtomEqu[iCurTautMode] ) 
+            if ( bIsotopicAtomEqu[iCurTautMode] )
             {
                 /*  atoms */
                 szGetTag( AuxLbl, nTag,  bTag2 = bTag1 | AL_AEQU, szTag2, &bAlways );
@@ -2862,12 +2884,12 @@ repeat_INChI_Aux_Iso_output:
                 if ( str_LineEnd( szTag2, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -2/*was -1: Fix15*/, bPlainTextTags ) )
                     goto exit_function;
                 inchi_ios_print( output_file, "%s%s", pStr, pLF );
-            }  
+            }
             else
             {
-                if ( !bXml ) 
+                if ( !bXml )
                 {
-                    if ( bPlainTextTags == 1 ) 
+                    if ( bPlainTextTags == 1 )
                         inchi_ios_print( output_file, "/" );
                 }
             }
@@ -2875,7 +2897,7 @@ repeat_INChI_Aux_Iso_output:
             /********************************/
             /*  Tautomeric groups, isotopic */
             /********************************/
-            if ( bTautomericOutputAllowed && bTautomeric && bIsotopicTautEqu[iCurTautMode] ) 
+            if ( bTautomericOutputAllowed && bTautomeric && bIsotopicTautEqu[iCurTautMode] )
             {
                 /********************************************/
                 /*  Isotopic tautomeric groups equivalence */
@@ -2888,12 +2910,12 @@ repeat_INChI_Aux_Iso_output:
                 if ( str_LineEnd( szTag2, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -2/*was -1: Fix15*/, bPlainTextTags ) )
                     goto exit_function;
                 inchi_ios_print( output_file, "%s%s", pStr, pLF );
-            } 
+            }
             else
             {
-                if ( !bXml && bTautomericOutputAllowed && bTautomeric ) 
+                if ( !bXml && bTautomericOutputAllowed && bTautomeric )
                 {
-                    if ( bPlainTextTags == 1 ) 
+                    if ( bPlainTextTags == 1 )
                         inchi_ios_print( output_file, "/" );
                 }
             }
@@ -2901,10 +2923,10 @@ repeat_INChI_Aux_Iso_output:
             /*************************************
              * Isotopic inverted stereo
              *************************************/
-            if ( bInvIsotopicStereo[iCurTautMode] ) 
+            if ( bInvIsotopicStereo[iCurTautMode] )
             {
                 szGetTag( AuxLbl, nTag,  bTag2 = bTag1 | AL_STER, szTag2, &bAlways );
-                if ( bXml ) 
+                if ( bXml )
                 {
                     /************************************
                          inv isotopic stereo start  tag
@@ -2925,9 +2947,9 @@ repeat_INChI_Aux_Iso_output:
                     goto exit_function;
                 inchi_ios_print( output_file, "%s", pStr );
                 /*********************************************
-                  inverted isotopic sp3  canonical numbering 
+                  inverted isotopic sp3  canonical numbering
                 **********************************************/
-                if ( bInvIsotopicStereoOrigNumb[iCurTautMode] ) 
+                if ( bInvIsotopicStereoOrigNumb[iCurTautMode] )
                 {
                     szGetTag( AuxLbl, nTag,  bTag3 = bTag2 | AL_SP3N, szTag3, &bAlways );
                     tot_len = str_LineStart( szTag3, NULL, 0, pStr, ind );
@@ -2937,16 +2959,16 @@ repeat_INChI_Aux_Iso_output:
                     if ( str_LineEnd( szTag3, tot_len, nStrLen, &bOverflow, pStr, bXml? 0 : -1, bPlainTextTags ) )
                         goto exit_function;
                     inchi_ios_print( output_file, "%s%s", pStr, pLF );
-                }   
+                }
                 else
                 {
-                    if ( !bXml ) 
+                    if ( !bXml )
                     {
-                        if ( bPlainTextTags == 1 ) 
+                        if ( bPlainTextTags == 1 )
                             inchi_ios_print( output_file, "/" );
                     }
                 }
-                if ( bXml ) 
+                if ( bXml )
                 {
                 /* close sp3 inv */
                     ind -= inc;
@@ -2954,20 +2976,20 @@ repeat_INChI_Aux_Iso_output:
                         goto exit_function;
                     inchi_ios_print( output_file, "%s", pStr );
                 }
-            } 
+            }
             else
             {
-                if ( !bXml ) 
+                if ( !bXml )
                 {
-                    if ( bPlainTextTags == 1 ) 
+                    if ( bPlainTextTags == 1 )
                         inchi_ios_print( output_file, "//" );
                 }
             }
 
             /* totally omitted undefined/unknown isotopic stereo */
-            if ( bXml ) 
+            if ( bXml )
             {
-                if ( bIgn_UU_Sp3_Iso[iCurTautMode] || bIgn_UU_Sp2_Iso[iCurTautMode]  ) 
+                if ( bIgn_UU_Sp3_Iso[iCurTautMode] || bIgn_UU_Sp2_Iso[iCurTautMode]  )
                 {
                     /* <stereo omit_undef_dbond="1" omit_undef_sp3="1"/> */
                     szGetTag( IdentLbl, nTag,  bTag1 = IL_STER, szTag1, &bAlways );
@@ -2980,7 +3002,7 @@ repeat_INChI_Aux_Iso_output:
             }
 
 
-            if ( bXml ) 
+            if ( bXml )
             {
                 /*****************  close isotopic ***********************/
                 ind -= inc;
@@ -2991,8 +3013,8 @@ repeat_INChI_Aux_Iso_output:
         } /* Aux info isotopic */
 
 
-#if( CANON_FIXH_TRANS != 1 )
-        if ( bSecondNonTautPass ) 
+#if ( CANON_FIXH_TRANS != 1 )
+        if ( bSecondNonTautPass )
         {
             /* find and print non-tautomeric components transposition, if non-trivial */
             AT_NUMB *nTrans_n, *nTrans_s;
@@ -3014,7 +3036,7 @@ repeat_INChI_Aux_Iso_output:
             }
         }
 #endif
-        
+
         /**************************************************************
           At this point the INChI_Aux part of the output has been completed.
           If this INChI is tautomeric and non-tautomeric results exist
@@ -3022,19 +3044,19 @@ repeat_INChI_Aux_Iso_output:
           (same as above excluding tautomeric information)
           Currently this is enabled for xml output only
         ***************************************************************/
-        
+
         if ( bOutType == OUT_TN && bTautomeric && bNonTautomeric &&
             /* Check whether the Fixed-H layer is empty */
             (*pSortPrintINChIFlags & ((INCHI_BAS == iINChI)? FLAG_SORT_PRINT_NO_NFIX_H_BAS :
                                                              FLAG_SORT_PRINT_NO_NFIX_H_REC )) &&
             (*pSortPrintINChIFlags & ((INCHI_BAS == iINChI)? FLAG_SORT_PRINT_NO_IFIX_H_BAS :
                                                              FLAG_SORT_PRINT_NO_IFIX_H_REC ))
-              ) 
+              )
         {
             bNonTautomeric = 0; /* bNonTautIdentifierNotEmpty == 0 => no fixed H info 02-10-2995 */
         }
-        
-        if ( bOutType == OUT_TN && bTautomeric && bNonTautomeric ) 
+
+        if ( bOutType == OUT_TN && bTautomeric && bNonTautomeric )
         {
             /* add the second (non-tautomeric) output */
             bOutType     = OUT_NONTAUT;
@@ -3043,34 +3065,34 @@ repeat_INChI_Aux_Iso_output:
             bSecondNonTautPass = 1;
             num_components = num_comp[iCurTautMode];
             bFhTag = AL_FIXH;
-            if ( bXml ) 
+            if ( bXml )
             {
                 szGetTag( AuxLbl, nTag,  bTag1 = bFhTag, szTag1, &bAlways );
                 str_LineStart( szTag1, NULL, 0, pStr, ind );
                 inchi_ios_print( output_file, "%s\n", pStr );
                 ind += inc;
-            } 
-            else 
+            }
+            else
             {
                 pStr[tot_len=0] = '\0';
             }
-            
+
             /* if InChI Fixed-H isotopic is empty then do not output corresponding AuxInfo */
-            if ( !(*pSortPrintINChIFlags & 
+            if ( !(*pSortPrintINChIFlags &
                     ((INCHI_BAS == iINChI)? FLAG_SORT_PRINT_NO_NFIX_H_BAS :
                                             FLAG_SORT_PRINT_NO_NFIX_H_REC ))
-               ) 
+               )
             {
                 goto repeat_INChI_Aux_output;
-            } 
-            else 
+            }
+            else
             {
                 goto repeat_INChI_Aux_Iso_output;
             }
-        } 
+        }
         else
         {
-            if ( bOutType == OUT_NONTAUT && bOutputType == OUT_TN && bTautomeric && bNonTautomeric ) 
+            if ( bOutType == OUT_NONTAUT && bOutputType == OUT_TN && bTautomeric && bNonTautomeric )
             {
                 /* the second (non-taut) output has been done; restore variables */
                 bOutType           = OUT_TN;
@@ -3079,7 +3101,7 @@ repeat_INChI_Aux_Iso_output:
                 bSecondNonTautPass = 0;
                 /* set correct num components for the reversibility info 02-10-2005 */
                 num_components     = num_comp[iCurTautMode];
-                if ( bXml ) 
+                if ( bXml )
                 {
                     /*  close non-tautomeric */
                     szGetTag( AuxLbl, nTag,  bTag1 = bFhTag, szTag1, &bAlways );
@@ -3096,7 +3118,7 @@ repeat_INChI_Aux_Iso_output:
         /***************************************/
         /* charges, radicals, unusual valences */
         /***************************************/
-        if ( !bSecondNonTautPass && bChargesRadVal[iCurTautMode] ) 
+        if ( !bSecondNonTautPass && bChargesRadVal[iCurTautMode] )
         {
             /*  aux equ atoms */
             /* 1. Compare to tautomeric equivalence (in case of second, non-taut, pass only) */
@@ -3113,7 +3135,7 @@ repeat_INChI_Aux_Iso_output:
 
         /* output the original input structure -- quick fix */
         if ( !bSecondNonTautPass && pOrigStruct && pOrigStruct->num_atoms &&
-             pOrigStruct->szAtoms && pOrigStruct->szBonds && pOrigStruct->szCoord ) 
+             pOrigStruct->szAtoms && pOrigStruct->szBonds && pOrigStruct->szCoord )
         {
             int length, cur_pos, line_len, last_pos, nMaxLineLen;
             char *p;
@@ -3122,7 +3144,7 @@ repeat_INChI_Aux_Iso_output:
                reversibility info
              **********************/
             szGetTag( AuxLbl, nTag,  bTag1 = AL_REVR | bFhTag, szTag1, &bAlways );
-            if ( bXml ) 
+            if ( bXml )
             {
                 str_LineStart( szTag1, NULL, 0, pStr, ind );
                 inchi_ios_print( output_file, "%s\n", pStr );
@@ -3130,7 +3152,7 @@ repeat_INChI_Aux_Iso_output:
             }
             /*  === atoms === */
             szGetTag( AuxLbl, nTag,  bTag2 = bTag1 | AL_ATMR, szTag2, &bAlways );
-            if ( bXml ) 
+            if ( bXml )
             {
                 str_LineStart( szTag2, NULL, 0, pStr, ind );
                 inchi_ios_print( output_file, "%s\n", pStr );
@@ -3138,8 +3160,8 @@ repeat_INChI_Aux_Iso_output:
                 /* first line indent */
                 strcpy( pStr, SP(ind));
                 tot_len = ind;
-            } 
-            else 
+            }
+            else
             {
                 pStr[tot_len = 0] = '\0';
                 inchi_ios_print( output_file, "%s%s", szTag2, pStr );
@@ -3147,42 +3169,42 @@ repeat_INChI_Aux_Iso_output:
             p = pOrigStruct->szAtoms;
             length = strlen( p );
             line_len = nMaxLineLen - tot_len;
-            for ( cur_pos = 0; cur_pos < length; cur_pos = last_pos ) 
+            for ( cur_pos = 0; cur_pos < length; cur_pos = last_pos )
             {
-                if ( length - cur_pos >= line_len ) 
+                if ( length - cur_pos >= line_len )
                 {
                     last_pos = cur_pos + line_len;
                     /* search backward for the nearest first atom letter (always uppercase) */
                     while ( cur_pos < last_pos && !isupper( UCINT p[last_pos] ) ) {
                         last_pos --;
                     }
-                } 
-                else 
+                }
+                else
                 {
                     last_pos = length;
                 }
-                if ( last_pos > cur_pos ) 
+                if ( last_pos > cur_pos )
                 {
                     memcpy( pStr + tot_len, p+cur_pos, last_pos - cur_pos );
                     pStr[tot_len + last_pos - cur_pos] = '\0';
                     inchi_ios_print( output_file, "%s%s", pStr, !bXml && bPlainTextTags? "" : "\n" );
-                } 
-                else 
+                }
+                else
                 {
                     break;
                 }
             }
-            if ( bXml ) 
+            if ( bXml )
             {
                 ind -= inc;
                 pStr[0] = '\0';
                 if ( str_LineEnd( szTag2, 0, nMaxLineLen, &bOverflow, pStr, ind, bPlainTextTags ) )
                     goto exit_function;
                 inchi_ios_print( output_file, "%s", pStr );
-            } 
+            }
             else
             {
-                if ( pLF[0] ) 
+                if ( pLF[0] )
                 {
                     inchi_ios_print( output_file, "%s", pLF );
                 }
@@ -3191,7 +3213,7 @@ repeat_INChI_Aux_Iso_output:
 
             /*  === bonds === */
             szGetTag( AuxLbl, nTag,  bTag2 = bTag1 | AL_BNDR, szTag2, &bAlways );
-            if ( bXml ) 
+            if ( bXml )
             {
                 str_LineStart( szTag2, NULL, 0, pStr, ind );
                 inchi_ios_print( output_file, "%s\n", pStr );
@@ -3199,58 +3221,58 @@ repeat_INChI_Aux_Iso_output:
                 /* first line indent */
                 strcpy( pStr, SP(ind));
                 tot_len = ind;
-            } 
-            else 
+            }
+            else
             {
                 pStr[tot_len = 0] = '\0';
                 inchi_ios_print( output_file, "%s%s", szTag2, pStr );
             }
-            
+
             p = pOrigStruct->szBonds;
             length = strlen( p );
             line_len = nMaxLineLen - tot_len;
-            for ( cur_pos = 0; cur_pos < length; cur_pos = last_pos ) 
+            for ( cur_pos = 0; cur_pos < length; cur_pos = last_pos )
             {
-                if ( length - cur_pos >= line_len ) 
+                if ( length - cur_pos >= line_len )
                 {
                     last_pos = cur_pos + line_len - 1;
                     /* search backward for the nearest first bond delimiter ";" */
-                    while ( cur_pos < last_pos && p[last_pos] != ';' ) 
+                    while ( cur_pos < last_pos && p[last_pos] != ';' )
                     {
                         last_pos --;
                     }
-                    if ( cur_pos < last_pos ) 
+                    if ( cur_pos < last_pos )
                     {
                         last_pos ++; /* include ';' at the end of the line */
                     }
-                } 
-                else 
+                }
+                else
                 {
                     last_pos = length;
                 }
-                if ( last_pos > cur_pos ) 
+                if ( last_pos > cur_pos )
                 {
                     memcpy( pStr + tot_len, p+cur_pos, last_pos - cur_pos );
                     pStr[tot_len + last_pos - cur_pos] = '\0';
                     inchi_ios_print( output_file, "%s%s", pStr, !bXml && bPlainTextTags? "" : "\n" );
-                } 
-                else 
+                }
+                else
                 {
                     break;
                 }
             }
 
-            if ( bXml ) 
+            if ( bXml )
             {
                 ind -= inc;
                 pStr[0] = '\0';
                 if ( str_LineEnd( szTag2, 0, nMaxLineLen, &bOverflow, pStr, ind, bPlainTextTags ) )
                     goto exit_function;
                 inchi_ios_print( output_file, "%s", pStr );
-            } 
+            }
             else
             {
-                if ( pLF[0] ) 
+                if ( pLF[0] )
                 {
                     inchi_ios_print( output_file, "%s", pLF );
                 }
@@ -3259,7 +3281,7 @@ repeat_INChI_Aux_Iso_output:
 
             /*  === coordinates === */
             szGetTag( AuxLbl, nTag,  bTag2 = bTag1 | AL_XYZR, szTag2, &bAlways );
-            if ( bXml ) 
+            if ( bXml )
             {
                 str_LineStart( szTag2, NULL, 0, pStr, ind );
                 inchi_ios_print( output_file, "%s\n", pStr );
@@ -3267,64 +3289,64 @@ repeat_INChI_Aux_Iso_output:
                 /* first line indent */
                 strcpy( pStr, SP(ind));
                 tot_len = ind;
-            } 
-            else 
+            }
+            else
             {
                 pStr[tot_len = 0] = '\0';
                 inchi_ios_print( output_file, "%s%s", szTag2, pStr );
             }
-            
+
             p = pOrigStruct->szCoord;
             length = strlen( p );
             line_len = nMaxLineLen - tot_len;
-            for ( cur_pos = 0; cur_pos < length; cur_pos = last_pos ) 
+            for ( cur_pos = 0; cur_pos < length; cur_pos = last_pos )
             {
-                if ( length - cur_pos >= line_len ) 
+                if ( length - cur_pos >= line_len )
                 {
                     last_pos = cur_pos + line_len - 1;
                     /* search backward for the nearest first coord. delimiter ";" */
-                    while ( cur_pos < last_pos && p[last_pos] != ';' ) 
+                    while ( cur_pos < last_pos && p[last_pos] != ';' )
                     {
                         last_pos --;
                     }
-                    if ( cur_pos < last_pos ) 
+                    if ( cur_pos < last_pos )
                     {
                         last_pos ++; /* include ';' at the end of the line */
                     }
-                } 
-                else 
+                }
+                else
                 {
                     last_pos = length;
                 }
-                if ( last_pos > cur_pos ) 
+                if ( last_pos > cur_pos )
                 {
                     memcpy( pStr + tot_len, p+cur_pos, last_pos - cur_pos );
                     pStr[tot_len + last_pos - cur_pos] = '\0';
                     inchi_ios_print( output_file, "%s%s", pStr, !bXml && bPlainTextTags? "" : "\n" );
-                } 
-                else 
+                }
+                else
                 {
                     break;
                 }
             }
-            
-            if ( bXml ) 
+
+            if ( bXml )
             {
                 ind -= inc;
                 pStr[0] = '\0';
                 if ( str_LineEnd( szTag2, 0, nMaxLineLen, &bOverflow, pStr, ind, bPlainTextTags ) )
                     goto exit_function;
                 inchi_ios_print( output_file, "%s", pStr );
-            } 
+            }
             else
             {
-                if ( pLF[0] ) 
+                if ( pLF[0] )
                 {
                     inchi_ios_print( output_file, "%s", pLF );
                 }
             }
 
-            if ( bXml ) 
+            if ( bXml )
             {
                 /***************************
                   close reversibility info
@@ -3343,53 +3365,53 @@ repeat_INChI_Aux_Iso_output:
          ************************************************/
         bEmbeddedOutputCalled = 0;
         if ( bDisconnectedCoord && INCHI_BAS == iINChI && (bINChIOutputOptions & INCHI_OUT_EMBED_REC) &&
-             num_components2[INCHI_REC] && !(bINChIOutputOptions & INCHI_OUT_NO_AUX_INFO) ) 
+             num_components2[INCHI_REC] && !(bINChIOutputOptions & INCHI_OUT_NO_AUX_INFO) )
         {
             int nRet;
             bEmbeddedOutputCalled = 1;
-            if ( !bXml ) 
+            if ( !bXml )
             {
                 inchi_ios_print( output_file, "%s", pLF );
             }
-        
-            nRet = OutputINChI1(pStr, nStrLen, 
-                                pINChISortTautAndNonTaut2, 
-                                INCHI_REC, 
+
+            nRet = OutputINChI1(pStr, nStrLen,
+                                pINChISortTautAndNonTaut2,
+                                INCHI_REC,
                                 NULL,
-                                0 /*bDisconnectedCoord*/, bOutputType, 
+                                0 /*bDisconnectedCoord*/, bOutputType,
                                 INCHI_OUT_ONLY_AUX_INFO | bINChIOutputOptions,
-                                bXml, bAbcNumbers, bCtPredecessors, bNoStructLabels, 
-                                num_components2, 
+                                bXml, bAbcNumbers, bCtPredecessors, bNoStructLabels,
+                                num_components2,
                                 num_non_taut2, num_taut2,
-                                output_file, log_file, 
+                                output_file, log_file,
                                 num_input_struct,
-                                szSdfLabel, szSdfValue, lSdfId, 
+                                szSdfLabel, szSdfValue, lSdfId,
                                 pSortPrintINChIFlags,
                                 save_opt_bits);
             if ( !nRet )
                 goto exit_function; /* error */
         }
-        
+
         /* close INChI_Aux */
-        if ( bXml ) 
+        if ( bXml )
         {
                 ind -= inc;
             if ( str_LineEnd( x_aux_basic, 0, nStrLen, &bOverflow, pStr, ind, bPlainTextTags ) )
                 goto exit_function;
             inchi_ios_print( output_file, "%s", pStr );
-        } 
+        }
         else
         {
-            if ( !bEmbeddedOutputCalled && !bPlainTextCommnts ) 
+            if ( !bEmbeddedOutputCalled && !bPlainTextCommnts )
             {
                 inchi_ios_print( output_file, "%s\n", (!num_components2[0] && !num_components2[1])? "//":"" );
                 /* plain text comment earlier ended with LF */
             }
         }
 
-        
+
         /* in wINChI window, separate AuxInfo: from InChIKey: with blank line */
-        inchi_ios_print( output_file, "%s", 
+        inchi_ios_print( output_file, "%s",
                         (bINChIOutputOptions & INCHI_OUT_WINCHI_WINDOW) ? "\n":"");
 
 
@@ -3401,14 +3423,14 @@ repeat_INChI_Aux_Iso_output:
     ret = 1;
 exit_function:
 
-    if ( bOverflow ) 
+    if ( bOverflow )
     {
         strcpy( pStr, "Output buffer overflow");
-        if ( bXml ) 
+        if ( bXml )
         {
             OutputINChIXmlError( output_file, pStr, nStrLen, ind /*, 0*/ /* err number */, pStr, _IS_FATAL );
-        } 
-        else 
+        }
+        else
         {
             inchi_ios_print( output_file, "\nFATAL ERROR: %s\n", pStr );
         }
@@ -3417,7 +3439,7 @@ exit_function:
     /* inchi_free( pStr ); */
     return ret;
 
-     
+
 } /* OutputINChI1 */
 
 
@@ -3492,8 +3514,8 @@ int str_LineEnd( const char *tag, int tot_len, int nStrLen, int *bOverflow, char
     return 0;
 }
 
-    
-    
+
+
 /**********************************************************************************************/
 int CleanOrigCoord( MOL_COORD szCoord, int delim )
 {
@@ -3536,7 +3558,7 @@ int CleanOrigCoord( MOL_COORD szCoord, int delim )
             /* fst = (first mantissa digit); fst=1 if the sign is present, otherwise 0 */
             fst = (szVal[0]!='.' && !isdigit( UCINT szVal[0] ));
             /* dec_pnt = (decimal point position) or last */
-            if ( q = strchr(szVal, '.') ) {
+            if ( (q = strchr(szVal, '.')) ) {
                 dec_pnt = q - szVal;
             } else {
                 dec_pnt = last;
@@ -3588,7 +3610,7 @@ int WriteOrigCoord( int num_inp_atoms, MOL_COORD *szMolCoord, int *i, char *szBu
         if ( NUM_COORD == num_zer ) {
             len = 0;
         } else {
-            if ( p = (char *)memchr( szCurCoord, '\0', sizeof(szCurCoord)) ) {
+            if ( (p = (char *)memchr( szCurCoord, '\0', sizeof(szCurCoord))) ) {
                 len = p - szCurCoord;
             } else {
                 len = sizeof(szCurCoord);
@@ -3690,18 +3712,18 @@ int WriteOrigAtoms( int num_inp_atoms, inp_ATOM *at, int *i, char *szBuf, int bu
                 len += sprintf( szCurAtom + len, "%d", val > 0? val : 0 );
             }
             /* charge */
-            if ( val = at[j].charge ) {
+            if ( (val = at[j].charge) ) {
                 szCurAtom[len++] = val>0? '+' : '-';
                 if ( (val = abs(val)) > 1 ) {
                     len += sprintf( szCurAtom + len, "%d", val );
                 }
             }
             /* radical */
-            if ( val = at[j].radical ) {
+            if ( (val = at[j].radical) ) {
                 len += sprintf(szCurAtom + len, ".%d", val);
             }
             /* isotopic shift */
-            if ( val = at[j].iso_atw_diff ) {
+            if ( (val = at[j].iso_atw_diff) ) {
                 mw = get_atw_from_elnum( at[j].el_number );
                 if ( val == 1 )
                     val = mw;
@@ -3723,7 +3745,7 @@ int WriteOrigAtoms( int num_inp_atoms, inp_ATOM *at, int *i, char *szBuf, int bu
             /* implicit isotopic H */
             if ( NUM_ISO_H(at,j) ) {
                 for ( k = 0; k < NUM_H_ISOTOPES; k ++ ) {
-                    if ( val = at[j].num_iso_H[k] ) {
+                    if ( (val = at[j].num_iso_H[k]) ) {
                         len += sprintf( szCurAtom + len, "%s%c", len == len0? ".":"", szIsoH[k] );
                         if ( val > 1 ) {
                             len += sprintf(szCurAtom + len, "%d", val);
@@ -3741,7 +3763,7 @@ int WriteOrigAtoms( int num_inp_atoms, inp_ATOM *at, int *i, char *szBuf, int bu
         }
         szBuf[cur_len] = '\0';
         *i = j;
-             
+
     }
     return cur_len;
 }
@@ -3789,7 +3811,7 @@ int WriteOrigBonds( int num_inp_atoms, inp_ATOM *at, int *i, char *szBuf, int bu
     int  chain_len, pnxt_atom, pinxt2cur, pinxt_sb_parity_ord;
     int  chain_len2, pnxt_atom2, pinxt2cur2, pinxt_sb_parity_ord2, m1, m2;
     int  pcur_atom, picur2nxt, picur_sb_parity_ord;
-   
+
     cur_len = 0;
     for ( j = *i; j < num_inp_atoms; ) {
         len = 0;
@@ -3825,7 +3847,7 @@ int WriteOrigBonds( int num_inp_atoms, inp_ATOM *at, int *i, char *szBuf, int bu
                     case -STEREO_SNGL_DOWN:
                         bond_char = 'N';
                         break;
-#if( FIX_EITHER_STEREO_IN_AUX_INFO == 1 )
+#if ( FIX_EITHER_STEREO_IN_AUX_INFO == 1 )
                     case  STEREO_SNGL_EITHER:
                         bond_char = 'v';
                         break;
@@ -3885,8 +3907,8 @@ int WriteOrigBonds( int num_inp_atoms, inp_ATOM *at, int *i, char *szBuf, int bu
                         }
                     }
                 }
-                if ( chain_len == 1 && chain_len2 == 1 ||  /* regular stereobond */
-                     chain_len  > 1 && j  > pnxt_atom ) {  /* j  is a cumulene endpoint */
+                if ( (chain_len == 1 && chain_len2 == 1) ||  /* regular stereobond */
+                     (chain_len  > 1 && j  > pnxt_atom) ) {  /* j  is a cumulene endpoint */
                     int m;
                     pcur_atom = j;  /* pcur_atom > pnxt_atom */
                     picur2nxt = k;
@@ -3977,7 +3999,7 @@ int WriteOrigBonds( int num_inp_atoms, inp_ATOM *at, int *i, char *szBuf, int bu
                             */
 
                         }
-                        
+
                         if ( neigh1 < num_inp_atoms && neigh2 < num_inp_atoms ) {
                             if ( ATOM_PARITY_WELL_DEF(p1) && ATOM_PARITY_WELL_DEF(p2) ) {
                                 bond_parity = 2 - (p1 + p2 + bNeighSwitched1 + bNeighSwitched2) % 2;
@@ -4047,8 +4069,8 @@ int FillOutOrigStruct( ORIG_ATOM_DATA *orig_inp_data, ORIG_STRUCT *pOrigStruct, 
 
     if (orig_inp_data->szCoord) {
 
-        while ( len = WriteOrigCoord( orig_inp_data->num_inp_atoms,
-                                      orig_inp_data->szCoord, &i, szBuf, sizeof(szBuf) )) {
+        while ( (len = WriteOrigCoord( orig_inp_data->num_inp_atoms,
+                                      orig_inp_data->szCoord, &i, szBuf, sizeof(szBuf) )) ) {
             len_coord += len;
         }
         pOrigStruct->szCoord = (char*) inchi_malloc( (len_coord + 1)*sizeof(pOrigStruct->szCoord[0]) );
@@ -4068,10 +4090,10 @@ int FillOutOrigStruct( ORIG_ATOM_DATA *orig_inp_data, ORIG_STRUCT *pOrigStruct, 
 
     }
 
-    /* atoms */                
+    /* atoms */
     len_atoms = i = 0;
-    while ( len = WriteOrigAtoms( orig_inp_data->num_inp_atoms,
-                                  orig_inp_data->at, &i, szBuf, sizeof(szBuf), sd)) {
+    while ( (len = WriteOrigAtoms( orig_inp_data->num_inp_atoms,
+                                  orig_inp_data->at, &i, szBuf, sizeof(szBuf), sd)) ) {
         len_atoms += len;
         if ( !orig_inp_data->num_inp_atoms )
             break;
@@ -4089,8 +4111,8 @@ int FillOutOrigStruct( ORIG_ATOM_DATA *orig_inp_data, ORIG_STRUCT *pOrigStruct, 
     /* bonds */
     len_bonds = 0;
     i = 1;
-    while ( len = WriteOrigBonds( orig_inp_data->num_inp_atoms,
-                                  orig_inp_data->at, &i, szBuf, sizeof(szBuf), NULL)) {
+    while ( (len = WriteOrigBonds( orig_inp_data->num_inp_atoms,
+                                  orig_inp_data->at, &i, szBuf, sizeof(szBuf), NULL)) ) {
         len_bonds += len;
         if ( !orig_inp_data->num_inp_atoms )
             break;
@@ -4129,14 +4151,14 @@ void FreeOrigStruct(  ORIG_STRUCT *pOrigStruct)
 Get the two letters encoding the saved InChI creation options.
 
 The first one encodes RecMet/FixedH/SUU/SLUUD options.
-Each of options is a binary switch {ON,OFF}, so it totals to 2*2*2*2=16 values 
-which are encoded by capital letters ‘A’ through ‘P’.
+Each of options is a binary switch {ON,OFF}, so it totals to 2*2*2*2=16 values
+which are encoded by capital letters ï¿½Aï¿½ through ï¿½Pï¿½.
 
-The second character encodes experimental (InChI 1 extension) options KET and 15T. 
-Each of these options is a binary switch ON/OFF, so there are 2*2=4 combinations, 
-currently encoded by ‘A’ through ‘D’. 
-Note that anything but 'A' here would indicate "extended" InChI 1 Also, there is a 
-reservation for future needs: the 2nd memo char may accommodate two more ON/OFF 
+The second character encodes experimental (InChI 1 extension) options KET and 15T.
+Each of these options is a binary switch ON/OFF, so there are 2*2=4 combinations,
+currently encoded by ï¿½Aï¿½ through ï¿½Dï¿½.
+Note that anything but 'A' here would indicate "extended" InChI 1 Also, there is a
+reservation for future needs: the 2nd memo char may accommodate two more ON/OFF
 binary options (at 26-base encoding).
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
 void GetSaveOptLetters(unsigned char save_opt_bits, char* let1, char* let2)

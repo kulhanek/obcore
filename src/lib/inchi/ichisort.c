@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -132,7 +153,7 @@ void insertions_sort_NeighListBySymmAndCanonRank( NEIGH_LIST base, const AT_RANK
   for( k=1, pk = base; k < num; k++, pk ++ ) {
      for( j = (i = pk) + 1; j > base &&  /*  always j > i */
           ( 0 > (diff = (int)nSymmRank[(int)*i] - (int)nSymmRank[(int)*j]) ||
-            !diff && nCanonRank[(int)*i] < nCanonRank[(int)*j]); j=i, i -- ) {
+            (!diff && nCanonRank[(int)*i] < nCanonRank[(int)*j])); j=i, i -- ) {
          tmp = *i;
          *i = *j;
          *j = tmp;
@@ -352,8 +373,8 @@ NEIGH_LIST *CreateNeighListFromLinearCT( AT_NUMB *LinearCT, int nLenCT, int num_
         goto exit_function;
     }
     length = num_bonds + num_atoms + 1;
-    if ( pp = (NEIGH_LIST *) inchi_calloc((num_atoms+1), sizeof(NEIGH_LIST)) ) {
-        if ( pAtList = (AT_NUMB *) inchi_malloc( length*sizeof(*pAtList) ) ) {
+    if ( (pp = (NEIGH_LIST *) inchi_calloc((num_atoms+1), sizeof(NEIGH_LIST))) ) {
+        if ( (pAtList = (AT_NUMB *) inchi_malloc(length*sizeof(*pAtList))) ) {
             /*  create empty connection table */
             for ( i = 1, length = 0; i <= num_atoms; i ++ ) {
                 start = length;
@@ -444,7 +465,7 @@ NEIGH_LIST *CreateNeighList( int num_atoms, int num_at_tg, sp_ATOM* at,
             length += num_t_groups;
         }
         length ++; /*  +1 to save number of neighbors */
-        if ( pAtList = (AT_NUMB *) inchi_malloc( length*sizeof(*pAtList) ) ) {
+        if ( (pAtList = (AT_NUMB *) inchi_malloc( length*sizeof(*pAtList) )) ) {
             if ( !bDoubleBondSquare ) {
                 for ( i = 0, length = 0; i < num_atoms; i ++ ) {
                     val = at[i].valence;
@@ -521,10 +542,10 @@ int BreakAllTies( int num_atoms, int num_max, AT_RANK **pRankStack,
     AT_RANK *nNewAtomNumber  = NULL;
         
     if ( !pRankStack[0] ) {
-        pRankStack[0] = (AT_RANK *)inchi_malloc(num_max*sizeof(*nNewRank));
+        pRankStack[0] = (AT_RANK *) inchi_malloc(num_max*sizeof(*nNewRank));
     }
     if ( !pRankStack[1] ) {
-        pRankStack[1] = (AT_RANK *)inchi_malloc(num_max*sizeof(*nNewAtomNumber));
+        pRankStack[1] = (AT_RANK *) inchi_malloc(num_max*sizeof(*nNewAtomNumber));
     }
     if ( !pRankStack[0] || !pRankStack[1] )
         return CT_OUT_OF_RAM;  /*   <BRKPT> */

@@ -40,7 +40,7 @@ using namespace std;
 //////////////////////////////////////////////////////////////////////////////
 
 //! The first available index for actual residues
-//! 0, 1, 2 reserved for UNK, HOH, LIG
+//! 0, 1, 2 reserved for UNK, HOH, UNL
 #define RESIDMIN       4
 //! The maximum number of residue IDs for this code
 #define RESIDMAX       64
@@ -50,7 +50,7 @@ using namespace std;
 static char ChainsResName[RESIDMAX][4] = {
   /*0*/ "UNK",
   /*1*/ "HOH",
-  /*2*/ "LIG",
+  /*2*/ "UNL",
   /*3*/ "ACE"
 };
 
@@ -414,6 +414,7 @@ namespace OpenBabel
     if( !result )
       {
         obErrorLog.ThrowError(__FUNCTION__, "Unable to allocate byte codes for biomolecule residue perception.", obError);
+        return (result);
       }
     result->type = type;
     result->eval.next     = NULL;
@@ -1034,7 +1035,7 @@ namespace OpenBabel
             hetflags[idx2] = true;
             chains[idx2] = ' ';
             resnos[idx2] = resno;
-            resids[idx2] = 2; // LIG
+            resids[idx2] = 2; // unknown ligand
           }
         }
 
@@ -1103,7 +1104,7 @@ namespace OpenBabel
           if (size == 1 && atom->IsOxygen())
             resid = 1; /* HOH */
           else
-            resid = 2; /* LIG */
+            resid = 2; /* Unknown ligand */
 
           for (i = 0 ; i < numAtoms ; ++i) {
             if (chains[i] == ('A' + count)) {
@@ -1251,10 +1252,14 @@ namespace OpenBabel
                   if (!nbr->IsHydrogen())
                     neighbour[count++] = nbr;
 
-                na = neighbour[0];
-                nb = neighbour[1];
-                nc = neighbour[2];
-                nd = neighbour[3];
+                if (count >= 1)
+                  na = neighbour[0];
+                if (count >= 2)
+                  nb = neighbour[1];
+                if (count >= 3)
+                  nc = neighbour[2];
+                if (count >= 4)
+                  nd = neighbour[3];
 
                 for ( i = 0 ; i < tmax ; i++ )
                   if ( templ[i].flag & bitmasks[idx] )
@@ -1268,7 +1273,7 @@ namespace OpenBabel
                         result = Match3Constraints(pep,na,nb,nc);
                       else if (count == 2)
                         result = Match2Constraints(pep,na,nb);
-                      else // count == 1
+                      else if (count == 1)
                         result = MatchConstraint(na,pep->n1);
 
                       if(result == false)
@@ -1373,9 +1378,12 @@ namespace OpenBabel
 
     resnos[idx] = r;
 
-    na = neighbour[0];
-    nb = neighbour[1];
-    nc = neighbour[2];
+    if (count >= 1)
+      na = neighbour[0];
+    if (count >= 2)
+      nb = neighbour[1];
+    if (count >= 3)
+      nc = neighbour[2];
 
     switch( atomids[i] )
       {
@@ -1424,7 +1432,7 @@ namespace OpenBabel
             if (!visits[j])
               TracePeptideChain(mol,j,r);
           }
-        else /* count == 2 */
+        else if (count == 2)
           {
             if ( bitmasks[na] & BitCAll )
               {
@@ -1644,7 +1652,6 @@ namespace OpenBabel
   void OBChainsParser::TraceNucleicChain(OBMol &mol, unsigned int i, int r)
   {
     unsigned int neighbour[4];
-    unsigned int na,nb,nc;
     int count;
     int j,k;
 
@@ -1662,10 +1669,6 @@ namespace OpenBabel
         neighbour[count++] = nbr->GetIdx() - 1;
 
     resnos[i] = r;
-
-    na = neighbour[0];
-    nb = neighbour[1];
-    nc = neighbour[2];
 
     switch( atomids[i] )
       {

@@ -263,7 +263,7 @@ namespace OpenBabel {
     ring_atoms.Clear();
 
     sssRings = _pmol->GetSSSR();
-    for (ri = sssRings.begin(); ri != sssRings.end(); ri++) {
+    for (ri = sssRings.begin(); ri != sssRings.end(); ++ri) {
       OBRing *ring = *ri;
       OBBitVec bvtmp = _frag_atoms & ring->_pathset;      // intersection: fragment and ring
       if (bvtmp == ring->_pathset)                        // all ring atoms in fragment?
@@ -345,7 +345,7 @@ namespace OpenBabel {
     vector<unsigned int>::iterator k;
     vector<pair<OBAtom*,unsigned int> >::iterator vp_iter;
 
-#if defined DEBUG2
+#if DEBUG2
     cout << "CreateNewClassVector: START\n";
     //print_vector_pairs("    ", vp1);
 #endif
@@ -355,7 +355,7 @@ namespace OpenBabel {
     // mapping vector of idx-to-index for vp1.
     vector<int> idx2index(_pmol->NumAtoms() + 1, -1);  // natoms + 1
     int index = 0;
-    for (vp_iter = vp1.begin(); vp_iter != vp1.end(); vp_iter++) {
+    for (vp_iter = vp1.begin(); vp_iter != vp1.end(); ++vp_iter) {
       int idx = vp_iter->first->GetIdx();
       idx2index[idx] = index++;
     }
@@ -369,7 +369,7 @@ namespace OpenBabel {
     // sort them into ascending order, and create a sum of (c0 + c1*10^2 + c2*10^4 + ...)
     // which becomes the new class ID (where c0 is the current classID).
 
-    for (vp_iter = vp1.begin(); vp_iter != vp1.end(); vp_iter++) {
+    for (vp_iter = vp1.begin(); vp_iter != vp1.end(); ++vp_iter) {
       atom = vp_iter->first;
       id   = vp_iter->second;
       vector<unsigned int> vtmp;
@@ -380,11 +380,11 @@ namespace OpenBabel {
       }
 
       sort(vtmp.begin(),vtmp.end(),CompareUnsigned);
-      for (m = 100, k = vtmp.begin(); k != vtmp.end(); k++, m*=100)
+      for (m = 100, k = vtmp.begin(); k != vtmp.end(); ++k, m*=100)
         id += *k * m;
       vp2.push_back(pair<OBAtom*,unsigned int> (atom, id));
     }
-#if defined DEBUG2
+#if DEBUG2
     cout << "CreateNewClassVector: FINISH\n";
     //print_vector_pairs("    ", vp2);
 #endif
@@ -399,7 +399,7 @@ namespace OpenBabel {
     vector<unsigned int>::iterator k;
     vector<pair<OBAtom*,unsigned int> >::iterator vp_iter;
 
-#if defined DEBUG2
+#if DEBUG2
     cout << "CreateNewClassVector: START\n";
     //print_vector_pairs("    ", vp1);
 #endif
@@ -409,7 +409,7 @@ namespace OpenBabel {
     // mapping vector of idx-to-index for vp1.
     vector<int> idx2index(mol->NumAtoms() + 1, -1);  // natoms + 1
     int index = 0;
-    for (vp_iter = vp1.begin(); vp_iter != vp1.end(); vp_iter++) {
+    for (vp_iter = vp1.begin(); vp_iter != vp1.end(); ++vp_iter) {
       int idx = vp_iter->first->GetIdx();
       idx2index[idx] = index++;
     }
@@ -423,7 +423,7 @@ namespace OpenBabel {
     // sort them into ascending order, and create a sum of (c0 + c1*10^2 + c2*10^4 + ...)
     // which becomes the new class ID (where c0 is the current classID).
 
-    for (vp_iter = vp1.begin(); vp_iter != vp1.end(); vp_iter++) {
+    for (vp_iter = vp1.begin(); vp_iter != vp1.end(); ++vp_iter) {
       atom = vp_iter->first;
       id   = vp_iter->second;
       vector<unsigned int> vtmp;
@@ -433,11 +433,11 @@ namespace OpenBabel {
       }
 
       sort(vtmp.begin(),vtmp.end(),CompareUnsigned);
-      for (m = 100, k = vtmp.begin(); k != vtmp.end(); k++, m*=100)
+      for (m = 100, k = vtmp.begin(); k != vtmp.end(); ++k, m*=100)
         id += *k * m;
       vp2.push_back(pair<OBAtom*,unsigned int> (atom, id));
     }
-#if defined DEBUG2
+#if DEBUG2
     cout << "CreateNewClassVector: FINISH\n";
     //print_vector_pairs("    ", vp2);
 #endif
@@ -494,8 +494,7 @@ namespace OpenBabel {
     // How many classes are we starting with?  (The "renumber" part isn't relevant.)
     CountAndRenumberClasses(symmetry_classes, nclasses1);
 
-    //int natoms = _pmol->NumAtoms();
-    int nfragatoms = _frag_atoms.CountBits();
+    unsigned int nfragatoms = _frag_atoms.CountBits();
 
     // LOOP: Do extended sum-of-invarients until no further changes are
     // noted.  (Note: This is inefficient, as it re-computes extended sums

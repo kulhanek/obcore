@@ -81,6 +81,7 @@ namespace OpenBabel
       int aDA, bDA; // hydrogen donor/acceptor (A=1, D=2, neither=0)
       double rab, epsilon, alpha_a, alpha_b, Na, Nb, Aa, Ab, Ga, Gb;
       double R_AB, R_AB7/*, erep, erep7, eattr*/;
+      int pairIndex; // index into iteration using FOR_PAIRS_OF_MOL(..., _mol)
 
       template<bool> void Compute();
   };
@@ -89,6 +90,7 @@ namespace OpenBabel
   {
     public:
       double qq, rab;
+      int pairIndex; // index into iteration using FOR_PAIRS_OF_MOL(..., _mol)
 
       template<bool> void Compute();
   };
@@ -235,7 +237,9 @@ namespace OpenBabel
         _rele = 15.0;
         _pairfreq = 15;
         _cutoff = false;
-        _linesearch = LineSearchType::Simple;
+        _linesearch = LineSearchType::Newton2Num;
+        _gradientPtr = NULL;
+        _grad1 = NULL;
 	if (!strncmp(ID, "MMFF94s", 7)) {
           mmff94s = true;
           _parFile = std::string("mmff94s.ff");

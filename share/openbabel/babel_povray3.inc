@@ -7,7 +7,7 @@
 //For chemical questions send mail to
 //weichold@sas.upenn.edu
 
-//$Id: babel_povray3.inc 3895 2010-07-22 10:36:05Z baoilleach $
+//$Id$
 
 #include "colors.inc"
 #include "metals.inc"

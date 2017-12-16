@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -46,7 +67,7 @@ int Eql_INChI_Stereo( INChI_Stereo *s1, int eql1, INChI_Stereo *s2, int eql2, in
     if ( !s1 ) {
         return 0;
     }
-#if( REL_RAC_STEREO_IGN_1_SC == 1 )
+#if ( REL_RAC_STEREO_IGN_1_SC == 1 )
 #else
     bRelRac = 0;
 #endif
@@ -150,13 +171,13 @@ int Eql_INChI_Isotopic( INChI *i1, INChI *i2 )
               i1->nNumberOfIsotopicAtoms == i2->nNumberOfIsotopicAtoms &&
               i1->nNumberOfIsotopicTGroups == i2->nNumberOfIsotopicTGroups &&
              ( !i1->nNumberOfIsotopicAtoms   ||
-               i1->IsotopicAtom && i2->IsotopicAtom &&
+               (i1->IsotopicAtom && i2->IsotopicAtom &&
                !memcmp( i1->IsotopicAtom,  i2->IsotopicAtom,
-                        i1->nNumberOfIsotopicAtoms  * sizeof(i1->IsotopicAtom[0]) ) ) &&
+                        i1->nNumberOfIsotopicAtoms  * sizeof(i1->IsotopicAtom[0]) )) ) &&
              ( !i1->nNumberOfIsotopicTGroups ||
-               i1->IsotopicTGroup && i2->IsotopicTGroup &&
+               (i1->IsotopicTGroup && i2->IsotopicTGroup &&
                !memcmp( i1->IsotopicTGroup, i2->IsotopicTGroup,
-                        i1->nNumberOfIsotopicTGroups * sizeof(i1->IsotopicAtom[0]) ) );
+                        i1->nNumberOfIsotopicTGroups * sizeof(i1->IsotopicAtom[0]) )) );
     return eq;
 
 }
@@ -222,8 +243,8 @@ int Eql_INChI_Aux_Num( INChI_Aux *a1, int eql1, INChI_Aux *a2, int eql2 )
     if ( (len = a1->nNumberOfAtoms) <= 0 || len != a2->nNumberOfAtoms || a1->bDeleted || a2->bDeleted ) {
         return 0;
     }
-    if ( (eql1 & EQL_NUM_ISO) && !a1->bIsIsotopic ||
-         (eql2 & EQL_NUM_ISO) && !a2->bIsIsotopic ) {
+    if ( ((eql1 & EQL_NUM_ISO) && !a1->bIsIsotopic) ||
+         ((eql2 & EQL_NUM_ISO) && !a2->bIsIsotopic) ) {
         return 0;
     }
 
@@ -506,7 +527,7 @@ int MakeCtStringOld( AT_NUMB *LinearCT, int nLenCT, int bAddDelim,
         for ( i = 0; i < nLenCT && nLen < nLen_szLinearCT; i ++ ) {
             bLessThanPrev = 0;
             if ( !(nCtMode & CT_MODE_NO_ORPHANS) || ((bLessThanPrev=LinearCT[i] < nMax) ||
-                  i+1 < nLenCT && LinearCT[i+1] < (nMax=LinearCT[i])) ) {
+                  (i+1 < nLenCT && LinearCT[i+1] < (nMax=LinearCT[i]))) ) {
                 nValue = LinearCT[i];
                 if ( nCtMode & CT_MODE_ABC_NUMBERS ) {
                     len = MakeAbcNumber( szValue, (int)sizeof(szValue), (!bNext && bAddDelim)? ITEM_DELIMETER : NULL, nValue );
@@ -599,7 +620,7 @@ int MakeHString( int bAddDelim, S_CHAR *LinearCT, int nLenCT,
                     }
                     /* end debug */
                     curLenH = curMaxH - curMinH + 1;
-                    nNumH = (int*)inchi_malloc( curLenH * sizeof(nNumH[0]) );
+                    nNumH = (int*) inchi_malloc( curLenH * sizeof(nNumH[0]) );
                     if ( !nNumH ) {
                         *bOverflow |= 1;
                         return nLen;
@@ -1414,7 +1435,7 @@ int MakeStereoString( AT_NUMB *at1, AT_NUMB *at2, S_CHAR *parity, int bAddDelim,
 }
 #ifdef ALPHA_BASE
 
-#if(  ALPHA_BASE != 27 )
+#if ( ALPHA_BASE != 27 )
 #error ALPHA_BASE definitions mismatch
 #endif
 
@@ -1458,7 +1479,7 @@ int MakeAbcNumber( char *szString, int nStringLen, const char *szLeadingDelim, i
         nValue = -nValue;
     }
     for ( q = p; nValue && --nStringLen; nValue /= ALPHA_BASE ) {
-        if ( nChar = nValue % ALPHA_BASE ) {
+        if ( (nChar = nValue % ALPHA_BASE) ) {
             nChar = ALPHA_ONE + nChar - 1;
         } else {
             nChar = ALPHA_ZERO;
@@ -1472,7 +1493,7 @@ int MakeAbcNumber( char *szString, int nStringLen, const char *szLeadingDelim, i
     p[0] = toupper(p[0]);
     return (q - szString);
 }
-#if( READ_INCHI_STRING == 1 )
+#if ( READ_INCHI_STRING == 1 )
 /*****************************************************/
 static long abctol( const char *szString, char **q ); /* keep compiler happy */
 
@@ -1571,7 +1592,7 @@ int MakeDecNumber( char *szString, int nStringLen, const char *szLeadingDelim, i
         nValue = -nValue;
     }
     for ( q = p; nValue && --nStringLen; nValue /= DECIMAL_BASE ) {
-        if ( nChar = nValue % DECIMAL_BASE ) {
+        if ( (nChar = nValue % DECIMAL_BASE) ) {
             nChar = DECIMAL_ONE + nChar - 1;
         } else {
             nChar = DECIMAL_ZERO;

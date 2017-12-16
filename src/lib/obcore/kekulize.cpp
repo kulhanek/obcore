@@ -66,6 +66,17 @@ namespace OpenBabel
       }
       time_t startTime, maxTime;
     };
+
+    // Store only differences in states between iterations in kekulization
+    struct stateDiff_t {
+      size_t idx1;
+      int ps1;
+      size_t idx2;
+      int ps2;
+      size_t idxb;
+      int psb;
+    };
+
   }
   //! @endcond
 
@@ -102,7 +113,7 @@ namespace OpenBabel
                            std::vector<int> &bondState)
   {
     int n = 0;
-    for (int i = 0; i < bondsThisRing.size(); i++) {
+    for (unsigned int i = 0; i < bondsThisRing.size(); i++) {
       if (bondState[bondsThisRing[i]->GetIdx()] != UNASSIGNED) {
         n++;
       }
@@ -177,7 +188,7 @@ namespace OpenBabel
 
     vector<bool> used_bonds;
     used_bonds.resize(mol->NumBonds());
-    for (int i = 0; i < used_bonds.size(); i++)
+    for (unsigned int i = 0; i < used_bonds.size(); i++)
       used_bonds[i] = false;
 
     ring_bonds.clear();
@@ -504,10 +515,11 @@ namespace OpenBabel
     int idx;
     OBAtom *atom;
     OBBond *bond;
+    int charge = _totalCharge; // if set (e.g., from quantum calculations
 
     // Figure out which atoms are in this ring system and whether or not each
     // atom can donate an electron.
-    for (int i = 0; i < cycle.size(); ++i) {
+    for (unsigned int i = 0; i < cycle.size(); ++i) {
       atom = cycle[i];
       idx =  atom->GetIdx();
       if (electron[i] == 1) {
@@ -516,11 +528,22 @@ namespace OpenBabel
         atomState[idx] = DOUBLE_PROHIBITED;	// No electrons to contribute to aromatic system
       }
 
-      if (atomState[idx] == DOUBLE_ALLOWED && atom->IsNitrogen() && atom->GetFormalCharge() == 0 && atom->GetValence() == 3) {
-        // Correct N with three explict bonds, if we haven't already
-        atomState[idx] = DOUBLE_PROHIBITED;
-        if (DEBUG) { cout << "atom " << idx << " rejected NR3 double bonds " << endl; }
+      // Special cases for NR3
+      if (atom->IsNitrogen() && atom->GetFormalCharge() == 0 && atom->GetValence() == 3) {
+        // Correct N with three explicit bonds, if we haven't already
+        if (charge == 0 && atomState[idx] == DOUBLE_ALLOWED) {
+          atomState[idx] = DOUBLE_PROHIBITED;
+          if (DEBUG) { cout << "atom " << idx << " rejected NR3 double bonds " << endl; }
+        }
+        if (charge > 0) {
+          // TODO: See if there's an easy way to rank the NR3 atoms (e.g., based on most likely double bond)
+          charge--; // it has an electron it can donate because of the total charge
+          atom->SetFormalCharge(+1); // to make this explicit
+          atomState[idx] = DOUBLE_ALLOWED;
+          if (DEBUG) { cout << "atom " << idx << " assigned NR3+ based on totalcharge " << endl; }
+        }
       }
+
       if (DEBUG) {cout << "atom " << idx << ": initial state = " << atomState[idx] << endl;}
     }
 
@@ -536,14 +559,14 @@ namespace OpenBabel
       std::vector<OBRing*> lssr_tmp = GetLSSR();
       std::vector<OBRing*> lssr;
       std::vector<bool>atom_in_cycle(NumAtoms()+1);
-      for (int i = 0; i <= NumAtoms(); i++)
+      for (unsigned int i = 0; i <= NumAtoms(); i++)
         atom_in_cycle[i] = false;
-      for (std::vector<OBAtom*>::iterator ai = cycle.begin(); ai != cycle.end(); ai++)
+      for (std::vector<OBAtom*>::iterator ai = cycle.begin(); ai != cycle.end(); ++ai)
         atom_in_cycle[(*ai)->GetIdx()] = true;
-      for (std::vector<OBRing*>::iterator ri = lssr_tmp.begin(); ri != lssr_tmp.end(); ri++) {
+      for (std::vector<OBRing*>::iterator ri = lssr_tmp.begin(); ri != lssr_tmp.end(); ++ri) {
         OBRing *ring = *ri;
         bool ok = true;
-        for (std::vector<int>::iterator pi = ring->_path.begin(); pi != ring->_path.end(); pi++) {
+        for (std::vector<int>::iterator pi = ring->_path.begin(); pi != ring->_path.end(); ++pi) {
           if (!atom_in_cycle[*pi]) {
             ok = false;
             break;
@@ -557,7 +580,7 @@ namespace OpenBabel
       // Initialize the "ring is assigned" vector
       std::vector<bool> lssrAssigned;
       lssrAssigned.resize(lssr.size());
-      for (int i = 0; i < lssr.size(); i++)
+      for (unsigned int i = 0; i < lssr.size(); i++)
         lssrAssigned[i] = false;
 
       // Initialize an empty vector that expand_kekulize2() uses.
@@ -578,7 +601,7 @@ namespace OpenBabel
     // We found a successful assignment, now actually change the bonds to double
 
     if (DEBUG) {std::cout << "Set double bonds\n";}
-    for (int i = 0; i < NumBonds(); ++i) {
+    for (unsigned int i = 0; i < NumBonds(); ++i) {
       bond = GetBond(i);
       if (DEBUG) { std::cout << "  bond " << bond->GetBeginAtomIdx() << " " << bond->GetEndAtomIdx() << " ";}
       if (bond->GetBO()==5 && bondState[i] == DOUBLE) {
@@ -731,8 +754,13 @@ namespace OpenBabel
       return expandKekulize(mol, bond_idx + 1, atomState, bondState, timeout);
 
     // Remember the current state so that we can backtrack if the attempt fails
-    vector<int> previousState         = atomState;	// Backup the atom states
-    vector<int> previousBondState     = bondState;	// ... and the bond states
+    stateDiff_t* pps = new stateDiff_t;
+    pps->idx1 = idx1;
+    pps->ps1  = atomState[idx1];
+    pps->idx2 = idx2;
+    pps->ps2  = atomState[idx2];
+    pps->idxb = bond_idx;
+    pps->psb  = bondState[bond_idx];
 
     // Is a double bond allowed here?  Both atoms have to have an extra electron,
     // and not have been assigned a double bond from a previous step in recursion.
@@ -745,24 +773,31 @@ namespace OpenBabel
       if (DEBUG) {std::cout << "bond " << bond_idx << " (atoms " << idx1 << " to " << idx2 << ") double\n";}
 
       // Recursively try the next bond
-      if (expandKekulize(mol, bond_idx + 1, atomState, bondState, timeout))
+      if (expandKekulize(mol, bond_idx + 1, atomState, bondState, timeout)) {
+        delete pps;
         return true;
+      }
 
       // If the double bond didn't work, roll back the changes and try a single bond.
-      atomState = previousState;
-      bondState = previousBondState;
+      atomState[pps->idx1] = pps->ps1;
+      atomState[pps->idx2] = pps->ps2;
+      bondState[pps->idxb] = pps->psb;
       if (DEBUG) {cout << "  double on bond " << bond_idx << " failed." << endl;}
     }
 
     // Double bond not allowed here, or double bond failed, just recurse with a single bond.
     if (DEBUG) {cout << "bond " << bond_idx << " (atoms " << idx1 << " to " << idx2 << ") single" << endl;}
-    if (expandKekulize(mol, bond_idx + 1, atomState, bondState, timeout))
+    if (expandKekulize(mol, bond_idx + 1, atomState, bondState, timeout)) {
+      delete pps;
       return true;
+    }
 
     // If it didn't work, roll back the changes we made and return failure.
     if (DEBUG) {cout << "bond " << bond_idx << " single failed, rolling back changes" << endl;}
-    atomState = previousState;
-    bondState = previousBondState;
+    atomState[pps->idx1] = pps->ps1;
+    atomState[pps->idx2] = pps->ps2;
+    bondState[pps->idxb] = pps->psb;
+    delete pps;
     return false;
   }
 
@@ -928,16 +963,12 @@ namespace OpenBabel
   {
     OBBond *bond = NULL;
     OBAtom *atom1, *atom2;
-    int idx1, idx2, bond_idx;
+    size_t idx1, idx2, bond_idx;
 
     if (DEBUG) {cout << "---------- expand_kekulize_lssr:" << endl;}
 
-    // Remember the current state so that we can backtrack if the attempt fails
-    vector<int> previousState         = atomState;	// Backup the atom states
-    vector<int> previousBondState     = bondState;	// ... and the bond states
-
     // Find the next unassigned bond on this ring
-    for (std::vector<OBBond*>::iterator b = bondsThisRing.begin(); b != bondsThisRing.end(); b++) {
+    for (std::vector<OBBond*>::iterator b = bondsThisRing.begin(); b != bondsThisRing.end(); ++b) {
       if (bondState[(*b)->GetIdx()] == UNASSIGNED) {
         bond = *b;
         break;
@@ -952,6 +983,15 @@ namespace OpenBabel
       idx1 = atom1->GetIdx();
       idx2 = atom2->GetIdx();
 
+      // Remember the current state so that we can backtrack if the attempt fails
+      stateDiff_t* pps = new stateDiff_t;
+      pps->idx1 = idx1;
+      pps->ps1  = atomState[idx1];
+      pps->idx2 = idx2;
+      pps->ps2  = atomState[idx2];
+      pps->idxb = bond_idx;
+      pps->psb  = bondState[bond_idx];
+
       // Does a double bond work here?
       if (   atomState[idx1] == DOUBLE_ALLOWED
              && atomState[idx2] == DOUBLE_ALLOWED) {
@@ -963,12 +1003,15 @@ namespace OpenBabel
         if (DEBUG) {std::cout << "bond " << bond_idx << " (atoms " << idx1 << " to " << idx2 << ") double" << endl;}
 
         // Recursively try the next bond
-        if (expand_kekulize_lssr(mol, atomState, bondState, lssr, lssrAssigned, bondsThisRing))
+        if (expand_kekulize_lssr(mol, atomState, bondState, lssr, lssrAssigned, bondsThisRing)) {
+          delete pps;
           return true;
+        }
 
         // If the double bond didn't work, roll back the changes and try a single bond.
-        atomState = previousState;
-        bondState = previousBondState;
+        atomState[pps->idx1] = pps->ps1;
+        atomState[pps->idx2] = pps->ps2;
+        bondState[pps->idxb] = pps->psb;
         if (DEBUG) {cout << "  double on bond " << bond_idx << " failed." << endl;}
       }
 
@@ -977,13 +1020,17 @@ namespace OpenBabel
       if (DEBUG) {cout << "bond " << bond_idx << " (atoms " << idx1 << " to " << idx2 << ") single" << endl;}
 
       // Recursively try the next bond
-      if (expand_kekulize_lssr(mol, atomState, bondState, lssr, lssrAssigned, bondsThisRing))
+      if (expand_kekulize_lssr(mol, atomState, bondState, lssr, lssrAssigned, bondsThisRing)) {
+        delete pps;
         return true;
+      }
 
       // If it didn't work, roll back the changes we made and return failure.
       if (DEBUG) {cout << "bond " << bond_idx << " single failed, rolling back changes" << endl;}
-      atomState = previousState;
-      bondState = previousBondState;
+      atomState[pps->idx1] = pps->ps1;
+      atomState[pps->idx2] = pps->ps2;
+      bondState[pps->idxb] = pps->psb;
+      delete pps;
       return false;
     }
 
@@ -991,11 +1038,8 @@ namespace OpenBabel
     // the current ring.  Double check that we haven't made an impossible
     // bond assignment.
 
-    if (has_leftover_electrons(mol, atomState, bondState)) {
-      atomState = previousState;
-      bondState = previousBondState;
+    if (has_leftover_electrons(mol, atomState, bondState))
       return false;
-    }
 
     // Now its time to pick the next ring to work on.
     //
@@ -1015,7 +1059,7 @@ namespace OpenBabel
 
     if (DEBUG) {cout << "Select next ring: " << lssr.size() << " rings to try" << endl;}
 
-    for (int rnum = 0; rnum < lssr.size(); rnum++) {
+    for (unsigned int rnum = 0; rnum < lssr.size(); rnum++) {
       if (lssrAssigned[rnum])
         continue;
       OBRing *ring = lssr[rnum];

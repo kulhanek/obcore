@@ -129,7 +129,7 @@ int DLHandler::findFiles (std::vector <std::string>& file_list,
     }
 
   if (file_list.empty())
-    return(-1); // error, didn't find any files at all
+    return 0; // error, didn't find any files at all
   return file_list.size();
 }
 
@@ -162,8 +162,7 @@ bool DLHandler :: openLib(const string& lib_name)
 #else
 bool DLHandler::openLib(const string& lib_name)
 {
-  void* p_handle = dlopen(lib_name.c_str(), RTLD_NOW | RTLD_GLOBAL);
-  bool success = ( p_handle != 0);
+  bool success = (dlopen(lib_name.c_str(), RTLD_LAZY | RTLD_GLOBAL) != 0);
   if (!success) {
     char buffer[BUFF_SIZE];
     sprintf(buffer, "%s did not load properly.\n Error: %s",

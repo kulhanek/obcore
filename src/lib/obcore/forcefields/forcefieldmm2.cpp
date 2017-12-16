@@ -270,14 +270,14 @@ namespace OpenBabel
 
     return energy;
   }
-/*
+
   //
   //  a
   //   \
   //    b---d      plane = a-b-c
   //   /
   //  c
-  // */
+  //
   double OBForceFieldMM2::E_OOP()
   {
     OBAtom *a, *b, *c, *d;
@@ -289,7 +289,7 @@ namespace OpenBabel
     FOR_ATOMS_OF_MOL(atom, _mol) {
       b = (OBAtom*) &*atom;
 
-      for (unsigned int idx=0; idx < _ffoutplanebendparams.size(); idx++) {
+      for (int idx=0; idx < _ffoutplanebendparams.size(); idx++) {
         if (atoi(b->GetType()) == _ffoutplanebendparams[idx].a) {
           a = NULL;
           c = NULL;
@@ -351,7 +351,6 @@ namespace OpenBabel
     OBAtom *a, *b;
     vector3 va, vb, ab, vf;
     double e, energy, ra, rb, rab, rr, rrab, rrab2, rrab4, rrab6, rrab7, abrr, eps, epsa, epsb, f;
-    //int idx;
 
     //sprintf(errbuf, "a_expterm=%f  b_expterm=%f c_expter=%fm\n", a_expterm, b_expterm, c_expterm); // DEBUG
 
@@ -495,9 +494,12 @@ namespace OpenBabel
 
   OBForceFieldMM2 &OBForceFieldMM2::operator=(OBForceFieldMM2 &src)
   {
-    _mol = src._mol;
-    _init = src._init;
-    return src;
+    if (this != &src)
+    {
+      _mol = src._mol;
+      _init = src._init;
+      return *this;
+    }
   }
 
   bool OBForceFieldMM2::Setup(OBMol &mol)
@@ -516,8 +518,6 @@ namespace OpenBabel
   {
     vector<string> vs;
     char buffer[80];
-    //char filename[80];
-    //int currently_parsing;
 
     OBFFParameter parameter;
 

@@ -790,6 +790,7 @@ namespace OpenBabel {
       //
       // the ATOM-TYPES list
       //
+      OBStereoFacade facade(mol);
       for (std::size_t j = 0; j < code.atoms.size(); ++j) {
         OBAtom *atom = code.atoms[j];
         if (atom->GetIsotope())
@@ -797,8 +798,17 @@ namespace OpenBabel {
         if (atom->GetFormalCharge())
           hasCharge = true;
 
+	// Include all explicit hydrogens
+        int hydrogens_to_include = atom->ExplicitHydrogenCount();
+
+        // We also include any implicit hydrogen on a stereocenter.
+        hydrogens_to_include += (facade.HasTetrahedralStereo(atom->GetId()) && atom->ImplicitHydrogenCount()==1) ? 1 : 0;
+
+	// Include implicit H on an aromatic nitrogen, e.g. distinguish the two nitrogens in c1ncc[nH]1
+	hydrogens_to_include += (atom->IsAromatic() && atom->GetAtomicNum() == 7) ? atom->ImplicitHydrogenCount() : 0;
+
         unsigned int c = 10000 * atom->GetSpinMultiplicity() +
-                          1000 * atom->ExplicitHydrogenCount() +
+                          1000 * hydrogens_to_include +
                                  atom->GetAtomicNum();
 
         // add the atomic number to the code
@@ -1602,7 +1612,7 @@ namespace OpenBabel {
             max_label = std::max(max_label, canonical_labels[i]);
           }
         }
-        offset += max_label;
+        offset = max_label;
       }
 
     }
@@ -1731,8 +1741,12 @@ namespace OpenBabel {
         }
       }
 
+      // The mol->DeleteData() above deleted some of the data that the OBStereoFacade sf()
+      // is using.  We have to create a new one.  (CJ - fixes a bug.)
+      OBStereoFacade newsf(mol, false);
+
       // Start the labeling process
-      CanonicalLabelsImpl::CalcCanonicalLabels(mol, symmetry_classes, canonical_labels, stereoUnits, maskCopy, &sf, maxSeconds);
+      CanonicalLabelsImpl::CalcCanonicalLabels(mol, symmetry_classes, canonical_labels, stereoUnits, maskCopy, &newsf, maxSeconds);
     }
 
     // if the labeling failed, just return the identity labels to avoid craches

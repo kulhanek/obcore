@@ -166,6 +166,13 @@ namespace OpenBabel
         mol.AddBond(i, connections[i][j].first, connections[i][j].second);
 
     mol.EndModify();
+    mol.SetPartialChargesPerceived();
+    // Annotate origin of partial charges
+    OBPairData *dp = new OBPairData;
+    dp->SetAttribute("PartialCharges");
+    dp->SetValue("MACROMODEL");
+    dp->SetOrigin(fileformatInput);
+    mol.SetData(dp);
 
     OBBond *bond;
     vector<OBBond*>::iterator bi;
@@ -209,23 +216,22 @@ namespace OpenBabel
     ttab.SetFromType("INT");
     ttab.SetToType("MMD");
 
-    for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
-      {
-        if (atom->IsHydrogen())
-          {
-            type = 41;
-            if ((nbr = atom->BeginNbrAtom(j)))
-              if (nbr->IsOxygen())
-                type = 42;
-              else if (nbr->IsNitrogen())
-                type = 43;
+    for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i)) {
+        if (atom->IsHydrogen()) {
+          type = 41;
+          if ((nbr = atom->BeginNbrAtom(j))) {
+            if (nbr->IsOxygen()) {
+              type = 42;
+            }
+            else if (nbr->IsNitrogen()) {
+              type = 43;
+            }
           }
-        else
-          {
+        } else {
             from = atom->GetType();
             ttab.Translate(to,from);
             type = atoi((char*)to.c_str());
-          }
+        }
         snprintf(buffer, BUFF_SIZE, "%4d",type);
         ofs << buffer;
         for (nbr = atom->BeginNbrAtom(j);nbr;nbr = atom->NextNbrAtom(j))

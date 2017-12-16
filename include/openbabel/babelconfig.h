@@ -13,14 +13,14 @@ const char* obprefix(const char* suffix);
 #endif
 
 /* The version of Open Babel */
-#define BABEL_VERSION "2.3.1"
+#define BABEL_VERSION "2.4.0"
 
 /* Version check macro
    Can be used like #if (OB_VERSION >= OB_VERSION_CHECK(2, 2, 99)) */
 #define OB_VERSION_CHECK(major, minor, patch) ((major<<16)|(minor<<8)|(patch))
 
 /* OB_VERSION is (major << 16) + (minor << 8) + patch */
-#define OB_VERSION OB_VERSION_CHECK(2, 3, 1)
+#define OB_VERSION OB_VERSION_CHECK(2, 4, 0)
 
 /* The file extension used for shared modules */
 #define MODULE_EXTENSION ".so"
@@ -116,6 +116,7 @@ const char* obprefix(const char* suffix);
  #pragma warning( disable : 4251 )
 
 
+ #include <algorithm>  // std::min and std::max were moved here in C++11
  #include <crtdbg.h>
 
  #ifdef _DEBUG
@@ -157,11 +158,17 @@ const char* obprefix(const char* suffix);
 /* have struct clock_t */
 #define HAVE_CLOCK_T 1
 
+/* shared pointer implementation to be used */
+#define OB_SHARED_PTR_IMPLEMENTATION std::tr1::shared_ptr
+
+/* header to be included for shared pointers */
+#define OB_SHARED_PTR_HEADER <tr1/memory>
+
 #if defined(WIN32)
-// #ifndef HAVE_ISFINITE
-//  #define isfinite _finite
-//  #define HAVE_ISFINITE 1
-// #endif
+ #ifndef HAVE_ISFINITE
+  #define isfinite _finite
+  #define HAVE_ISFINITE 1
+ #endif
 
  #ifndef HAVE_SNPRINTF
   #define snprintf _snprintf

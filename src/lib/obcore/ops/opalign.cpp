@@ -23,6 +23,8 @@ GNU General Public License for more details.
 #include<openbabel/obconversion.h>
 #include "opisomorph.h"
 
+//#define DEPICTION2D     0x100 // Should have the same value as in format.h!!
+
 namespace OpenBabel
 {
 using namespace std;
@@ -34,7 +36,7 @@ public:
   const char* Description(){ return 
     "Align coordinates to the first molecule\n"
     "Typical use with a -s option:\n"
-    "    obabel pattern.www  dataset.xxx  -outset.yyy  -s SMARTS  --align\n"
+    "    obabel pattern.www  dataset.xxx  -O outset.yyy  -s SMARTS  --align\n"
     "Only molecules matching SMARTS are converted and are aligned by\n"
     "having all their atom coordinates modified. The atoms that are\n"
     "used in the alignment are those matched by SMARTS in the first\n"
@@ -46,9 +48,9 @@ public:
     "The standalone program obfit has similar functionality.\n \n"
 
     "The first input molecule could be part of the data set :\n"
-    "    obabel dataset.xxx  -outset.yyy  -s SMARTS  --align\n"
-    "which could be used to ensure a particular substructure always\n"
-    "had the same orientation in a 2D display of a set of molecules.\n"
+    "    obabel dataset.xxx  -O outset.yyy  -s SMARTS  --align\n"
+    "This form also ensures that a particular substructure always\n"
+    "has the same orientation in a 2D display of a set of molecules.\n"
     "0D molecules, e.g. from SMILES, are given 2D coordinates before\n"
     "alignment.\n \n"
 
@@ -65,7 +67,7 @@ public:
      "of the fit. To attach it to the title of each molecule use\n"
      "--append rmsd.\n"
      "To output the two conformers closest to the first conformer in a dataset:\n"
-     "    obabel dataset.xxx  -outset.yyy  --align  --smallest 2 rmsd\n\n"
+     "    obabel dataset.xxx  -O outset.yyy  --align  --smallest 2 rmsd\n\n"
     ;
 
 }
@@ -111,6 +113,16 @@ bool OpAlign::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion*
     }
   }
 
+  // If the output format is a 2D depiction format, then we should align
+  // on the 2D coordinates and not the 3D coordinates (if present). This
+  //means we need to generate the 2D coordinates at this point.
+  if(pmol->GetDimension()==3 && (pConv->GetOutFormat()->Flags() & DEPICTION2D))
+  {
+    OBOp* pgen = OBOp::FindType("gen2D");
+    if(pgen)
+      pgen->Do(pmol);
+  }
+
   // All molecules must have coordinates, so add them if 0D
   // They may be added again later when gen2D or gen3D is called, but they will be the same.
   // It would be better if this op was called after them, which would happen
@@ -122,6 +134,18 @@ bool OpAlign::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion*
     OBOp* pgen = (itr==pmap->end()) ? OBOp::FindType("gen2D") : OBOp::FindType("gen3D");
     if(pgen)
       pgen->Do(pmol);
+  }
+
+  //Do the alignment in 2D if the output format is svg, png etc. and there is no -xn option
+  if(pmol->GetDimension()==3 && pConv && !pConv->IsOption("n"))
+  {
+    OBFormat* pOutFormat = pConv->GetOutFormat();
+    if(pOutFormat->Flags() & DEPICTION2D)
+    {
+      OBOp* pgen = OBOp::FindType("gen2D");
+      if(pgen)
+        pgen->Do(pmol);
+    }
   }
 
   if(pConv->IsFirstInput() || _refMol.NumAtoms()==0)
@@ -181,21 +205,36 @@ bool OpAlign::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion*
 
     // Get the atoms equivalent to those in ref molecule        
     vector<int> ats = _pOpIsoM->GetMatchAtoms();
-    // Make a vector of their coordinates
-    vector<vector3> vec;
-    for(vector<int>::iterator iter=ats.begin(); iter!=ats.end(); ++iter)
-      vec.push_back(pmol->GetAtom(*iter)->GetVector());
 
+    // Make a vector of their coordinates and get the centroid
+    vector<vector3> vec;
+    vector3 centroid;
+    for(vector<int>::iterator iter=ats.begin(); iter!=ats.end(); ++iter) {
+      vector3 v = pmol->GetAtom(*iter)->GetVector();
+      centroid += v;
+      vec.push_back(v);
+    }
+    centroid /= vec.size();
+    
+    // Do the alignment
     _align.SetTarget(vec);
     if(!_align.Align())
       return false;
 
-    //rotate the target molecule
+    // Get the centroid of the reference atoms
+    vector3 ref_centroid;
+    for(vector<vector3>::iterator iter=_refvec.begin(); iter!=_refvec.end(); ++iter)
+      ref_centroid += *iter;
+    ref_centroid /= _refvec.size();
+
+    //subtract the centroid, rotate the target molecule, then add the centroid
     matrix3x3 rotmatrix = _align.GetRotMatrix();
     for (unsigned int i = 1; i <= pmol->NumAtoms(); ++i)
     {
       vector3 tmpvec = pmol->GetAtom(i)->GetVector();
+      tmpvec -= centroid;
       tmpvec *= rotmatrix; //apply the rotation
+      tmpvec += ref_centroid;
       pmol->GetAtom(i)->SetVector(tmpvec);
     }
   }

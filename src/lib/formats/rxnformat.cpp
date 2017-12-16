@@ -130,12 +130,18 @@ bool RXNFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
     //	OBConversion MolConv(*pConv); //new copy to use to read associated MOL
 
     istream &ifs = *pConv->GetInStream();
-
     string ln;
-    if (!getline(ifs,ln))
-      return(false);
-    if(Trim(ln).find("$RXN")!=0)
-      return false; //Has to start with $RXN
+    // When MDLFormat reads the last product it may also read and discard
+    // the line with $RXN for the next reaction. But it then sets $RXNread option.
+    if(pConv->IsOption("$RXNread"))
+      pConv->RemoveOption("$RXNread", OBConversion::OUTOPTIONS);
+    else
+    {
+      if (!getline(ifs,ln))
+        return(false);
+      if(Trim(ln).find("$RXN")!=0)
+        return false; //Has to start with $RXN
+    }
     if (!getline(ifs,ln))
       return(false); //reaction title
     pReact->SetTitle(Trim(ln));
@@ -169,7 +175,7 @@ bool RXNFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
         obErrorLog.ThrowError(__FUNCTION__, "Failed to read a reactant", obWarning);
       else
       {
-        shared_ptr<OBMol> p(pmol);
+        obsharedptr<OBMol> p(pmol);
         pReact->AddReactant(p);
       }
     }
@@ -183,7 +189,7 @@ bool RXNFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
       else
       {
         //        pReact->products.push_back(pmol);
-        shared_ptr<OBMol> p(pmol);
+        obsharedptr<OBMol> p(pmol);
         pReact->AddProduct(p);
       }
     }
@@ -200,9 +206,7 @@ bool RXNFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
     if(pReact==NULL)
         return false;
 
-    OBConversion MolConv(*pConv); //new copy to use to write associated MOL
-    MolConv.AddOption("no$$$$",OBConversion::OUTOPTIONS);
-    MolConv.SetAuxConv(NULL); //temporary until a proper OBConversion copy constructor written
+    pConv->AddOption("no$$$$",OBConversion::OUTOPTIONS);
 
     OBFormat* pMolFormat = pConv->FindFormat("MOL");
     if(pMolFormat==NULL)
@@ -215,24 +219,24 @@ bool RXNFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 
     ofs << "$RXN" << endl;
     ofs << pReact->GetTitle() << endl;
-    ofs << "  OpenBabel" << endl;
+    ofs << "      OpenBabel" << endl;
     ofs << pReact->GetComment() <<endl;
 
     ofs << setw(3) << pReact->NumReactants() << setw(3) << pReact->NumProducts() << endl;
 
-    int i;
+    unsigned i;
     for(i=0;i<pReact->NumReactants();i++)
     {
       ofs << "$MOL" << endl;
       //Write reactant in MOL format
-      pMolFormat->WriteMolecule(pReact->GetReactant(i).get(), &MolConv);
+      pMolFormat->WriteMolecule(pReact->GetReactant(i).get(), pConv);
     }
 
     for(i=0;i<pReact->NumProducts();i++)
     {
       ofs << "$MOL" << endl;
       //Write reactant in MOL format
-      pMolFormat->WriteMolecule(pReact->GetProduct(i).get(), &MolConv);
+      pMolFormat->WriteMolecule(pReact->GetProduct(i).get(), pConv);
     }
 
     return true;

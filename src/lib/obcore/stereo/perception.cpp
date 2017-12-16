@@ -36,10 +36,11 @@
 #include <limits>
 #include <set>
 #include <iterator>
+#include <functional>
 
 #define DEBUG 0
 #define DEBUG_INVERSIONS 0
-#define IMPLICIT_CIS_RING_SIZE 12
+#define IMPLICIT_CIS_RING_SIZE 8
 #define DELTA_ANGLE_FOR_OVERLAPPING_BONDS 4.0 // In degrees
 
 using namespace std;
@@ -754,6 +755,8 @@ namespace OpenBabel {
     bool isCisTransBond;
     std::vector<OBBond*>::iterator ib;
     for (OBBond *bond = mol->BeginBond(ib); bond; bond = mol->NextBond(ib)) {
+      if (bond->IsInRing() && bond->IsAromatic())
+        continue; // Exclude C=C in phenyl rings for example
 
       if (bond->GetBO() == 2) {
         OBAtom *begin = bond->GetBeginAtom();
@@ -1422,11 +1425,13 @@ namespace OpenBabel {
           cout << "automorphism " << i+1 << "     ";
           for (std::size_t j = 0; j < mol->NumAtoms(); ++j) {
             unsigned int t;
-            if (MapsTo(entry.p, j, t))
-              if (t < 10)
+            if (MapsTo(entry.p, j, t)) {
+              if (t < 10) {
                 cout << " " << t << " ";
-              else
+              } else {
                 cout << t << " ";
+              }
+            }
           }
           cout << endl;
           cout << "  invertedAtoms: ";
@@ -1514,11 +1519,13 @@ namespace OpenBabel {
     bool foundTrueStereoCenter = false;
     int paraStereoCenterCount = 0;
     for (OBStereoUnitSet::const_iterator u2 = units.begin(); u2 != units.end(); ++u2) {
-      if (isUnitInFragment(mol, *u2, ligand))
-        if ((*u2).para)
+      if (isUnitInFragment(mol, *u2, ligand)) {
+        if ((*u2).para) {
           paraStereoCenterCount++;
-        else
+        } else {
           foundTrueStereoCenter = true;
+        }
+      }
     }
 
     if (foundTrueStereoCenter || paraStereoCenterCount >= 2)
@@ -1562,15 +1569,19 @@ namespace OpenBabel {
         OBBond *bond = mol->GetBondById((*u2).id);
         OBAtom *begin = bond->GetBeginAtom();
         OBAtom *end = bond->GetEndAtom();
-        if (ligand.BitIsOn(begin->GetId()) || ligand.BitIsOn(end->GetId()))
+        if (ligand.BitIsOn(begin->GetId()) || ligand.BitIsOn(end->GetId())) {
           if ((*u2).para) {
             for (std::size_t ringIdx = 0; ringIdx < mergedRings.size(); ++ringIdx) {
-              if (mergedRings.at(ringIdx).BitIsOn(begin->GetIdx()) || mergedRings.at(ringIdx).BitIsOn(end->GetIdx()))
-                if (std::find(ringIndices.begin(), ringIndices.end(), ringIdx) == ringIndices.end())
+              if (mergedRings.at(ringIdx).BitIsOn(begin->GetIdx()) || mergedRings.at(ringIdx).BitIsOn(end->GetIdx())) {
+                if (std::find(ringIndices.begin(), ringIndices.end(), ringIdx) == ringIndices.end()) {
                   ringIndices.push_back(ringIdx);
+                }
+              }
             }
-          } else
+          } else {
             trueStereoCenterCount++;
+          }
+        }
       }
     }
 
@@ -1746,8 +1757,8 @@ namespace OpenBabel {
                     break;
                   }
                 }
-
-                beginValid = containsAtLeast_1true_1para(ligandAtom, bond->GetBeginAtom(), units);
+                if (ligandAtom)
+                  beginValid = containsAtLeast_1true_1para(ligandAtom, bond->GetBeginAtom(), units);
               }
               break;
           }
@@ -1770,8 +1781,8 @@ namespace OpenBabel {
                     break;
                   }
                 }
-
-                endValid = containsAtLeast_1true_1para(ligandAtom, bond->GetEndAtom(), units);
+                if (ligandAtom)
+                  endValid = containsAtLeast_1true_1para(ligandAtom, bond->GetEndAtom(), units);
               }
               break;
           }
@@ -1965,39 +1976,48 @@ namespace OpenBabel {
     std::vector<unsigned long>::iterator i;
     for (i = bonds.begin(); i != bonds.end(); ++i) {
       // If there already exists a OBCisTransStereo object for this
-      // bond, leave it alone
-      if (existingMap.find(*i) != existingMap.end())
-        continue;
+      // bond, leave it alone unless it's in a ring of small size
 
+      bool alreadyExists = (existingMap.find(*i) != existingMap.end());
       OBBond *bond = mol->GetBondById(*i);
-      OBAtom *begin = bond->GetBeginAtom();
-      OBAtom *end = bond->GetEndAtom();
 
+      OBCisTransStereo *ct;
       OBCisTransStereo::Config config;
-      config.specified = false;
-      // begin
-      config.begin = begin->GetId();
-      FOR_NBORS_OF_ATOM (nbr, begin) {
-        if (nbr->GetId() == end->GetId())
-          continue;
-        config.refs.push_back(nbr->GetId());
+      if (alreadyExists)
+      {
+        ct = existingMap[*i];
+        config = ct->GetConfig();
       }
-      if (config.refs.size() == 1) {
-        config.refs.push_back(OBStereo::ImplicitRef);
-      }
-      // end
-      config.end = end->GetId();
-      FOR_NBORS_OF_ATOM (nbr, end) {
-        if (nbr->GetId() == begin->GetId())
-          continue;
-        config.refs.push_back(nbr->GetId());
-      }
-      if (config.refs.size() == 3) {
-        config.refs.push_back(OBStereo::ImplicitRef);
-      }
+      else
+      {
+        OBAtom *begin = bond->GetBeginAtom();
+        OBAtom *end = bond->GetEndAtom();
 
-      OBCisTransStereo *ct = new OBCisTransStereo(mol);
-      ct->SetConfig(config);
+        config.specified = false;
+        // begin
+        config.begin = begin->GetId();
+        FOR_NBORS_OF_ATOM (nbr, begin) {
+          if (nbr->GetId() == end->GetId())
+            continue;
+          config.refs.push_back(nbr->GetId());
+        }
+        if (config.refs.size() == 1) {
+          config.refs.push_back(OBStereo::ImplicitRef);
+        }
+        // end
+        config.end = end->GetId();
+        FOR_NBORS_OF_ATOM (nbr, end) {
+          if (nbr->GetId() == begin->GetId())
+            continue;
+          config.refs.push_back(nbr->GetId());
+        }
+        if (config.refs.size() == 3) {
+          config.refs.push_back(OBStereo::ImplicitRef);
+        }
+
+        ct = new OBCisTransStereo(mol);
+        ct->SetConfig(config);
+      }
 
       // For a double bond in a ring of size IMPLICIT_CIS_RING_SIZE or less
       // the stereochemistry is implicitly cis (in terms
@@ -2008,22 +2028,23 @@ namespace OpenBabel {
         // Find the ring atoms in the config.refs
         vector<unsigned int> ringrefs(2);
         for (int i = 0; i<2; ++i) {
-          if (ring->IsMember(mol->GetAtomById(config.refs[i*2])))
+          if (config.refs[i*2] != OBStereo::ImplicitRef && ring->IsMember(mol->GetAtomById(config.refs[i*2])))
             ringrefs[i] = config.refs[i*2];
           else
             ringrefs[i] = config.refs[i*2 + 1];
         }
         if (!ct->IsCis(ringrefs[0], ringrefs[1])) // Need to invert the stereo
           config.shape = OBStereo::ShapeZ;
-        
+
         config.specified = true;
         ct->SetConfig(config);
       }
 
       configs.push_back(ct);
       // add the data to the molecule if needed
-      if (addToMol)
+      if (addToMol && !alreadyExists)
         mol->SetData(ct);
+
     }
 
     return configs;
@@ -2278,7 +2299,7 @@ namespace OpenBabel {
   //! angle anticlockwise (true) or clockwise (false) relative to a central point.
   bool AngleOrder(const vector3 &a, const vector3 &b, const vector3 &c, const vector3 &center)
   {
-    vector3 t, u, v; 
+    vector3 t, u, v;
     t = a - center;
     t.normalize();
     u = b - center;
@@ -2286,6 +2307,24 @@ namespace OpenBabel {
     v = c - center;
     v.normalize();
     return TriangleSign(t, u, v) > 0;
+  }
+  //! Get the angle between three atoms (from -180 to +180)
+  //! Note: OBAtom.GetAngle just returns 0->180
+  double GetAngle(OBAtom *a, OBAtom *b, OBAtom *c)
+  {
+   vector3 v1,v2;
+
+    v1 = a->GetVector() - b->GetVector();
+    v2 = c->GetVector() - b->GetVector();
+    if (IsNearZero(v1.length(), 1.0e-3)
+      || IsNearZero(v2.length(), 1.0e-3)) {
+        return(0.0);
+    }
+
+    double angle = (atan2(v2.y(),v2.x()) - atan2(v1.y(),v1.x())) * RAD_TO_DEG;
+    while (angle < -180.0) angle += 360.0;
+    while (angle > 180.0) angle -= 360.0;
+    return angle;
   }
   std::vector<OBTetrahedralStereo*> TetrahedralFrom2D(OBMol *mol,
       const OBStereoUnitSet &stereoUnits, bool addToMol)
@@ -2336,7 +2375,7 @@ namespace OpenBabel {
             if (tiponly)
               planeAtoms.push_back(nbr);
             else
-              wedgeAtoms.push_back(nbr);  
+              wedgeAtoms.push_back(nbr);
           }
         } else if (bond->IsWedge()) {
           // wedge bonds
@@ -2381,70 +2420,146 @@ namespace OpenBabel {
             config.refs.push_back(nbr->GetId());
         while (config.refs.size() < 3)
           config.refs.push_back(OBStereo::ImplicitRef);
-      } else
-      if (planeAtoms.size() == 2) {
-        if (hashAtoms.size() == 1 && wedgeAtoms.size() == 1) {
-          // plane1 + plane2, hash, wedge
-          config.from = wedgeAtoms[0]->GetId();
-          config.refs.resize(3);
-          config.refs[0] = planeAtoms[0]->GetId();
-          config.refs[1] = planeAtoms[1]->GetId();
-          config.refs[2] = hashAtoms[0]->GetId();
-          bool anticlockwise_order = AngleOrder(planeAtoms[0]->GetVector(),
-              planeAtoms[1]->GetVector(), hashAtoms[0]->GetVector(), center->GetVector());
-          if (anticlockwise_order)
-            config.winding = OBStereo::AntiClockwise;
-        } else if ((hashAtoms.size() + wedgeAtoms.size()) == 1) {
-          // Either: plane1 + plane2 + hash *or* plane1 + plane2 + wedge
-          OBAtom* stereoAtom;
-          if (hashAtoms.size() == 1) {
-            config.from = OBStereo::ImplicitRef;
-            config.view = OBStereo::ViewFrom;
-            stereoAtom = hashAtoms[0];
-          }
-          else { // wedgeAtoms.size() == 1
-            config.towards = OBStereo::ImplicitRef;
-            config.view = OBStereo::ViewTowards;
-            stereoAtom = wedgeAtoms[0];
-          }
-          config.refs.resize(3);
-          config.refs[0] = planeAtoms[0]->GetId();
-          config.refs[1] = planeAtoms[1]->GetId();
-          config.refs[2] = stereoAtom->GetId();
-          bool anticlockwise_order = AngleOrder(planeAtoms[0]->GetVector(),
-              planeAtoms[1]->GetVector(), stereoAtom->GetVector(), center->GetVector());
-          if (anticlockwise_order)
-            config.winding = OBStereo::AntiClockwise;
-        } else {
-          success = false;
-        }
-      } else if (planeAtoms.size() == 3) {
-        if ( (hashAtoms.size() + wedgeAtoms.size()) == 1) {
-          // Either: plane1 + plane2 + plane3, hash
-          //     or: plane1 + plane2 + plane3, wedge
-          if (hashAtoms.size() == 1) {
-            config.towards = hashAtoms[0]->GetId();
-            config.view = OBStereo::ViewTowards;
-          }
-          else { // wedgeAtoms.size() == 1
-            config.from = wedgeAtoms[0]->GetId();
-            config.view = OBStereo::ViewFrom;
-          }
-          config.refs.resize(3);
-          config.refs[0] = planeAtoms[0]->GetId();
-          config.refs[1] = planeAtoms[1]->GetId();
-          config.refs[2] = planeAtoms[2]->GetId();
-          bool anticlockwise_order = AngleOrder(planeAtoms[0]->GetVector(),
-              planeAtoms[1]->GetVector(), planeAtoms[2]->GetVector(), center->GetVector());
-          if (anticlockwise_order)
-            config.winding = OBStereo::AntiClockwise;
-        } else {
-          success = false;
-        }
-
       } else {
-        success = false;
-      }
+
+        // config.specified
+
+        if (hashAtoms.size() == 4 || wedgeAtoms.size() == 4)
+        {
+          success = false;
+        } else if (planeAtoms.size() + hashAtoms.size() + wedgeAtoms.size() == 4)
+        {
+          // Handle all explicit tetra with at least one stereobond
+          vector<OBAtom*> order;
+
+          // First of all, handle the case of three wedge (or three hash) and one other bond
+          //          by converting it into a single hash (or single wedge) and three planes
+          if (wedgeAtoms.size() == 3 || hashAtoms.size() == 3) {
+            vector<OBAtom*> *pwedge, *phash;
+            if (wedgeAtoms.size() == 3) {
+              pwedge = &wedgeAtoms; phash = &hashAtoms;
+            }
+            else {
+              phash = &wedgeAtoms; pwedge = &hashAtoms;
+            }
+            if (planeAtoms.size() == 0) { // Already has the hash bond
+              planeAtoms.insert(planeAtoms.end(), pwedge->begin(), pwedge->end());
+              pwedge->clear();
+            }
+            else { // Does not already have the hash bond
+              phash->push_back(planeAtoms[0]);
+              planeAtoms.clear();
+              pwedge->clear();
+            }
+          }
+
+          // Pick a stereobond on which to base the stereochemistry:
+          bool wedge = wedgeAtoms.size() > 0;
+          order.push_back(wedge?wedgeAtoms[0]:hashAtoms[0]);
+          vector<OBAtom*> nbrs;
+          FOR_NBORS_OF_ATOM(nbr, center) {
+            if (&*nbr != order[0])
+              nbrs.push_back(&*nbr);
+          }
+          // Add "nbrs" to "order" in order of anticlockwise stereo
+          order.push_back(nbrs[0]);
+          if (AngleOrder(order[0]->GetVector(), order[1]->GetVector(), nbrs[1]->GetVector(), center->GetVector()))
+            order.push_back(nbrs[1]);
+          else
+            order.insert(order.begin()+1, nbrs[1]);
+          if (AngleOrder(order[0]->GetVector(), order[2]->GetVector(), nbrs[2]->GetVector(), center->GetVector()))
+            order.push_back(nbrs[2]);
+          else {
+            if (AngleOrder(order[0]->GetVector(), order[1]->GetVector(), nbrs[2]->GetVector(), center->GetVector()))
+              order.insert(order.begin()+2, nbrs[2]);
+            else
+              order.insert(order.begin()+1, nbrs[2]);
+          }
+
+          // Handle the case of two planes with a wedge and hash bond opposite each other.
+          // This is handled as in the InChI TechMan (Figure 9) by marking it ambiguous if
+          // the (small) angle between the plane bonds is > 133, and basing the stereo on
+          // the 'inner' bond otherwise. This is commonly used for stereo in rings.
+          // See also Get2DTetrahedralAmbiguity() in ichister.c (part of InChI)
+          if (planeAtoms.size() == 2 && wedgeAtoms.size() == 1) { // Two planes, 1 wedge, 1 hash
+            if (order[2] == hashAtoms[0]) { // The wedge and hash are opposite
+              double angle = GetAngle(order[1], center, order[3]); // The anticlockwise angle between the plane atoms
+              if (angle > -133 && angle < 133) { // This value is from the InChI TechMan Figure 9
+                if (angle > 0) { // Change to three planes and the hash bond
+                  std::rotate(order.begin(), order.begin() + 2, order.end()); // Change the order so that it begins with the hash bond
+                  wedge = false;
+                  planeAtoms.push_back(wedgeAtoms[0]);
+                  wedgeAtoms.clear();
+                }
+                else { // Change to three planes and the wedge bond (note: order is already correct)
+                  planeAtoms.push_back(hashAtoms[0]);
+                  hashAtoms.clear();
+                }
+              } // No need for "else" statement, as this will be picked up as ambiguous stereo below
+            }
+          }
+
+          config.from = order[0]->GetId();
+          config.refs.resize(3);
+          for(int i=0; i<3; ++i)
+            config.refs[i] = order[i+1]->GetId();
+          if (wedge)
+            config.winding = OBStereo::AntiClockwise;
+
+          // Check for ambiguous stereo based on the members of "order".
+          // If the first is a wedge bond, then the next should be a plane/hash, then plane/wedge, then plane/hash
+          // If not, then the stereo is considered ambiguous.
+          vector<OBAtom*> *pwedge, *phash;
+          if (wedge) {
+            pwedge = &wedgeAtoms; phash = &hashAtoms;
+          }
+          else {
+            phash = &wedgeAtoms; pwedge = &hashAtoms;
+          }
+          if (std::find(pwedge->begin(), pwedge->end(), order[1]) != pwedge->end() ||
+              std::find(phash->begin(), phash->end(), order[2]) != phash->end()  ||
+              std::find(pwedge->begin(), pwedge->end(), order[3]) != pwedge->end()) { // Ambiguous stereo
+                success = false;
+          }
+        } else // 3 explicit bonds from here on
+          if(hashAtoms.size() == 0 || wedgeAtoms.size() == 0) {
+            // Composed of just wedge bonds and plane bonds, or just hash bonds and plane bonds
+
+            // Pick a stereobond on which to base the stereochemistry:
+            vector<OBAtom*> order;
+            bool wedge = wedgeAtoms.size() > 0;
+            order.push_back(wedge?wedgeAtoms[0]:hashAtoms[0]);
+            vector<OBAtom*> nbrs;
+            FOR_NBORS_OF_ATOM(nbr, center) {
+              if (&*nbr != order[0])
+                nbrs.push_back(&*nbr);
+            }
+            // Add "nbrs" to "order" in order of anticlockwise stereo
+            order.push_back(nbrs[0]);
+            if (AngleOrder(order[0]->GetVector(), order[1]->GetVector(), nbrs[1]->GetVector(), center->GetVector()))
+              order.push_back(nbrs[1]);
+            else
+              order.insert(order.begin()+1, nbrs[1]);
+
+            // Handle the case of two planes with a wedge/hash in the small angle between them.
+            // This is handled similar to the InChI TechMan (Figure 10) by treating the stereo bond
+            // as being in the large angle. This is consistent with Symyx Draw.
+            if (planeAtoms.size() == 2) { // Two planes, 1 stereo
+              double angle = GetAngle(order[1], center, order[2]); // The anticlockwise angle between the plane atoms
+              if (angle < 0) // Invert the stereo of the stereobond
+                wedge = !wedge;
+            }
+
+            config.from = OBStereo::ImplicitRef;
+            config.refs.resize(3);
+            for(int i=0; i<3; ++i)
+              config.refs[i] = order[i]->GetId();
+            if (!wedge)
+              config.winding = OBStereo::AntiClockwise;
+        }  else { // 3 explicit bonds with at least one hash and at least one wedge
+          success = false;
+        }
+      } // end of config.specified
 
       if (!success) {
 //         std::stringstream errorMsg;
@@ -2476,6 +2591,7 @@ namespace OpenBabel {
       const std::map<OBBond*, enum OBStereo::BondDirection> *updown, bool addToMol)
   {
     std::vector<OBCisTransStereo*> configs;
+    std::map<OBBond*, enum OBStereo::BondDirection>::const_iterator ud_cit;
     obErrorLog.ThrowError(__FUNCTION__, "Ran OpenBabel::CisTransFrom2D", obAuditMsg);
 
     // find all cis/trans bonds
@@ -2493,6 +2609,8 @@ namespace OpenBabel {
       // Create a vector with the coordinates of the neighbor atoms
       std::vector<vector3> bondVecs;
       OBCisTransStereo::Config config;
+      config.specified = true;
+
       // begin
       config.begin = begin->GetId();
       FOR_NBORS_OF_ATOM (nbr, begin) {
@@ -2500,6 +2618,14 @@ namespace OpenBabel {
           continue;
         config.refs.push_back(nbr->GetId());
         bondVecs.push_back(nbr->GetVector());
+
+        // Check whether a single bond with unknown dir starts at the dbl bond (tip-only convention)
+        OBBond *b = mol->GetBond(begin, &*nbr);
+        if (updown) {
+          ud_cit = updown->find(b);
+          if (ud_cit!=updown->end() && ud_cit->second==OBStereo::UnknownDir && b->GetBeginAtom()==begin)
+            config.specified = false;
+        }
       }
       if (config.refs.size() == 1) {
         config.refs.push_back(OBStereo::ImplicitRef);
@@ -2514,6 +2640,14 @@ namespace OpenBabel {
           continue;
         config.refs.push_back(nbr->GetId());
         bondVecs.push_back(nbr->GetVector());
+
+        // Check whether a single bond with unknown dir starts at the dbl bond (tip-only convention)
+        OBBond *b = mol->GetBond(end, &*nbr);
+        if (updown) {
+          ud_cit = updown->find(b);
+          if (ud_cit!=updown->end() && ud_cit->second==OBStereo::UnknownDir && b->GetBeginAtom()==end)
+            config.specified = false;
+        }
       }
       if (config.refs.size() == 3) {
         config.refs.push_back(OBStereo::ImplicitRef);
@@ -2522,13 +2656,13 @@ namespace OpenBabel {
         bondVecs.push_back(pos);
       }
 
-      config.specified = true;
+      // Handle the case where the dbl bond is marked as unknown stereo
       if (updown) {
-        std::map<OBBond*, enum OBStereo::BondDirection>::const_iterator ud_cit;
         ud_cit = updown->find(bond);
         if (ud_cit!=updown->end() && ud_cit->second==OBStereo::UnknownDir)
             config.specified = false;
       }
+
       if (config.specified==true) { // Work out the stereochemistry
         // 0      3
         //  \    /        2 triangles: 0-1-b & 2-3-a
@@ -2590,7 +2724,8 @@ namespace OpenBabel {
           FOR_NBORS_OF_ATOM(a, center)
             nbrs.push_back(&*a);
           double min_angle = 359.0;
-          OBBond *close_bond_a, *close_bond_b;
+          OBBond *close_bond_a = (OBBond*) NULL;
+          OBBond *close_bond_b = (OBBond*) NULL;
           for (unsigned int i=0; i<nbrs.size() - 1; ++i)
             for (unsigned int j=i+1; j<nbrs.size(); ++j) {
               double angle = abs(nbrs[i]->GetAngle(center, nbrs[j]));
@@ -2600,7 +2735,7 @@ namespace OpenBabel {
                 close_bond_b = mol.GetBond(center, nbrs[j]);
               }
             }
-          
+
           if (min_angle > DELTA_ANGLE_FOR_OVERLAPPING_BONDS) {
             close_bond_a = (OBBond*) NULL;
             close_bond_b = (OBBond*) NULL;
@@ -2609,10 +2744,11 @@ namespace OpenBabel {
           // Find the best candidate bond to set to up/down
           // 1. **Should not already be set**
           // 2. Should not be connected to a 2nd tet center
-          // (this is acceptable, as the wedge is only at one end, but will only confuse things)
+          //    (this is acceptable, as the wedge is only at one end, but will only confuse things)
           // 3. Preferably is not in a cycle
-          // 4. Preferably is a terminal H
-          // 5. If two bonds are overlapping, choose one of these
+	  // 4. Prefer neighbor with fewer bonds over neighbor with more bonds
+          // 5. Preferably is a terminal H, C, or heteroatom (in that order)
+          // 6. If two bonds are overlapping, choose one of these
           //    (otherwise the InChI code will mark it as ambiguous)
 
           unsigned int max_bond_score = 0;
@@ -2620,14 +2756,24 @@ namespace OpenBabel {
             if (alreadyset.find(&*b) != alreadyset.end()) continue;
 
             OBAtom* nbr = b->GetNbrAtom(center);
-            unsigned int score = 1;
-
-            if (!b->IsInRing())
-              score += 2;
+	    int nbr_nbonds = nbr->GetValence();
+            int score = 0;
+            if (!b->IsInRing()) {
+	      if (!nbr->IsInRing())
+		score += 8;		// non-ring bond to non-ring atom is good
+	      else
+		score += 2;		// non-ring bond to ring atom is bad
+	    }
             if (tetcenters.find(nbr->GetId()) == tetcenters.end()) // Not a tetcenter
               score += 4;
-            if (nbr->IsHydrogen())
-              score += 8;
+	    if (nbr_nbonds == 1)	// terminal atom...
+		score += 8;		// strongly prefer terminal atoms
+	    else
+	      score -= nbr_nbonds - 2;	// bond to atom with many bonds is penalized
+	    if (nbr->IsHydrogen())
+	      score += 2;		// prefer H
+	    else if (nbr->IsCarbon())
+	      score += 1;		// then C
             if (&*b==close_bond_a || &*b==close_bond_b)
               score += 16;
 
@@ -2652,25 +2798,47 @@ namespace OpenBabel {
 
             // If there is an implicit ref; let's make that the 'from' atom
             // otherwise use the atom on the chosen bond
-            bool implicit = true;
+            bool implicit = false;
             if (test_cfg.from != OBStereo::ImplicitRef) {
               OBStereo::RefIter ri = std::find(test_cfg.refs.begin(), test_cfg.refs.end(), (unsigned long) OBStereo::ImplicitRef);
-              if (ri!=test_cfg.refs.end())
+              if (ri!=test_cfg.refs.end()) {
                 test_cfg = OBTetrahedralStereo::ToConfig(test_cfg, OBStereo::ImplicitRef);
-              else {
-                test_cfg = OBTetrahedralStereo::ToConfig(test_cfg, chosen->GetNbrAtom(center)->GetId());
-                implicit = false;
+                implicit = true;
               }
             }
-            
-            bool anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
+            else
+              implicit = true;
+
+            bool anticlockwise_order;
+            bool useup;
+            if (implicit) {
+              // Put the ref for the stereo bond second
+              while (test_cfg.refs[1] != chosen->GetNbrAtom(center)->GetId())
+                std::rotate(test_cfg.refs.begin(), test_cfg.refs.begin() + 2, test_cfg.refs.end());
+              anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
                 mol.GetAtomById(test_cfg.refs[1])->GetVector(), mol.GetAtomById(test_cfg.refs[2])->GetVector(),
                 center->GetVector());
+              // Get the angle between the plane bonds
+              double angle = GetAngle(mol.GetAtomById(test_cfg.refs[0]), center, mol.GetAtomById(test_cfg.refs[2]));
+              if ((angle<0 && anticlockwise_order) || (angle>0 && !anticlockwise_order)) // Is the stereobond in the bigger angle?
+                // If the bonds are in anticlockwise order, a clockwise angle (<180) between plane bonds
+                // implies that the stereo bond is in the bigger angle. Otherwise it has the opposite meaning.
+                useup = anticlockwise_order;
+              else
+                useup = !anticlockwise_order;
+              }
+            else {
+              test_cfg = OBTetrahedralStereo::ToConfig(test_cfg, chosen->GetNbrAtom(center)->GetId());
+              anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
+                mol.GetAtomById(test_cfg.refs[1])->GetVector(), mol.GetAtomById(test_cfg.refs[2])->GetVector(),
+                center->GetVector());
+              if (anticlockwise_order)
+                useup = false;
+              else
+                useup = true;
+            }
 
-            // Things are inverted from the point of view of the ImplicitH which we
-            // assume to be of opposite stereochemistry to the wedge/hash
-            bool useup = !implicit;
-            if (anticlockwise_order) useup = !useup;
+
             // Set to UpBond (filled wedge from cfg.center to chosen_nbr) or DownBond
             bonddir = useup ? OBStereo::UpBond : OBStereo::DownBond;
           }
@@ -2726,6 +2894,46 @@ namespace OpenBabel {
         if (ts_cfg.from == atomId) ts_cfg.from = OBStereo::ImplicitRef;
         replace_if(ts_cfg.refs.begin(), ts_cfg.refs.end(), equal_to_atomId, (OBStereo::Ref) OBStereo::ImplicitRef);
         ts->SetConfig(ts_cfg);
+      }
+    }
+  }
+
+  void ImplicitRefToStereo(OBMol& mol, OBStereo::Ref centerId, OBStereo::Ref newId) {
+    // The following is for use in replace_if(...) below
+    const std::binder1st<std::equal_to<OBStereo::Ref> > equal_to_implicitRef = std::bind1st (equal_to<OBStereo::Ref>(), (OBStereo::Ref) OBStereo::ImplicitRef);
+
+    std::vector<OBGenericData*> vdata = mol.GetAllData(OBGenericDataType::StereoData);
+    for (std::vector<OBGenericData*>::iterator data = vdata.begin(); data != vdata.end(); ++data) {
+      OBStereo::Type datatype = ((OBStereoBase*)*data)->GetType();
+
+      if (datatype != OBStereo::CisTrans && datatype != OBStereo::Tetrahedral) {
+        // Maybe I should just unset the stereochemistry if this happens?
+        obErrorLog.ThrowError(__FUNCTION__,
+            "This function should be updated to handle additional stereo types.\nSome stereochemistry objects may contain implicit refs to hydrogens which need to be converted to explicit.", obWarning);
+        continue;
+      }
+
+      // Replace any references to ImplicitRef (attached to centerId) with newId
+      if (datatype == OBStereo::CisTrans) {
+        OBCisTransStereo *ct = dynamic_cast<OBCisTransStereo*>(*data);
+        OBCisTransStereo::Config ct_cfg = ct->GetConfig();
+        if (ct_cfg.begin == centerId || ct_cfg.end == centerId) {
+          // Assumption: the first two refs are on the begin atom, the last two on the end atom
+          if (ct_cfg.begin == centerId)
+            replace_if(ct_cfg.refs.begin(), ct_cfg.refs.begin()+2, equal_to_implicitRef, (OBStereo::Ref) newId);
+          if (ct_cfg.end == centerId)
+            replace_if(ct_cfg.refs.begin()+2, ct_cfg.refs.end(), equal_to_implicitRef, (OBStereo::Ref) newId);
+          ct->SetConfig(ct_cfg);
+        }
+      }
+      else if (datatype == OBStereo::Tetrahedral) {
+        OBTetrahedralStereo *ts = dynamic_cast<OBTetrahedralStereo*>(*data);
+        OBTetrahedralStereo::Config ts_cfg = ts->GetConfig();
+        if (ts_cfg.center == centerId) {
+          if (ts_cfg.from == OBStereo::ImplicitRef) ts_cfg.from = newId;
+          replace_if(ts_cfg.refs.begin(), ts_cfg.refs.end(), equal_to_implicitRef, (OBStereo::Ref) newId);
+          ts->SetConfig(ts_cfg);
+        }
       }
     }
   }

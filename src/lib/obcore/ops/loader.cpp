@@ -44,7 +44,7 @@ PLUGIN_CPP_FILE(OBLoader)
 ///Class which makes instances of plugin classes from information in text file.
 ///This allows the commandline and GUI interfaces to be extended without recompiling.
 ///The class is itself a plugin but needs a short piece of code as a hook in
-///OBConversion::LoadFormatFiles(). This does nothing if the plugin is not loaded.
+///OBPlugin::LoadAllPlugins(). This does nothing if the plugin is not loaded.
 class OBDefine : public OBLoader
 {
 public:
@@ -85,21 +85,30 @@ public:
         else
           textlines.push_back(ln);
       }
-      OBPlugin* pdef;
       //look up class name in map maintained in OBPlugin
-      if(!textlines.empty() && (pdef = FindDef(textlines[0].c_str()))!=NULL)
+      if(!textlines.empty() && FindDef(textlines[0].c_str())!=NULL)
       {
         //Save a copy of textlines so that const char* pointers in new instance point
         //to something which has not been deleted
         _text.push_back(textlines);
-        //Make an instance of the object. It will be deleted in the destructor
-        _instances.push_back(pdef->MakeInstance(_text.back()));
+        // Previously, instances of the plugins were made here:
+        //_instances.push_back(pdef->MakeInstance(_text.back()));
+        // However, subsequent _text.push_back calls can cause vector reallocations, 
+        // which invalidates the const char* pointers in the instances. So instead we
+        // populate _text fully before making the plugin instances.
       }
       else
         obErrorLog.ThrowError(__FUNCTION__, "Failed to make an instance " + textlines[0], obError);
       textlines.clear();
     }
 
+    // Iterate through _text and make instances of the plugins.
+    // They will be deleted in the destructor.
+    vector<vector<string> >::iterator iter;
+    for(iter=_text.begin();iter!=_text.end();++iter) {
+      OBPlugin* pdef = FindDef((*iter)[0].c_str());
+      _instances.push_back(pdef->MakeInstance(*iter));
+    }
 
     // return the locale to the original one
     obLocale.RestoreLocale();
@@ -147,7 +156,7 @@ private:
 system of the existence of OBDefine. It cannot do the work of the plugin and
 parse the datafile, because the plugins referred to there may not have been
 loaded yet. Another instance with the same ID is made using MakeInstance() in
-OBConversion::LoadFormatFiles() after all the plugins are present.*/
+OBPlugin::LoadAllPlugins() after all the plugins are present.*/
 
 OBDefine placeholderOBDefine;
 //************************************************************

@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI)
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ *
+ * This library is free software; you can redistribute it and/or modify it under the
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier
+ * (InChI) Software version 1.0; either version 1.0 of the License, or
+ * (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI)
+ * Software version 1.0 for more details.
+ *
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the
+ * International Chemical Identifier (InChI) Software version 1.0 along with
+ * this library; if not, write to:
+ *
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ *
  */
 
 
@@ -33,7 +54,7 @@
 
 #define MIN_ATOM_CHARGE        (-2)
 #define MAX_ATOM_CHARGE         2
-#define NEUTRAL_STATE          (-MIN_ATOM_CHARGE)  
+#define NEUTRAL_STATE          (-MIN_ATOM_CHARGE)
 #define NUM_ATOM_CHARGES       (MAX_ATOM_CHARGE - MIN_ATOM_CHARGE + 1)
 #define MAX_NUM_VALENCES        5                /* max. number + 1 to provide zero termination */
 
@@ -159,6 +180,34 @@ const ELDATA ElData[] = {
 { "No", 259, 259, 259.100900000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
 { "Lr", 260, 260, 260.105400000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
 { "Rf", 261, 261, 261.108700000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
+
+/*^^^ Added in v. 1.04 */
+
+/*
+    Reference:
+        M. E. WIESER AND T. B. COPLEN.
+        Atomic weights of the elements 2009 (IUPAC Technical Report).
+        Pure Appl. Chem., Vol. 83, No. 2, pp. 359�396, 2011.
+    When available, the mass is given for isotope with the longest half-life.
+*/
+/* 105 dubnium Db */		/* ? Like: Ta */
+{ "Db", 268, 268, 268.125000000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
+/* 106 seaborgium Sg */		/* ? Like: W */
+{ "Sg", 271, 271, 271.133000000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
+/* 107 bohrium Bh */		/* ? Like: Re */
+{ "Bh", 267, 267, 267.127700000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
+/* 108 hassium Hs */		/* ? Like: Os */
+{ "Hs", 277, 277, 277.150000000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
+/* 109 meitnerium Mt */		/* ? Like: Ir */
+{ "Mt", 276, 276, 276.151000000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
+/* 110 darmstadtium Ds */	/* ? Like: Pt */
+{ "Ds", 281, 281, 281.162000000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
+/* 111 roentgenium Rg */	/* ? Like: Au */
+{ "Rg", 280, 280, 280.164000000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
+/* 112 copernicium Cn */	/* ? Like: Hg */
+{ "Cn", 285, 285, 285.174000000, METAL ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }},
+/*^^^ End of added in v. 1.04 */
+
 #ifdef INCHI_ZFRAG
 { "Zu",   0,   0,   0.000000000,     0 ,  0,  1, {{0,},       {0,},       {1,},       {0,},       {0,}       }}, //single bond fragment
 { "Zv",   0,   0,   0.000000000,     0 ,  0,  1, {{0,},       {0,},       {2,},       {0,},       {0,}       }}, //double bond fragment
@@ -281,7 +330,7 @@ int needed_unusual_el_valence( int nPeriodicNum, int charge, int radical, int bo
 
     chem_valence = bonds_valence + num_H;
     if ( charge < MIN_ATOM_CHARGE || charge > MAX_ATOM_CHARGE ||
-         !get_el_valence( nPeriodicNum, charge, 0 ) || 
+         !get_el_valence( nPeriodicNum, charge, 0 ) ||
          do_not_add_H( nPeriodicNum ) || bonds_valence != actual_bonds_valence ||
          num_H_expected != num_H ) {
         if ( !num_H && !num_H_expected && bonds_valence == actual_bonds_valence )
@@ -325,10 +374,10 @@ int needed_unusual_el_valence( int nPeriodicNum, int charge, int radical, int bo
 int detect_unusual_el_valence( int nPeriodicNum, int charge, int radical, int bonds_valence, int num_H, int num_bonds )
 {
     int i, chem_valence, rad_adj, known_chem_valence;
-    
+
     if ( !num_bonds && !num_H )
         return 0;
-    
+
     if ( charge < MIN_ATOM_CHARGE || charge > MAX_ATOM_CHARGE ) {
         if ( bonds_valence == num_bonds )
             return 0; /* all single bonds */
@@ -367,7 +416,7 @@ int is_el_a_metal( int nPeriodicNum )
     return 0!=(ElData[nPeriodicNum+1].nType & IS_METAL);
 }
 /******************************************************************************************************/
-/*#ifndef INCHI_LIBRARY*/
+/*#ifndef TARGET_API_LIB*/
 int extract_ChargeRadical( char *elname, int *pnRadical, int *pnCharge )
 {
     char *q, *r, *p;
@@ -376,7 +425,7 @@ int extract_ChargeRadical( char *elname, int *pnRadical, int *pnCharge )
     p = elname;
 
     /*  extract radicals & charges */
-    while ( q = strpbrk( p, "+-^" ) ) {
+    while ( (q = strpbrk( p, "+-^" )) ) {
         switch ( *q ) {
         case '+':
         case '-':
@@ -384,7 +433,7 @@ int extract_ChargeRadical( char *elname, int *pnRadical, int *pnCharge )
                 nVal += (nLastSign = nSign);
                 charge_len ++;
             }
-            if ( nSign = (int)strtol( q+k, &r, 10 ) ) { /*  fixed 12-5-2001 */
+            if ( (nSign = (int)strtol( q+k, &r, 10 )) ) { /*  fixed 12-5-2001 */
                 nVal += nLastSign * (nSign-1);
             }
             charge_len = r - q;
@@ -402,7 +451,7 @@ int extract_ChargeRadical( char *elname, int *pnRadical, int *pnCharge )
         }
         memmove( q, q+charge_len, strlen(q+charge_len)+1 );
     }
-    len = strlen(p);
+    len = (int) strlen(p);
     /*  radical */
     if ( (q = strrchr( p, ':' )) && !q[1]) {
         nRad = RADICAL_SINGLET;
@@ -504,7 +553,7 @@ int get_num_H (const char* elname, int inp_num_H, S_CHAR inp_num_iso_H[],
          !ElData[el_number].bDoNotAddH && !bDoNotAddH ) {
         /* add hydrogen atoms according to standard element valence */
         if ( radical && radical != RADICAL_SINGLET ) {
-            if ( val = ElData[el_number].cValence[NEUTRAL_STATE+charge][0] ) {
+            if ( (val = ElData[el_number].cValence[NEUTRAL_STATE+charge][0]) ) {
                 val -= (radical==RADICAL_DOUBLET)? 1 :
                        (radical==RADICAL_SINGLET || radical==RADICAL_TRIPLET )? 2 : val;
                 /* if unknown radical then do not add H */
@@ -590,7 +639,7 @@ int get_mw(char elname[])
 }
 */
 /***********************************************************************************/
-#ifndef INCHI_LIBRARY
+#ifndef TARGET_API_LIB
 /***********************************************************************************/
 int get_atw(const char *elname)
 {
@@ -631,7 +680,7 @@ int normalize_name( char* name )
     }
     return len;
 }
-#endif /* ifndef INCHI_LIBRARY */
+#endif /* ifndef TARGET_API_LIB */
 /************************************************/
 #ifndef inchi_malloc
 void *inchi_malloc(size_t c)
@@ -658,11 +707,7 @@ void inchi_free(void *p)
 
 
 
-
-
-
-#ifndef INCHI_LIBRARY
-
+#ifndef TARGET_API_LIB
 /*************************************************************************/
 void remove_trailing_spaces( char* p )
 {
@@ -681,7 +726,10 @@ void remove_one_lf( char* p)
             p[len-2] = '\0';
     }
 }
-#endif /* ifndef INCHI_LIBRARY */
+#endif /* ifndef TARGET_API_LIB */
+
+
+
 /***************************************************************************/
 /* Copies up to maxlen characters INCLUDING end null from source to target */
 /* Fills out the rest of the target with null bytes */
@@ -692,7 +740,7 @@ int mystrncpy(char *target,const char *source,unsigned maxlen)
 
     if (target==NULL || maxlen == 0 || source == NULL)
         return 0;
-    if ( p = (const char*)memchr(source, 0, maxlen) ) {
+    if ( (p = (const char*)memchr(source, 0, maxlen)) ) {
         len = p-source; /*  maxlen does not include the found zero termination */
     } else {
         len = maxlen-1; /*  reduced length does not include one more byte for zero termination */
@@ -708,7 +756,7 @@ int mystrncpy(char *target,const char *source,unsigned maxlen)
 char* LtrimRtrim( char *p, int* nLen )
 {
     int i, len=0;
-    if ( p &&  (len = strlen( p )) ) {
+    if ( p &&  (len = (int) strlen( p )) ) {
         for ( i = 0; i < len && __isascii( p[i] ) && isspace( p[i] ); i++ )
             ;
         if ( i )
@@ -836,7 +884,7 @@ int nNoMetalNumBonds( inp_ATOM *at, int at_no )
             return a->valence - num_bonds_to_metal;
         }
     }
-#if( S_VI_O_PLUS_METAL_FIX_BOND == 1 )
+#if ( S_VI_O_PLUS_METAL_FIX_BOND == 1 )
     else
     if ( 1 == a->charge && 2 == get_endpoint_valence(a->el_number) &&
          a->chem_bonds_valence + num_H == std_chem_bonds_valence ) {
@@ -884,7 +932,7 @@ int nNoMetalBondsValence( inp_ATOM *at, int at_no )
             return a->chem_bonds_valence - valence_to_metal;
         }
     }
-#if( S_VI_O_PLUS_METAL_FIX_BOND == 1 )
+#if ( S_VI_O_PLUS_METAL_FIX_BOND == 1 )
     else
     if ( 1 == a->charge && 2 == get_endpoint_valence(a->el_number) &&
          a->chem_bonds_valence + num_H == std_chem_bonds_valence ) {
@@ -947,7 +995,7 @@ int nNoMetalOtherNeighIndex2( inp_ATOM *at, int at_no, int cur_neigh, int cur_ne
 }
 
 
-#ifndef INCHI_ANSI_ONLY
+#ifndef COMPILE_ANSI_ONLY
 /**************************************************************************/
 int MakeRemovedProtonsString( int nNumRemovedProtons, NUM_H *nNumExchgIsotopicH, NUM_H *nNumRemovedProtonsIsotopic,
                               int bIsotopic, char *szRemovedProtons, int *num_removed_iso_H )
@@ -992,7 +1040,7 @@ int MakeRemovedProtonsString( int nNumRemovedProtons, NUM_H *nNumExchgIsotopicH,
     0-9
     ()*+,-./;=?@
 
-    
+
     Here we consider any character not conforming this specification as a whitespace
     which marks the end of the InChI string.
     For example:
@@ -1007,9 +1055,9 @@ int MakeRemovedProtonsString( int nNumRemovedProtons, NUM_H *nNumExchgIsotopicH,
 /**************************************************************************/
 void extract_inchi_substring(char ** buf, const char *str, size_t slen)
 {
-size_t i;   
+size_t i;
 char *p, pp;
-    
+
     *buf = NULL;
     if (str==NULL)
         return;
@@ -1019,35 +1067,35 @@ char *p, pp;
     p = strstr(str, "InChI=");
     if (NULL==p)
         return;
-    
+
     for (i=0; i<slen; i++)
     {
         pp = p[i];
 
-        if (pp >= 'A' && pp <='Z')   continue; 
-        if (pp >= 'a' && pp <='z')   continue; 
-        if (pp >= '0' && pp <='9')   continue;             
-        switch ( pp ) 
-        { 
-            case '(': 
-            case ')': 
-            case '*': 
-            case '+': 
-            case ',': 
-            case '-': 
-            case '.': 
-            case '/': 
-            case ';': 
-            case '=': 
-            case '?': 
-            case '@': continue;             
-            
-            default:            break; 
-        } 
-        break; 
+        if (pp >= 'A' && pp <='Z')   continue;
+        if (pp >= 'a' && pp <='z')   continue;
+        if (pp >= '0' && pp <='9')   continue;
+        switch ( pp )
+        {
+            case '(':
+            case ')':
+            case '*':
+            case '+':
+            case ',':
+            case '-':
+            case '.':
+            case '/':
+            case ';':
+            case '=':
+            case '?':
+            case '@': continue;
+
+            default:            break;
+        }
+        break;
     }
 
-    *buf = (char*) inchi_calloc(i+1, sizeof(char));   
+    *buf = (char*) inchi_calloc(i+1, sizeof(char));
     memcpy(*buf, p, i);
     (*buf)[i] = '\0';
 
@@ -1058,14 +1106,14 @@ char *p, pp;
 
 
 
-#ifdef INCHI_ANSI_ONLY
+#ifdef COMPILE_ANSI_ONLY
 /*************************************************************************/
 /*************          non-ANSI functions                ****************/
 /*************************************************************************/
 #define __MYTOLOWER(c) ( ((c) >= 'A') && ((c) <= 'Z') ? ((c) - 'A' + 'a') : (c) )
 
-#if ( defined(ADD_NON_ANSI_FUNCTIONS) || defined(__STDC__) && __STDC__ == 1 )
-/* support (VC++ Language extensions) = OFF && defined(INCHI_ANSI_ONLY) */
+#if ( defined(COMPILE_ADD_NON_ANSI_FUNCTIONS) || defined(__STDC__) && __STDC__ == 1 )
+/* support (VC++ Language extensions) = OFF && defined(COMPILE_ANSI_ONLY) */
 int memicmp ( const void * p1, const void * p2, size_t length )
 {
     const U_CHAR *s1 = (const U_CHAR*)p1;
@@ -1111,7 +1159,7 @@ char *_strdup( const char *string )
     char *p = NULL;
     if ( string ) {
         size_t length = strlen( string );
-        p = (char *)inchi_malloc( length + 1 );
+        p = (char *) inchi_malloc( length + 1 );
         if ( p ) {
             strcpy( p, string );
         }
@@ -1120,5 +1168,3 @@ char *_strdup( const char *string )
 }
 #endif
 #endif
-
-

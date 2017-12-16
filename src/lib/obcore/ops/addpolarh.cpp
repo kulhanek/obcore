@@ -43,7 +43,7 @@ bool OpAddPolarH::Do(OBBase* pOb, const char* OptionText, OpMap* pOptions, OBCon
   if(!pmol)
     return false;
 
-  pmol->AddHydrogens(true, false);
+  pmol->AddPolarHydrogens();
 
   return true;
 }

@@ -77,12 +77,13 @@ namespace OpenBabel
 
   // Class OBAtom
   // class introduction in atom.cpp
+ #define OBATOM_TYPE_LEN 6
  class OBAPI OBAtom: public OBBase
     {
     protected:
       unsigned char                 _ele;       //!< atomic number (type unsigned char to minimize space -- allows for 0..255 elements)
       char                          _impval;    //!< implicit valence
-      char                          _type[6];   //!< atomic type
+      char                          _type[OBATOM_TYPE_LEN];   //!< atomic type
       short                         _fcharge;   //!< formal charge
       unsigned short                _isotope;   //!< isotope (0 = most abundant)
       short                         _spinmultiplicity;//!< atomic spin, e.g., 2 for radical  1 or 3 for carbene
@@ -214,7 +215,7 @@ namespace OpenBabel
       //! \return the atomic mass of this atom given by standard IUPAC
       //!  average molar mass
       double     GetAtomicMass()    const;
-      //! \return the atomic mass of given by the isotope
+      //! \return the atomic mass of this atom given by the isotope
       //! (default of 0 gives the most abundant isotope)
       double     GetExactMass()     const;
       //! \return the internal atom index (e.g., inside an OBMol)
@@ -227,10 +228,7 @@ namespace OpenBabel
       //! \deprecated Use GetCoordinateIdx() instead
       unsigned int GetCIdx()          const { return((int)_cidx); }
       //! \return The current number of explicit connections
-      unsigned int GetValence()       const
-        {
-          return((_vbond.empty()) ? 0 : static_cast<unsigned int> (_vbond.size()));
-        }
+      unsigned int GetValence() const { return (unsigned int)_vbond.size(); }
       //! \return The hybridization of this atom: 1 for sp, 2 for sp2, 3 for sp3, 4 for sq. planar, 5 for trig. bipy, 6 for octahedral
       unsigned int GetHyb()             const;
       //! \return The implicit valence of this atom type (i.e. maximum number of connections expected)
@@ -326,6 +324,9 @@ namespace OpenBabel
       double GetDistance(int index);
       //! \return the distance to the supplied OBAtom
       double GetDistance(OBAtom*);
+      //! \return the distance to the coordinates of the supplied vector3
+      //! \since version 2.4
+      double GetDistance(vector3* v);
       //! \return the angle defined by this atom -> b (vertex) -> c
       double GetAngle(int b, int c);
       //! \return the angle defined by this atom -> b (vertex) -> c
@@ -389,6 +390,9 @@ namespace OpenBabel
       //@{
       //! \return The number of oxygen atoms connected that only have one heavy valence
       unsigned int  CountFreeOxygens()      const;
+      //! \return The number of sulfur atoms connected that only have one heavy valence
+      //! \since version 2.4
+      unsigned int  CountFreeSulfurs()      const;
       //! \return The number of hydrogens needed to fill the implicit valence of this atom
       unsigned int  ImplicitHydrogenCount() const;
       //! \return The number of hydrogens explicitly bound to this atom, optionally excluding D,T and isotope explicitly set to 1
@@ -408,8 +412,21 @@ namespace OpenBabel
       //! \return The sum of the bond orders of bonds to the atom, considering only KDouble, KTriple bonds
       //! \deprecated Use BOSum() instead
       unsigned int  KBOSum()                const;
+      /** Lewis acid/base vacancies for this atom
+       *  \return A pair of integers, where first is acid count and second is base count
+       *  \since version 2.3
+       */
+      std::pair<int, int> LewisAcidBaseCounts() const;
       //! \return Is there any residue information?
       bool HasResidue()    { return(_residue != NULL);    }
+      //! \return Is this a HETATM in a residue (returns false if not in a residue)
+      //! \since version 2.4
+      bool IsHetAtom() {
+        if (_residue == NULL)
+          return false;
+        else
+          return _residue->IsHetAtom(this);
+      }
       //! \return Is the atom hydrogen?
       bool IsHydrogen()    { return(GetAtomicNum() == 1); }
       bool IsHydrogen() const { return(GetAtomicNum() == 1); }
@@ -477,12 +494,17 @@ namespace OpenBabel
       bool HasChiralitySpecified() { return(HasFlag(OB_CSTEREO_ATOM|OB_ACSTEREO_ATOM)); }
       //! \deprecated
       bool HasChiralVolume() { return(HasFlag(OB_POS_CHIRAL_ATOM|OB_NEG_CHIRAL_ATOM)); }
-      //! \return Is this atom a hydrogen-bond acceptor (receptor)?
+      //! \return Is this atom a hydrogen-bond acceptor  (considering also atom surrounding)
       bool IsHbondAcceptor();
-      //! \return Is this atom a hydrogen-bond donor?
+      //! \return Is this atom a hydrogen-bond acceptor (old function)?
+      bool IsHbondAcceptorSimple();
+            //! \return Is this atom a hydrogen-bond donor?
       bool IsHbondDonor();
       //! \return Is this a hydrogen atom attached to a hydrogen-bond donor?
       bool IsHbondDonorH();
+      //! \return Is this atom a metal?
+      //! \since version 2.4
+      bool IsMetal();
       //! \return Whether a neighboring atom (alpha) has an unsaturated bond
       //!   to a third atom (beta).
       //! \param includePandS Whether to include phosphorus and sulfur neighbors
@@ -492,6 +514,8 @@ namespace OpenBabel
       bool HasBondOfOrder(unsigned int bo);
       //! \return The count of bonds connected to this atom with order == @p bo
       int  CountBondsOfOrder(unsigned int bo);
+      //! \return The maximum bond order for this atom
+      int  HighestBondOrder();
       //! \return Whether this atom is connected to any bond with order >1
       bool HasNonSingleBond();
       //! \return Does this atom have a single bond

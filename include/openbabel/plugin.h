@@ -20,6 +20,7 @@ General Public License for more details.
 #define OB_PLUGIN_H
 
 #include <openbabel/babelconfig.h>
+#include <openbabel/dlhandler.h>
 #include <string>
 #include <iostream>
 #include <vector>
@@ -123,6 +124,9 @@ public:
   ///Returns the map of the subtypes
   virtual PluginMapType& GetMap() const =0;
 
+  ///Load all plugins (formats, fingerprints, forcefields etc.)
+  static void LoadAllPlugins();
+
 protected:
   ///\brief Returns a reference to the map of the plugin types.
   /// Is a function rather than a static member variable to avoid initialization problems.
@@ -131,6 +135,9 @@ protected:
     static PluginMapType m;
     return m;
   }
+
+  ///Keep a record if all plugins have been loaded
+  static int AllPluginsLoaded;
 
   ///Returns the map of a particular plugin type, e.g. GetMapType("fingerprints")
   static PluginMapType& GetTypeMap(const char* PluginID);
@@ -148,36 +155,75 @@ protected:
 //Macro to be added to definition of the base class
 #define MAKE_PLUGIN(BaseClass)\
 protected:\
-static PluginMapType& Map();\
-virtual PluginMapType& GetMap()const{return Map();}\
+  static PluginMapType& Map();\
+  virtual PluginMapType& GetMap() const {\
+    return Map();\
+  }\
 public:\
-static BaseClass*& Default(){static BaseClass* d;return d;}\
-  BaseClass(const char* ID, bool IsDefault=false)\
- {_id=ID;if(ID&&*ID){if(IsDefault || Map().empty()) Default() = this;\
- Map()[ID]=this;PluginMap()[TypeID()] =this;}}\
-static BaseClass* FindType(const char* ID)\
- {if(!ID || *ID==0 || *ID==' ') return Default();\
- return static_cast<BaseClass*>(BaseFindType(Map(),ID));}
+  static BaseClass*& Default() {\
+    static BaseClass* d;\
+    return d;\
+  }\
+  BaseClass(const char* ID, bool IsDefault=false) {\
+    _id=ID;\
+    if (ID&&*ID) {\
+      if (IsDefault || Map().empty()) {\
+        Default() = this;\
+      }\
+      if (Map().count(ID) == 0) {\
+        Map()[ID] = this;\
+        PluginMap()[TypeID()] = this;\
+      }\
+    }\
+  }\
+  static BaseClass* FindType(const char* ID) {\
+    if (!ID || *ID==0 || *ID==' ') {\
+      return Default();\
+    }\
+    return static_cast<BaseClass*>(BaseFindType(Map(),ID));\
+  }
 
 #define PLUGIN_CPP_FILE(BaseClass)\
-OBPlugin::PluginMapType& BaseClass::Map()\
-{ static OBPlugin::PluginMapType map; return map; }
+OBPlugin::PluginMapType& BaseClass::Map() {\
+  static OBPlugin::PluginMapType map;\
+  return map;\
+}
 
 #else // __CYGWIN__ || __MINGW32__
 
 //Macro to be added to definition of the base class
 #define MAKE_PLUGIN(BaseClass)\
 protected:\
-static PluginMapType& Map(){static PluginMapType m;return m;}\
-virtual PluginMapType& GetMap()const{return Map();}\
+  static PluginMapType& Map() {\
+    static PluginMapType m;\
+    return m;\
+  }\
+  virtual PluginMapType& GetMap() const {\
+    return Map();\
+  }\
 public:\
-static BaseClass*& Default(){static BaseClass* d;return d;}\
-  BaseClass(const char* ID, bool IsDefault=false)\
- {_id=ID;if(ID&&*ID){if(IsDefault || Map().empty()) Default() = this;\
- Map()[ID]=this;PluginMap()[TypeID()] =this;}}\
-static BaseClass* FindType(const char* ID)\
- {if(!ID || *ID==0 || *ID==' ') return Default();\
- return static_cast<BaseClass*>(BaseFindType(Map(),ID));}
+  static BaseClass*& Default() {\
+    static BaseClass* d;\
+    return d;\
+  }\
+  BaseClass(const char* ID, bool IsDefault=false) {\
+    _id=ID;\
+    if (ID&&*ID) {\
+      if (IsDefault || Map().empty()) {\
+        Default() = this;\
+      }\
+      if (Map().count(ID) == 0) {\
+        Map()[ID] = this;\
+        PluginMap()[TypeID()] = this;\
+      }\
+    }\
+  }\
+  static BaseClass* FindType(const char* ID) {\
+    if (!ID || *ID==0 || *ID==' ') {\
+      return Default();\
+    }\
+    return static_cast<BaseClass*>(BaseFindType(Map(),ID));\
+  }
 
 #endif // __CYGWIN__ || __MINGW32__
 
@@ -328,11 +374,15 @@ public:
   OBAPI EXTERN className instanceName;
 
   // formats
+  OB_STATIC_PLUGIN(ABINITFormat, theABINITFormat)
+  OB_STATIC_PLUGIN(AcesOutputFormat, theAcesOutputFormat)
+  OB_STATIC_PLUGIN(AcesInputFormat, theAcesInputFormat)
   OB_STATIC_PLUGIN(ACRFormat, theACRFormat)
   OB_STATIC_PLUGIN(ADFOutputFormat, theADFOutputFormat)
   OB_STATIC_PLUGIN(ADFInputFormat, theADFInputFormat)
   OB_STATIC_PLUGIN(AlchemyFormat, theAlchemyFormat)
   OB_STATIC_PLUGIN(AmberPrepFormat, theAmberPrepFormat)
+  OB_STATIC_PLUGIN(AoforceFormat, theAoforceFormat)
   OB_STATIC_PLUGIN(OBAPIInterface, theOBAPIInterface)
   OB_STATIC_PLUGIN(BallStickFormat, theBallStickFormat)
   OB_STATIC_PLUGIN(BGFFormat, theBGFFormat)
@@ -340,10 +390,11 @@ public:
   OB_STATIC_PLUGIN(CacaoFormat, theCacaoFormat)
   OB_STATIC_PLUGIN(CacheFormat, theCacheFormat)
   OB_STATIC_PLUGIN(CARFormat, theCARFormat)
+  OB_STATIC_PLUGIN(CASTEPFormat, theCASTEPFormat)
   OB_STATIC_PLUGIN(CCCFormat, theCCCFormat)
   OB_STATIC_PLUGIN(CHEM3D1Format, theCHEM3D1Format)
   OB_STATIC_PLUGIN(CHEM3D2Format, theCHEM3D2Format)
-  OB_STATIC_PLUGIN(ChemDrawBinaryFormat, theChemDrawBinaryFormat)
+  OB_STATIC_PLUGIN(ChemDrawBinaryXFormat, theChemDrawBinaryXFormat)
   OB_STATIC_PLUGIN(ChemDrawFormat, theChemDrawFormat)
   OB_STATIC_PLUGIN(ChemKinFormat, theChemKinFormat)
   OB_STATIC_PLUGIN(CHTFormat, theCHTFormat)
@@ -356,6 +407,7 @@ public:
   OB_STATIC_PLUGIN(DlpolyConfigFormat, theDlpolyConfigFormat)
   OB_STATIC_PLUGIN(DlpolyHISTORYFormat, theDlpolyHISTORYFormat)
   OB_STATIC_PLUGIN(DMolFormat, theDMolFormat)
+  OB_STATIC_PLUGIN(EXYZFormat, theEXYZFormat)
   OB_STATIC_PLUGIN(FASTAFormat, theFASTAFormat)
   OB_STATIC_PLUGIN(FastSearchFormat, theFastSearchFormat)
   OB_STATIC_PLUGIN(FCHKFormat, theFCHKFormat)
@@ -372,11 +424,13 @@ public:
   OB_STATIC_PLUGIN(GaussianZMatrixInputFormat, theGaussianZMatrixInputFormat)
   OB_STATIC_PLUGIN(GenBankFormat, theGenBankFormat)
   OB_STATIC_PLUGIN(GhemicalFormat, theGhemicalFormat)
+  OB_STATIC_PLUGIN(GROFormat, theGROFormat)
   OB_STATIC_PLUGIN(GROMOS96Format, theGROMOS96Format)
   OB_STATIC_PLUGIN(GULPFormat, theGULPFormat)
   OB_STATIC_PLUGIN(HINFormat, theHINFormat)
   OB_STATIC_PLUGIN(JaguarOutputFormat, theJaguarOutputFormat)
   OB_STATIC_PLUGIN(JaguarInputFormat, theJaguarInputFormat)
+  OB_STATIC_PLUGIN(LMPDATFormat, theLMPDATFormat)
   OB_STATIC_PLUGIN(MCDLFormat, theMCDLFormat)
   OB_STATIC_PLUGIN(MOLFormat, theMOLFormat)
   OB_STATIC_PLUGIN(SDFormat, theSDFormat)
@@ -401,6 +455,8 @@ public:
   OB_STATIC_PLUGIN(NWChemOutputFormat, theNWChemOutputFormat)
   OB_STATIC_PLUGIN(NWChemInputFormat, theNWChemInputFormat)
   OB_STATIC_PLUGIN(OBOpenDXCubeFormat, theOpenDXCubeFormat)
+  OB_STATIC_PLUGIN(OrcaOutputFormat, theOrcaOutputFormat)
+  OB_STATIC_PLUGIN(OrcaInputFormat, theOrcaInputFormat)
   OB_STATIC_PLUGIN(OutputFormat, theOutputFormat)
   OB_STATIC_PLUGIN(PCModelFormat, thePCModelFormat)
   OB_STATIC_PLUGIN(PDBFormat, thePDBFormat)
@@ -408,6 +464,7 @@ public:
 #ifdef HAVE_LIBZ
   OB_STATIC_PLUGIN(PNGFormat, thePNGFormat)
 #endif
+  OB_STATIC_PLUGIN(PointCloudFormat, thePointCloudFormat)
   OB_STATIC_PLUGIN(PovrayFormat, thePovrayFormat)
   OB_STATIC_PLUGIN(PQRFormat, thePQRFormat)
   OB_STATIC_PLUGIN(PQSFormat, thePQSFormat)
@@ -419,6 +476,7 @@ public:
   OB_STATIC_PLUGIN(RXNFormat, theRXNFormat)
   OB_STATIC_PLUGIN(ShelXFormat, theShelXFormat)
   OB_STATIC_PLUGIN(SMIFormat, theSMIFormat)
+  OB_STATIC_PLUGIN(STLFormat, theSTLFormat)
   OB_STATIC_PLUGIN(CANSMIFormat, theCANSMIFormat)
   OB_STATIC_PLUGIN(FIXFormat, theFIXFormat)
   OB_STATIC_PLUGIN(SVGFormat, theSVGFormat)
@@ -431,6 +489,7 @@ public:
   OB_STATIC_PLUGIN(VASPFormat, theVASPFormat)
   OB_STATIC_PLUGIN(ViewMolFormat, theViewMolFormat)
   OB_STATIC_PLUGIN(XEDFormat, theXEDFormat)
+  OB_STATIC_PLUGIN(XSFFormat, theXSFFormat)
   OB_STATIC_PLUGIN(XYZFormat, theXYZFormat)
   OB_STATIC_PLUGIN(YOBFormat, theYOBFormat)
   OB_STATIC_PLUGIN(ZINDOFormat, theZINDOFormat)
@@ -476,6 +535,12 @@ public:
   OB_STATIC_PLUGIN(fingerprint2, thefingerprint2)
   OB_STATIC_PLUGIN(PatternFP, FP3PatternFP)
   OB_STATIC_PLUGIN(PatternFP, FP4PatternFP)
+  OB_STATIC_PLUGIN(fingerprintECFP, theECFP0)
+  OB_STATIC_PLUGIN(fingerprintECFP, theECFP2)
+  OB_STATIC_PLUGIN(fingerprintECFP, theECFP4)
+  OB_STATIC_PLUGIN(fingerprintECFP, theECFP6)
+  OB_STATIC_PLUGIN(fingerprintECFP, theECFP8)
+  OB_STATIC_PLUGIN(fingerprintECFP, theECFP10)
 
   // forcefields
   OB_STATIC_PLUGIN(OBForceFieldGaff, theForceFieldGaff)
@@ -487,7 +552,11 @@ public:
   // operations
   OB_STATIC_PLUGIN(OpAddInIndex, theOpAddInIndex)
   OB_STATIC_PLUGIN(OpAddPolarH, theOpAddPolarH)
+  OB_STATIC_PLUGIN(OpAddNonPolarH, theOpAddNonPolarH)
+  OB_STATIC_PLUGIN(OpChangeCell, theOpChangeCell)
   OB_STATIC_PLUGIN(OpCanonical, theOpCanonical)
+  OB_STATIC_PLUGIN(OpDelPolarH, theOpDelPolarH)
+  OB_STATIC_PLUGIN(OpDelNonPolarH, theOpDelNonPolarH)
   OB_STATIC_PLUGIN(OpFillUC, theOpFillUC)
   OB_STATIC_PLUGIN(OpEnergy, theOpEnergy)
   OB_STATIC_PLUGIN(OpMinimize, theOpMinimize)
@@ -508,11 +577,15 @@ public:
   // charges
   OB_STATIC_PLUGIN(GasteigerCharges, theGasteigerCharges)
   OB_STATIC_PLUGIN(MMFF94Charges, theMMFF94Charges)
+  OB_STATIC_PLUGIN(NoCharges, theNoCharges)
+  OB_STATIC_PLUGIN(FromFileCharges, theFromFileCharges)
 #ifdef HAVE_EIGEN
   OB_STATIC_PLUGIN(QEqCharges, theQEqCharges)
   OB_STATIC_PLUGIN(QTPIECharges, theQTPIECharges)
 #endif
-
+#ifdef HAVE_EIGEN3
+  OB_STATIC_PLUGIN(EQEqCharges, theEQEqCharges)
+#endif
   OBAPI std::vector<std::string> EnableStaticPlugins();
 
 #endif // USING_DYNAMIC_LIBS

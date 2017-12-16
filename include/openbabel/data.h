@@ -115,7 +115,7 @@ namespace OpenBabel
         _red(red), _green(green), _blue(blue),
         _maxbonds(maxbo)
         {
-          strncpy(_symbol, sym, 4);
+          strncpy(_symbol, sym, 3); // Make sure to leave 4th character for null
         }
 
       //! \return the atomic number of this element
@@ -221,7 +221,117 @@ namespace OpenBabel
       //! \return the exact masss of the isotope
       //!   (or by default (i.e. "isotope 0") the most abundant isotope)
       double	GetExactMass(const unsigned int atomicNum,
-                           const unsigned int isotope = 0);
+                             const unsigned int isotope = 0);
+    };
+
+  /** \class OBAtomHOF data.h <openbabel/data.h>
+      \brief helper class for OBAtomicHeatOfFormationTable
+
+      Stores both theoretical and experimental corrections
+      needed to compute the Enthalpy of formation. In order to
+      use these you need to perform
+      Gaussian G2/G3/G4 or CBS-QB3 calculations.
+  **/
+  class OBAPI OBAtomHOF
+  {
+  private:
+      std::string _element,_method,_desc,_unit;
+    double _T,_value;
+    int _charge;
+    int _multiplicity;
+
+  public:
+    /** \brief Initialize Heat of Formation for atom
+        
+     @param element The element string
+     @param charge  The formal charge of the particle (if an ion)
+     @param method  The method used for determining the value
+     @param desc    Description of the value
+     @param T       Temperature
+     @param value   The value of the property (energy)
+     @param multiplicity The multiplicity of the atomic system
+     @param unit    The (energy) unit
+    */
+    OBAtomHOF(std::string element,int charge,
+              std::string method,std::string desc,
+              double T,double value,int multiplicity,
+              std::string unit)
+      {
+        _element      = element;
+        _charge       = charge;
+        _method       = method;
+        _desc         = desc;
+        _T            = T;
+        _value        = value;
+        _multiplicity = multiplicity;
+        _unit         = unit;
+      }
+
+    /** \brief Destructor */
+    ~OBAtomHOF() {}
+    /** \brief Return the chemical element */
+    std::string Element() { return _element; }
+    /** \brief Return the formal charge */
+    int Charge()          { return _charge; }
+    /** \brief Return the method used for the measurement/calculation */
+    std::string Method()  { return _method; }
+    /** \brief Return specification of the measurement/calculation type */
+    std::string Desc()    { return _desc; }
+    /** \brief Return the temperature */
+    double T()            { return _T; }
+    /** \brief Return the (energy) value */
+    double Value()        { return _value; }
+    /** \brief Return the multiplicity */
+    int Multiplicity()    { return _multiplicity; }
+    /** \brief Return the (energy) unit */
+    std::string Unit()    { return _unit; }
+  };
+
+  /** \class OBAtomicHeatOfFormationTable data.h <openbabel/data.h>
+      \brief Atomic Heat of Formation Table
+
+      Contributions of atoms to Enthalpy of Formation calculations performed
+      in Gaussian, using the G2/G3/G4 or CBS-QB3 methods respectively.
+      The energies produced by Gaussian have to be corrected according to their
+      document on Thermochemistry with Gaussian. The data in the file
+      BABEL_DATA/atomization_energies.txt supplies this information based on
+      single atom calculations with Gaussian and the appropriate method and
+      experimental data from Curtiss et al., J. Chem. Phys. 106 (1997) 1063-1079.
+  */
+  class OBAPI OBAtomicHeatOfFormationTable : public OBGlobalDataBase
+  {
+    std::vector<OBAtomHOF> _atomhof;
+
+    public:
+      /** \brief Constructor */
+      OBAtomicHeatOfFormationTable(void);
+      /** \brief Destructor */
+      ~OBAtomicHeatOfFormationTable() {}
+
+      //! \return the number of elements in the Atomic Heat Of Formation table
+      size_t GetSize() { return _atomhof.size(); }
+
+      /** \brief Read one line in the file and parse it 
+          @param Unnamed the line to be parsed
+      */
+      void	ParseLine(const char*);
+      /** \brief Extract heat of formation and entropy for an atom
+       @param elem         The chemical element we're looking for
+       @param charge       At this formal charge
+       @param method       The method used for computing/measuring
+       @param T            The temperature
+       @param dhof0        The output energy at 0K
+       @param dhof1        The output energy at T
+       @param S0T          The entropy at T (it is 0 at 0K)
+       \return 1 if the contribution to the Heat of Formation for this atom
+       is known at temperature T. If 1 the values
+       including all corrections are returned in the dhof variable.
+      */
+      int	GetHeatOfFormation(std::string elem, 
+                               int charge,
+                               std::string method,
+                               double T, double *dhof0,
+                               double *dhofT,double *S0T);
     };
 
   // class introduction in data.cpp
@@ -306,7 +416,7 @@ namespace OpenBabel
     };
 
 } // end namespace OpenBabel
-
+  
 #endif //DATA_H
 
 //! \file data.h

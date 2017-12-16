@@ -30,8 +30,7 @@ GNU General Public License for more details.
 #include <openbabel/rotor.h>
 #include <openbabel/obconversion.h>
 #include <openbabel/locale.h>
-#include <assert.h>
-
+#include <openbabel/distgeom.h>
 
 #include <openbabel/stereo/stereo.h>
 #include <openbabel/stereo/cistrans.h>
@@ -123,19 +122,22 @@ namespace OpenBabel
     double bondLength = 0.0;
 
     // We create an estimate of the bond length based on the two atoms
-    bondLength += etab.CorrectedBondRad(atom1->GetAtomicNum(), atom1->GetHyb());
-    bondLength += etab.CorrectedBondRad(atom2->GetAtomicNum(), atom2->GetHyb());
+    // Scaling is performed by the bond order corrections below
+    //  .. so we will use the straight covalent radii
+    bondLength += etab.GetCovalentRad(atom1->GetAtomicNum());
+    bondLength += etab.GetCovalentRad(atom2->GetAtomicNum());
 
     if (bondLength < 1.0)
       bondLength = 1.0;
 
     // These are based on OBBond::GetEquibLength
+    // Numbers come from averaged values of Pyykko and Atsumi
     if (bondOrder == -1) // aromatic
-      bondLength *= 0.93;
+      bondLength *= 0.9475;   // 0.9475 = average of 1.0 and 0.8950
     else if (bondOrder == 2)
-      bondLength *= 0.91;
+      bondLength *= 0.8950;   // 0.8950
     else if (bondOrder == 3)
-      bondLength *= 0.87;
+      bondLength *= 0.8578;   // 0.8578
 
     return OBBuilder::GetNewBondVector(atom1, bondLength);
   }
@@ -172,7 +174,7 @@ namespace OpenBabel
         newbond = atom->GetVector() + VX * length;
         return newbond;
       }
-/*
+
       // hyb * = 1
       // ^^^^^^^^^
       //
@@ -195,7 +197,7 @@ namespace OpenBabel
       //     \                 \
       //    (a-1)--a   --->   (a-1)--a          angle(a-1, a, *) = 109
       //                              \
-      //                              *    */
+      //                               *
       if (atom->GetValence() == 1) {
         bool isCarboxylateO = atom->IsCarboxylOxygen();
 
@@ -206,15 +208,18 @@ namespace OpenBabel
             continue;
 
           FOR_NBORS_OF_ATOM (nbr2, &*nbr) {
-            if (&*nbr2 != atom)
+            if (&*nbr2 != atom) {
               bond2 = nbr->GetVector() - nbr2->GetVector();
-            if (isCarboxylateO && nbr2->IsOxygen())
-              break; // make sure that the hydrogen is trans to the C=O
+
+              if (isCarboxylateO && nbr2->IsOxygen())
+                break; // make sure that the hydrogen is trans to the C=O
+            }
           }
         }
 
         bond1 = bond1.normalize();
-        if (bond2 == VZero) {
+        v1 = cross(bond1, bond2);
+        if (bond2 == VZero || v1 == VZero) {
           vector3 vrand;
           vrand.randomUnitVector();
           double angle = fabs(acos(dot(bond1, vrand)) * RAD_TO_DEG);
@@ -224,11 +229,8 @@ namespace OpenBabel
           }
           // there is no a-2 atom
           v1 = cross(bond1, vrand); // so find a perpendicular, given the random vector (this doesn't matter here)
-          v2 = cross(bond1, v1);
-        } else {
-          v1 = cross(bond1, bond2);
-          v2 = cross(bond1, v1);
         }
+        v2 = cross(bond1, v1);
         v2 = v2.normalize();
 
         // check to see if atom is a square planar in disguise
@@ -840,27 +842,6 @@ namespace OpenBabel
     return Connect(mol, idxA, idxB, newpos, bondOrder);
   }
 
-
-  /*
-     matrix3x3 mat;
-     vector3 moldir = newpos - posa;
-     vector3 fragdir = GetNewBondVector(b); // b is at origin
-     moldir.normalize();
-     fragdir.normalize();
-     double angle = acos(dot(moldir, fragdir));
-     vector3 axis = cross(moldir, fragdir);
-     axis.normalize();
-
-     mat.RotAboutAxisByAngle(axis, angle);
-     for (unsigned int i = 1; i <= _workMol.NumAtoms(); ++i) {
-     if (fragment.BitIsSet(i)) {
-     vector3 tmpvec = _workMol.GetAtom(i)->GetVector();
-     tmpvec *= mat; //apply the rotation
-     _workMol.GetAtom(i)->SetVector(tmpvec);
-     }
-     }
-  */
-
   // Variation of OBBuilder::Swap that allows swapping with a vector3 rather than
   // an explicit bond. This is useful for correcting stereochemistry at Tet Centers
   // where it is sometimes necessary to swap an existing bond with the location
@@ -985,7 +966,7 @@ namespace OpenBabel
   //                                       b) Not the first atom: rotate, translate and connect the fragment
   // 3) The atom doesn't belong to a fragment: a) First atom: place at origin
   //                                           b) Not first atom: Find position and place atom
-  bool OBBuilder::Build(OBMol &mol)
+  bool OBBuilder::Build(OBMol &mol, bool stereoWarnings)
   {
     //cerr << "OBBuilder::Build(OBMol &mol)" << endl;
     OBBitVec vdone; // Atoms that are done, need no further manipulation.
@@ -1007,7 +988,7 @@ namespace OpenBabel
       workMol.SetDimension(0);
 
     // Count the number of ring atoms.
-    int ratoms = 0;
+    unsigned int ratoms = 0;
     FOR_ATOMS_OF_MOL(a, mol)
       if (a->IsInRing()) {
         ratoms++;
@@ -1039,7 +1020,7 @@ namespace OpenBabel
         LoadFragments();
 
       // Skip all fragments that are too big to match
-      // Note: It would be better to compare to the size of the largest
+      // Note: It would be faster to compare to the size of the largest
       //       isolated ring system instead of comparing to ratoms
       for (i = _fragments.begin();i != _fragments.end() && i->first->NumAtoms() > ratoms;++i);
 
@@ -1171,25 +1152,36 @@ namespace OpenBabel
 
     }
 
-    // Ensure all bonds from the old molecule exist in the new molecule
+    // Make sure we keep the bond indexes the same
+    // so we'll delete the bonds again and copy them
+    // Fixes PR#3448379 (and likely other topology issues)
+    while (workMol.NumBonds())
+      workMol.DeleteBond(workMol.GetBond(0));
+
     int beginIdx, endIdx;
     FOR_BONDS_OF_MOL(b, mol) {
       beginIdx = b->GetBeginAtomIdx();
       endIdx = b->GetEndAtomIdx();
-      if (!workMol.GetBond(beginIdx, endIdx)) {
-        // We need to duplicate the old bond
-        workMol.AddBond(beginIdx, endIdx, b->GetBO(), b->GetFlags());
-      }
+      workMol.AddBond(beginIdx, endIdx, b->GetBO(), b->GetFlags());
     }
 
     // correct the chirality
-    CorrectStereoBonds(workMol);
-    CorrectStereoAtoms(workMol);
-    workMol.SetChiralityPerceived();
+    bool success = CorrectStereoBonds(workMol);
+    // we only succeed if we corrected all stereochemistry
+    success = success && CorrectStereoAtoms(workMol, stereoWarnings);
+
+    /*
+    // if the stereo failed, we should use distance geometry instead
+    OBDistanceGeometry dg;
+    dg.Setup(workMol);
+    dg.GetGeometry(workMol); // ensured to have correct stereo
+    */
+
     mol = workMol;
+    mol.SetChiralityPerceived();
     mol.SetDimension(3);
 
-    return true;
+    return success;
   }
 
   void OBBuilder::ConnectFrags(OBMol &mol, OBMol &workMol, vector<int> match, vector<vector3> coords,
@@ -1296,7 +1288,7 @@ namespace OpenBabel
     return;
   }
 
-  void OBBuilder::CorrectStereoBonds(OBMol &mol)
+  bool OBBuilder::CorrectStereoBonds(OBMol &mol)
   {
     // Get CisTransStereos and make a vector of corresponding OBStereoUnits
     std::vector<OBCisTransStereo*> cistrans, newcistrans;
@@ -1323,13 +1315,14 @@ namespace OpenBabel
     std::vector<OBCisTransStereo*>::iterator origct, newct;
     for (origct=cistrans.begin(), newct=newcistrans.begin(); origct!=cistrans.end(); ++origct, ++newct) {
       OBCisTransStereo::Config config = (*newct)->GetConfig(OBStereo::ShapeU);
+
       if ((*origct)->GetConfig(OBStereo::ShapeU) != config) { // Wrong cis/trans stereochemistry
-/*
+
         // refs[0]            refs[3]
         //        \          /
         //         begin==end
         //        /          \
-        // refs[1]            refs[2]   */
+        // refs[1]            refs[2]
 
         a = mol.GetAtomById(config.refs[0]);
         b = mol.GetAtomById(config.begin);
@@ -1340,9 +1333,12 @@ namespace OpenBabel
           d = mol.GetAtomById(config.refs[2]);
         angle = mol.GetTorsion(a, b, c, d); // In degrees
         newangle = angle * DEG_TO_RAD + M_PI; // flip the bond by 180 deg (PI radians)
+        // if it's a ring, break a ring bond before rotating
         mol.SetTorsion(a, b, c, d, newangle); // In radians
       }
     }
+
+    return true; // was all the ring bond stereochemistry corrected?
   }
 
   bool OBBuilder::IsSpiroAtom(unsigned long atomId, OBMol &mol)
@@ -1352,22 +1348,21 @@ namespace OpenBabel
     if (watom->GetHvyValence() != 4) // QUESTION: Do I need to restrict it further?
       return false;
 
-    std::vector <OBBond*> bonds;
-    std::vector <OBBond*>::iterator bond_it;
-    FOR_BONDS_OF_ATOM(b, watom) {
-      if (!b->IsInRing())
+    int atomsInSameRing = 0;
+    int atomsInDiffRings = 0;
+    FOR_NBORS_OF_ATOM(n, watom) {
+      if (!n->IsInRing())
         return false;
+      if (mol.AreInSameRing(&*n, watom))
+        atomsInSameRing++;
       else
-        bonds.push_back(&(*b));
+        atomsInDiffRings++;
     }
-    // Removing the four bonds should partition the molecule into 3 fragments
-    // ASSUMPTION: Molecule is a contiguous fragment to begin with
-    for(bond_it=bonds.begin(); bond_it != bonds.end(); ++bond_it)
-      workmol.DeleteBond(*bond_it);
-    if (workmol.Separate().size() != 3)
-      return false;
 
-    return true;
+    if (atomsInSameRing == 2 && atomsInDiffRings == 2)
+      return true;
+
+    return false;
   }
 
   void OBBuilder::FlipSpiro(OBMol &mol, int idx)
@@ -1426,8 +1421,10 @@ namespace OpenBabel
         mol.GetAtom(i)->SetVector(workMol.GetAtom(i)->GetVector() + posP);
   }
 
-  void OBBuilder::CorrectStereoAtoms(OBMol &mol)
+  bool OBBuilder::CorrectStereoAtoms(OBMol &mol, bool warn)
   {
+    bool success = true; // for now
+
     // Get TetrahedralStereos and make a vector of corresponding OBStereoUnits
     std::vector<OBTetrahedralStereo*> tetra, newtetra;
     OBStereoUnitSet sgunits;
@@ -1482,13 +1479,15 @@ namespace OpenBabel
       bool inversion = FixRingStereo(ringstereo, mol, unfixed);
 
       // Output warning message if necessary
-      if (unfixed.size() > 0) {
+      if (unfixed.size() > 0 && warn) {
         stringstream errorMsg;
         errorMsg << "Could not correct " << unfixed.size() << " stereocenter(s) in this molecule (" << mol.GetTitle() << ")";
         errorMsg << std::endl << "  with Atom Ids as follows:";
         for (OBStereo::RefIter ref=unfixed.begin(); ref!=unfixed.end(); ++ref)
           errorMsg << " " << *ref;
         obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obWarning);
+
+        success = false; // uncorrected bond
       }
 
       // Reperceive non-ring TetrahedralStereos if an inversion occured
@@ -1530,6 +1529,8 @@ namespace OpenBabel
         }
       }
     }
+
+    return success; // did we fix all atoms, including ring stereo?
   }
 
   bool OBBuilder::FixRingStereo(std::vector<std::pair<OBStereo::Ref, bool> > atomIds, OBMol &mol,

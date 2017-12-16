@@ -56,14 +56,16 @@ namespace OpenBabel
           " --nconf #        number of conformers to generate\n"
           " forcefield based methods for finding stable conformers:\n"
           " --systematic     systematically generate all conformers\n"
+          " --fast           fast systematic search from central bonds\n"
           " --random         randomly generate conformers\n"
           " --weighted       weighted rotor search for lowest energy conformer\n"
           " --ff #           select a forcefield (default = MMFF94)\n"
+          " --rings          sample ring torsions\n"
           " genetic algorithm based methods (default):\n"
           " --children #     number of children to generate for each parent (default = 5)\n"
           " --mutability #   mutation frequency (default = 5)\n"
           " --converge #     number of identical generations before convergence is reached\n"
-          " --score #        scoring function [rmsd|energy] (default = rmsd)\n"
+          " --score #        scoring function [rmsd|energy|minrmsd|minenergy] (default = rmsd)\n"
           ;
       }
 
@@ -77,11 +79,10 @@ namespace OpenBabel
   //////////////////////////////////////////////////////////
   OpConformer theOpConformer("conformer"); //Global instance
 
-  bool getInteger(const std::string &str, int &value)
+  void getInteger(const std::string &str, int &value)
   {
     std::istringstream iss(str);
-    bool ret = iss >> value;
-    return ret;
+    iss >> value;
   }
 
   //////////////////////////////////////////////////////////
@@ -97,6 +98,8 @@ namespace OpenBabel
     bool systematic = false;
     bool random = false;
     bool weighted = false;
+    bool fast = false;
+    bool rings = false;
     int numConformers = 30;
 
     iter = pmap->find("log");
@@ -115,11 +118,23 @@ namespace OpenBabel
     if(iter!=pmap->end())
       random = true;
 
+    iter = pmap->find("fast");
+    if(iter!=pmap->end())
+      fast = true;
+
     iter = pmap->find("weighted");
     if(iter!=pmap->end())
       weighted = true;
 
-    if (systematic || random || weighted) {
+    iter = pmap->find("ring");
+    if(iter!=pmap->end())
+        rings = true;
+
+    iter = pmap->find("rings");
+    if(iter!=pmap->end())
+        rings = true;
+
+    if (systematic || random || fast || weighted) {
       std::string ff = "MMFF94";
       iter = pmap->find("ff");
       if(iter!=pmap->end())
@@ -130,14 +145,34 @@ namespace OpenBabel
       pFF->SetLogFile(&clog);
       pFF->SetLogLevel(log ? OBFF_LOGLVL_MEDIUM : OBFF_LOGLVL_NONE);
 
+      // Add cut-offs for faster conformer searching
+      // Generally people will perform further optimization on a final conformer
+      pFF->EnableCutOff(true);
+      pFF->SetVDWCutOff(10.0);
+      pFF->SetElectrostaticCutOff(20.0);
+      pFF->SetUpdateFrequency(10); // delay updates of non-bonded distances
+
       if (!pFF->Setup(*pmol)) {
         cerr  << "Could not setup force field." << endl;
         return false;
       }
-    } else {
+
+      // Perform search
+      if (systematic) {
+        pFF->SystematicRotorSearch(10, rings); // 10 steepest-descent forcfield steps per conformer
+      } else if (fast) {
+        pFF->FastRotorSearch(true); // permute rotors
+      } else if (random) {
+        pFF->RandomRotorSearch(numConformers, 10, rings);
+      } else if (weighted) {
+        pFF->WeightedRotorSearch(numConformers, 10, rings);
+      }
+      pFF->GetConformers(*pmol);
+
+    } else { // GA-based searching
       int numChildren = 5;
       int mutability = 5;
-      int convergence = 25;
+      int convergence = 5;
       std::string score = "rmsd";
 
       iter = pmap->find("children");
@@ -159,6 +194,10 @@ namespace OpenBabel
       OBConformerSearch cs;
       if (score == "energy")
         cs.SetScore(new OBEnergyConformerScore);
+      else if (score == "mine" || score == "minenergy")
+        cs.SetScore(new OBMinimizingEnergyConformerScore);
+      else if (score == "minr" || score == "minrmsd")
+        cs.SetScore(new OBMinimizingRMSDConformerScore);
 
       if (cs.Setup(*pmol, numConformers, numChildren, mutability, convergence)) {
         cs.Search();
@@ -171,4 +210,3 @@ namespace OpenBabel
 
 
 }//namespace
-

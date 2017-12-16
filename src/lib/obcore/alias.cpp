@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include <openbabel/parsmart.h>
 #include <openbabel/mcdlutil.h>
 #include <openbabel/atomclass.h>
+#include <openbabel/shared_ptr.h>
 
 using namespace std;
 namespace OpenBabel
@@ -70,13 +71,12 @@ namespace OpenBabel
       return true;
 
     // Rn is stored as an atom with 0 atomic number and atomclass = n
-    // R', R'' etc. are treated as R1, R2  
+    // R', R'' etc. are treated as R1, R2
     // Note that if the name contains anything after the number it is ignored.
-    if(_alias[0]=='R' && (_alias[1]=='\'' || _alias[1]=='¢' || isdigit(_alias[1])))
+    if(_alias[0]=='R' && (_alias[1]=='\'' || isdigit(_alias[1])))
     {
-      replace(_alias.begin(),_alias.end(),'¢','\'');
-      int n=1;
-      if(_alias[1]=='\'' || _alias[1]=='¢')
+      unsigned int n = 1;
+      if(_alias[1]=='\'')
         while(n<_alias.size()-1 && _alias[n]==_alias[n+1]) n++;
       else
         n = atoi(_alias.c_str()+1);
@@ -95,9 +95,9 @@ namespace OpenBabel
       return true;
     }
 
-    obErrorLog.ThrowError(__FUNCTION__, "Alias " + _alias + 
+    obErrorLog.ThrowError(__FUNCTION__, "Alias " + _alias +
       " was not chemically interpreted\n", obWarning, onceOnly);
-    return false;   
+    return false;
   }
 
 bool AliasData::FromNameLookup(OBMol& mol, const unsigned int atomindex)
@@ -139,11 +139,14 @@ bool AliasData::FromNameLookup(OBMol& mol, const unsigned int atomindex)
   }
   obFrag.SetDimension(dimension);//will be same as parent
 
-  //Find index of *first* atom to which XxAtom is attached
+  //Find index of *first* atom to which XxAtom is attached (could be NULL)
   OBBondIterator bi;
   OBAtom* firstAttachAtom = XxAtom->BeginNbrAtom(bi);
   unsigned mainAttachIdx = firstAttachAtom ? firstAttachAtom->GetIdx() : 0;
- 
+  unsigned int firstAttachFlags = 0;
+  if (firstAttachAtom)
+    firstAttachFlags = mol.GetBond(XxAtom, firstAttachAtom)->GetFlags();
+
   //++Make list of other attachments* of XxAtom
   // (Added later so that the existing bonding of the XXAtom are retained)
   vector<pair<OBAtom*, unsigned> > otherAttachments;
@@ -175,12 +178,12 @@ bool AliasData::FromNameLookup(OBMol& mol, const unsigned int atomindex)
     if(mainAttachIdx)
       builder.Connect(mol, mainAttachIdx, newFragIdx);
   }
-  else // 0D, 2D  
+  else // 0D, 2D
   {
     obFrag.DeleteAtom(obFrag.GetAtom(1));//remove dummy atom
     mol += obFrag; //Combine with main molecule and connect
     if(mainAttachIdx)
-      mol.AddBond(mainAttachIdx, newFragIdx, 1);
+      mol.AddBond(mainAttachIdx, newFragIdx, 1, firstAttachFlags);
   }
 
   if(dimension==2)//Use MCDL
@@ -268,7 +271,7 @@ bool AliasData::LoadFile(SmartsTable& smtable)
         //OBSmartsPattern objects are not copyable without complications,
         //so reference semantics used.
 
-        shared_ptr<OBSmartsPattern> psp(new OBSmartsPattern);
+        obsharedptr<OBSmartsPattern> psp(new OBSmartsPattern);
         psp->Init(ssmarts.str());
         smtable.push_back(make_pair(vec[0], psp));
       }
@@ -282,15 +285,20 @@ void AliasData::AddExpandedAtom(int id) { _expandedatoms.push_back(id); };
 
 void AliasData::DeleteExpandedAtoms(OBMol& mol)
 {
-  //The atom that carries the AliasData object remains as an Xx atom;
-  //the others are deleted.
+  //The atom that carries the AliasData object remains as an Xx atom with no charge;
+  //the others are deleted. All the attached hydrogens are also deleted.
   for(unsigned i=0;i<_expandedatoms.size();++i)
   {
     OBAtom* at = mol.GetAtomById(_expandedatoms[i]);
     if(!at)
       continue;
+    mol.DeleteHydrogens(at);
     if(at->HasData(AliasDataType))
+    {
       at->SetAtomicNum(0);
+      at->SetFormalCharge(0);
+      at->SetSpinMultiplicity(0);
+    }
     else
       mol.DeleteAtom(at);
   }
@@ -301,7 +309,7 @@ void AliasData::RevertToAliasForm(OBMol& mol)
 {
   //Deleting atoms invalidates the iterator, so start again
   //and continue until all no unexpanded aliases are found in molecule.
-  bool acted;
+  bool acted = false;
   do
   {
     FOR_ATOMS_OF_MOL(a, mol)

@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -174,7 +195,7 @@ typedef struct tagTautomerGroup {
                                        FLAG_PROTON_SINGLE_REMOVED     | \
                                        FLAG_PROTON_CHARGE_CANCEL    )
 
-#if( FIX_N_MINUS_NORN_BUG == 1 )
+#if ( FIX_N_MINUS_NORN_BUG == 1 )
 #define FLAG_FORCE_SALT_TAUT         ( FLAG_PROTON_NP_HARD_REMOVED  | \
                                        FLAG_PROTON_AC_HARD_REMOVED  | \
                                        FLAG_PROTON_AC_HARD_ADDED    | \
@@ -338,7 +359,7 @@ typedef struct tagDfsPath {
 } DFS_PATH;
 
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -404,15 +425,15 @@ int nGet15TautInAltPath( inp_ATOM *atom, int nStartAtom, AT_RANK  *nDfsPathPos,
                               struct BalancedNetworkData *pBD, int num_atoms );
 
 
-#if( RING2CHAIN == 1 )
+#if ( RING2CHAIN == 1 )
 int Ring2Chain( ORIG_ATOM_DATA *orig_inp_data );
 #endif
 
-#if( UNDERIVATIZE == 1 )
+#if ( UNDERIVATIZE == 1 )
 int underivatize( ORIG_ATOM_DATA *orig_inp_data );
 #endif
 
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 }
 #endif

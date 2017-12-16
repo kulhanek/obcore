@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <string>
+#include <set>
 
 #include <openbabel/mol.h>
 #include <openbabel/generic.h>
@@ -319,7 +320,7 @@ namespace OpenBabel
   }
 
   //! Implements <a href="http://qsar.sourceforge.net/dicts/blue-obelisk/index.xhtml#convertNotionalIntoCartesianCoordinates">blue-obelisk:convertNotionalIntoCartesianCoordinates</a>
-  vector<vector3> OBUnitCell::GetCellVectors()
+  vector<vector3> OBUnitCell::GetCellVectors() const
   {
     vector<vector3> v;
     v.reserve(3);
@@ -333,44 +334,44 @@ namespace OpenBabel
     return v;
   }
 
-  matrix3x3 OBUnitCell::GetCellMatrix()
+  matrix3x3 OBUnitCell::GetCellMatrix() const
   {
     return (_mOrient * _mOrtho).transpose();
   }
 
-  matrix3x3 OBUnitCell::GetOrthoMatrix()
+  matrix3x3 OBUnitCell::GetOrthoMatrix() const
   {
     return _mOrtho;
   }
 
-  matrix3x3 OBUnitCell::GetOrientationMatrix()
+  matrix3x3 OBUnitCell::GetOrientationMatrix() const
   {
     return _mOrient;
   }
 
-  matrix3x3 OBUnitCell::GetFractionalMatrix()
+  matrix3x3 OBUnitCell::GetFractionalMatrix() const
   {
     return _mOrtho.inverse();
   }
 
-  vector3 OBUnitCell::FractionalToCartesian(vector3 frac)
+  vector3 OBUnitCell::FractionalToCartesian(vector3 frac) const
   {
     return _mOrient * _mOrtho * frac + _offset;
   }
 
-  vector3 OBUnitCell::CartesianToFractional(vector3 cart)
+  vector3 OBUnitCell::CartesianToFractional(vector3 cart) const
   {
     return _mOrtho.inverse() * _mOrient.inverse() * (cart - _offset);
   }
 
-  vector3 OBUnitCell::WrapCartesianCoordinate(vector3 cart)
+  vector3 OBUnitCell::WrapCartesianCoordinate(vector3 cart) const
   {
     vector3 v = CartesianToFractional(cart);
     v = WrapFractionalCoordinate(v);
     return FractionalToCartesian(v);
   }
 
-  vector3 OBUnitCell::WrapFractionalCoordinate(vector3 frac)
+  vector3 OBUnitCell::WrapFractionalCoordinate(vector3 frac) const
   {
     double x = fmod(frac.x(), 1);
     double y = fmod(frac.y(), 1);
@@ -378,10 +379,30 @@ namespace OpenBabel
     if (x < 0) x += 1;
     if (y < 0) y += 1;
     if (z < 0) z += 1;
+
+#define LIMIT 0.999999
+    if (x > LIMIT)
+      x -= 1;
+    if (y > LIMIT)
+      y -= 1;
+    if (z > LIMIT)
+      z -= 1;
+#undef LIMIT
+
+    // Fuzzy logic from Francois-Xavier
+#define EPSILON 1.0e-6
+    if (x > 1 - EPSILON || x < EPSILON)
+      x = 0.0;
+    if (y > 1 - EPSILON || y < EPSILON)
+      y = 0.0;
+    if (z > 1 - EPSILON || z < EPSILON)
+      z = 0.0;
+#undef EPSILON
+
     return vector3(x, y, z);
   }
 
-  OBUnitCell::LatticeType OBUnitCell::GetLatticeType( int spacegroup )
+  OBUnitCell::LatticeType OBUnitCell::GetLatticeType( int spacegroup ) const
   {
     //	1-2 	Triclinic
     //	3-15 	Monoclinic
@@ -430,7 +451,7 @@ namespace OpenBabel
       return OBUnitCell::Undefined;
   }
 
-  OBUnitCell::LatticeType OBUnitCell::GetLatticeType()
+  OBUnitCell::LatticeType OBUnitCell::GetLatticeType() const
   {
     if (_lattice != Undefined)
       return _lattice;
@@ -449,36 +470,40 @@ namespace OpenBabel
     if (IsApprox(beta,  90.0, 1.0e-3)) rightAngles++;
     if (IsApprox(gamma, 90.0, 1.0e-3)) rightAngles++;
 
+    // recast cache member "_lattice" as mutable
+    OBUnitCell::LatticeType *lattice =
+      const_cast<OBUnitCell::LatticeType*>(&_lattice);
+
     switch (rightAngles)
       {
       case 3:
         if (IsApprox(a, b, 1.0e-4) && IsApprox(b, c, 1.0e-4))
-          _lattice = Cubic;
+          *lattice = Cubic;
         else if (IsApprox(a, b, 1.0e-4) || IsApprox(b, c, 1.0e-4))
-          _lattice = Tetragonal;
+          *lattice = Tetragonal;
         else
-          _lattice = Orthorhombic;
+          *lattice = Orthorhombic;
         break;
       case 2:
         if ( (IsApprox(alpha, 120.0, 1.0e-3)
               || IsApprox(beta, 120.0, 1.0e-3)
               || IsApprox(gamma, 120.0f, 1.0e-3))
              && (IsApprox(a, b, 1.0e-4) || IsApprox(b, c, 1.0e-4)) )
-          _lattice = Hexagonal;
+          *lattice = Hexagonal;
         else
-          _lattice = Monoclinic;
+          *lattice = Monoclinic;
         break;
       default:
         if (IsApprox(a, b, 1.0e-4) && IsApprox(b, c, 1.0e-4))
-          _lattice = Rhombohedral;
+          *lattice = Rhombohedral;
         else
-          _lattice = Triclinic;
+          *lattice = Triclinic;
       }
 
-    return _lattice;
+    return *lattice;
   }
 
-  int OBUnitCell::GetSpaceGroupNumber( std::string name)
+  int OBUnitCell::GetSpaceGroupNumber( std::string name) const
   {
     static const char * const spacegroups[] = {
       "P1", "P-1", "P2", "P2(1)", "C2", "Pm", "Pc", "Cm", "Cc", "P2/m",
@@ -515,7 +540,7 @@ namespace OpenBabel
     };
 
     if (name.length () == 0)
-	  {
+      {
         if (_spaceGroup != NULL)
           return _spaceGroup->GetId();
         else
@@ -530,115 +555,153 @@ namespace OpenBabel
     return 0; //presumably never reached
   }
 
-  // Helper function -- transform fractional coordinates to ensure they lie in the unit cell
-  vector3 transformedFractionalCoordinate(vector3 originalCoordinate)
+  // Whether two points (given in fractional coordinates) are close enough
+  // to be considered duplicates.
+  bool areDuplicateAtoms (vector3 v1, vector3 v2)
   {
-    // ensure the fractional coordinate is entirely within the unit cell
-    vector3 returnValue(originalCoordinate);
+    vector3 dr = v2 - v1;
+    if (dr.x() < -0.5)
+      dr.SetX(dr.x() + 1);
+    if (dr.x() > 0.5)
+      dr.SetX(dr.x() - 1);
+    if (dr.y() < -0.5)
+      dr.SetY(dr.y() + 1);
+    if (dr.y() > 0.5)
+      dr.SetY(dr.y() - 1);
+    if (dr.z() < -0.5)
+      dr.SetZ(dr.z() + 1);
+    if (dr.z() > 0.5)
+      dr.SetZ(dr.z() - 1);
 
-    // So if we have -2.08, we take -2.08 - (-2) = -0.08 .... almost what we want
-    returnValue.SetX(originalCoordinate.x() - int(originalCoordinate.x()) );
-    returnValue.SetY(originalCoordinate.y() - int(originalCoordinate.y()) );
-    returnValue.SetZ(originalCoordinate.z() - int(originalCoordinate.z()) );
-
-    if (returnValue.x() < 0.0)
-      returnValue.SetX(returnValue.x() + 1.0);
-    if (returnValue.y() < 0.0)
-      returnValue.SetY(returnValue.y() + 1.0);
-    if (returnValue.z() < 0.0)
-      returnValue.SetZ(returnValue.z() + 1.0);
-
-    return returnValue;
+    return (dr.length_2() < 1e-6);
   }
 
   void OBUnitCell::FillUnitCell(OBMol *mol)
   {
     const SpaceGroup *sg = GetSpaceGroup(); // the actual space group and transformations for this unit cell
 
-    // For each atom, we loop through: convert the coords back to inverse space, apply the transformations and create new atoms
-    vector3 uniqueV, newV, updatedCoordinate;
-    list<vector3> transformedVectors; // list of symmetry-defined copies of the atom
-    list<vector3>::iterator transformIterator, duplicateIterator;
-    OBAtom *newAtom;
-    list<OBAtom*> atoms; // keep the current list of unique atoms -- don't double-create
-    list<vector3> coordinates; // all coordinates to prevent duplicates
-    bool foundDuplicate;
-    FOR_ATOMS_OF_MOL(atom, *mol)
-      atoms.push_back(&(*atom));
+    if(sg == NULL)
+      return ;
 
-    list<OBAtom*>::iterator i;
-    for (i = atoms.begin(); i != atoms.end(); ++i) {
-      uniqueV = (*i)->GetVector();
+    // For each atom, we loop through: convert the coords back to inverse space, apply the transformations and create new atoms
+    vector3 baseV, uniqueV, updatedCoordinate;
+    list<vector3> transformedVectors; // list of symmetry-defined copies of the atom
+    list<vector3>::iterator transformIter;
+    list<OBAtom*>::iterator deleteIter, atomIter;
+    OBAtom *newAtom;
+    list<OBAtom*> atoms, atomsToDelete;
+    char hash[22];
+    set<string> coordinateSet;
+
+    // Check original mol for duplicates
+    FOR_ATOMS_OF_MOL(atom, *mol) {
+      baseV = atom->GetVector();
+      baseV = CartesianToFractional(baseV);
+      baseV = WrapFractionalCoordinate(baseV);
+      snprintf(hash, 22, "%03d,%.3f,%.3f,%.3f", atom->GetAtomicNum(), baseV.x(), baseV.y(), baseV.z());
+      if (coordinateSet.insert(hash).second) { // True if new entry
+        atoms.push_back(&(*atom));
+      } else {
+        atomsToDelete.push_back(&(*atom));
+      }
+    }
+    for (deleteIter = atomsToDelete.begin(); deleteIter != atomsToDelete.end(); ++deleteIter) {
+      mol->DeleteAtom(*deleteIter);
+    }
+
+    // Cross-check all transformations for duplicity
+    for (atomIter = atoms.begin(); atomIter != atoms.end(); ++atomIter) {
+      uniqueV = (*atomIter)->GetVector();
       uniqueV = CartesianToFractional(uniqueV);
-      uniqueV = transformedFractionalCoordinate(uniqueV);
-      coordinates.push_back(uniqueV);
+      uniqueV = WrapFractionalCoordinate(uniqueV);
 
       transformedVectors = sg->Transform(uniqueV);
-      for (transformIterator = transformedVectors.begin();
-           transformIterator != transformedVectors.end(); ++transformIterator) {
-        // coordinates are in reciprocal space -- check if it's in the unit cell
-        // if not, transform it in place
-        updatedCoordinate = transformedFractionalCoordinate(*transformIterator);
-        foundDuplicate = false;
+      for (transformIter = transformedVectors.begin();
+        transformIter != transformedVectors.end(); ++transformIter) {
+        updatedCoordinate = WrapFractionalCoordinate(*transformIter);
 
         // Check if the transformed coordinate is a duplicate of an atom
-        for (duplicateIterator = coordinates.begin();
-             duplicateIterator != coordinates.end(); ++duplicateIterator) {
-          if (duplicateIterator->distSq(updatedCoordinate) < 1.0e-4) {
-            foundDuplicate = true;
-            break;
-          }
+        snprintf(hash, 22, "%03d,%.3f,%.3f,%.3f", (*atomIter)->GetAtomicNum(), updatedCoordinate.x(),
+                 updatedCoordinate.y(), updatedCoordinate.z());
+        if (coordinateSet.insert(hash).second) {
+          newAtom = mol->NewAtom();
+          newAtom->Duplicate(*atomIter);
+          newAtom->SetVector(FractionalToCartesian(updatedCoordinate));
         }
-        if (foundDuplicate)
-          continue;
-
-        coordinates.push_back(updatedCoordinate); // make sure to check the new atom for dupes
-        newAtom = mol->NewAtom();
-        newAtom->Duplicate(*i);
-        newAtom->SetVector(FractionalToCartesian(updatedCoordinate));
       } // end loop of transformed atoms
-      (*i)->SetVector(FractionalToCartesian(uniqueV)); // move the atom back into the unit cell
     } // end loop of atoms
-
     SetSpaceGroup(1); // We've now applied the symmetry, so we should act like a P1 unit cell
   }
 
-  double OBUnitCell::GetA()
+  /// @todo Remove nonconst overloads in OBUnitCell on next version bump.
+#define OBUNITCELL_CALL_CONST_OVERLOAD(_type, _name) \
+  _type OBUnitCell::_name() \
+  { \
+    return const_cast<const OBUnitCell*>(this)->_name(); \
+  }
+#define OBUNITCELL_CALL_CONST_OVERLOAD_ARG(_type, _name, _argsig) \
+  _type OBUnitCell::_name( _argsig arg1 ) \
+  { \
+    return const_cast<const OBUnitCell*>(this)->_name(arg1); \
+  }
+  OBUNITCELL_CALL_CONST_OVERLOAD(double, GetA);
+  OBUNITCELL_CALL_CONST_OVERLOAD(double, GetB);
+  OBUNITCELL_CALL_CONST_OVERLOAD(double, GetC);
+  OBUNITCELL_CALL_CONST_OVERLOAD(double, GetAlpha);
+  OBUNITCELL_CALL_CONST_OVERLOAD(double, GetBeta);
+  OBUNITCELL_CALL_CONST_OVERLOAD(double, GetGamma);
+  OBUNITCELL_CALL_CONST_OVERLOAD(vector3, GetOffset);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG(OBUnitCell::LatticeType,
+                                     GetLatticeType, int);
+  OBUNITCELL_CALL_CONST_OVERLOAD(OBUnitCell::LatticeType, GetLatticeType);
+  OBUNITCELL_CALL_CONST_OVERLOAD(std::vector<vector3>, GetCellVectors);
+  OBUNITCELL_CALL_CONST_OVERLOAD(matrix3x3, GetCellMatrix );
+  OBUNITCELL_CALL_CONST_OVERLOAD(matrix3x3, GetOrthoMatrix );
+  OBUNITCELL_CALL_CONST_OVERLOAD(matrix3x3, GetOrientationMatrix );
+  OBUNITCELL_CALL_CONST_OVERLOAD(matrix3x3, GetFractionalMatrix );
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, FractionalToCartesian, vector3);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, CartesianToFractional, vector3);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, WrapCartesianCoordinate, vector3);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, WrapFractionalCoordinate, vector3);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG(int, GetSpaceGroupNumber, std::string);
+  OBUNITCELL_CALL_CONST_OVERLOAD(double, GetCellVolume);
+
+  double OBUnitCell::GetA() const
   {
     return _mOrtho.GetColumn(0).length();
   }
 
-  double OBUnitCell::GetB()
+  double OBUnitCell::GetB() const
   {
     return _mOrtho.GetColumn(1).length();
   }
 
-  double OBUnitCell::GetC()
+  double OBUnitCell::GetC() const
   {
     return _mOrtho.GetColumn(2).length();
   }
 
-  double OBUnitCell::GetAlpha()
+  double OBUnitCell::GetAlpha() const
   {
     return vectorAngle(_mOrtho.GetColumn(1), _mOrtho.GetColumn(2));
   }
 
-  double OBUnitCell::GetBeta()
+  double OBUnitCell::GetBeta() const
   {
     return vectorAngle(_mOrtho.GetColumn(0), _mOrtho.GetColumn(2));
   }
 
-  double OBUnitCell::GetGamma()
+  double OBUnitCell::GetGamma() const
   {
     return vectorAngle(_mOrtho.GetColumn(0), _mOrtho.GetColumn(1));
   }
 
-  vector3 OBUnitCell::GetOffset()
+  vector3 OBUnitCell::GetOffset() const
   {
     return _offset;
   }
 
-  double OBUnitCell::GetCellVolume()
+  double OBUnitCell::GetCellVolume() const
   {
     return fabs(GetCellMatrix().determinant());
   }
@@ -652,7 +715,8 @@ namespace OpenBabel
 
   OBSymmetryData::OBSymmetryData(const OBSymmetryData &src) :
     OBGenericData(src._attr, src._type, src._source),
-    _pointGroup(src._pointGroup), _spaceGroup(src._spaceGroup)
+    _spaceGroup(src._spaceGroup),
+    _pointGroup(src._pointGroup)
   {  }
 
   OBSymmetryData & OBSymmetryData::operator=(const OBSymmetryData &src)
@@ -974,7 +1038,7 @@ namespace OpenBabel
 
     unsigned int ct = 0;
 
-    for( angle=_angles.begin(); angle!=_angles.end(); angle++,ct++)
+    for( angle=_angles.begin(); angle!=_angles.end(); ++angle,ct++)
       {
         angles[ct].resize(3);
         angles[ct][0] = angle->_vertex->GetIdx() - 1;
@@ -1400,6 +1464,8 @@ void OBDOSData::SetData(double fermi,
       return; // something is very weird -- it's OK to pass no symmetries (we'll assume "A")
     if (energies.size() == 0)
       return;
+    if (alphaHOMO <= 0)
+      return;
     if (alphaHOMO > energies.size())
       return;
 
@@ -1431,6 +1497,8 @@ void OBDOSData::SetData(double fermi,
       return; // something is very weird -- it's OK to pass no symmetries (we'll assume "A")
     if (energies.size() == 0)
       return;
+    if (alphaHOMO <= -1)
+      return;
     if (alphaHOMO > energies.size())
       return;
 
@@ -1459,6 +1527,8 @@ void OBDOSData::SetData(double fermi,
     if (energies.size() < symmetries.size())
       return; // something is very weird -- it's OK to pass no symmetries (we'll assume "A")
     if (energies.size() == 0)
+      return;
+    if (betaHOMO <= -1)
       return;
     if (betaHOMO > energies.size())
       return;
@@ -1569,7 +1639,7 @@ void OBVibrationData::SetData(const std::vector< std::vector< vector3 > > & vLx,
 */
 unsigned int OBVibrationData::GetNumberOfFrequencies() const
 {
-  return !this->_vFrequencies.empty() ? this->_vFrequencies.size() : 0;
+  return this->_vFrequencies.size();
 }
 
 } //end namespace OpenBabel

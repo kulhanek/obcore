@@ -68,7 +68,7 @@ namespace OpenBabel
     //Define some references so we can use the old parameter names
     istream &ifs = *pConv->GetInStream();
     OBMol &mol = *pmol;
-    //const char* title = pConv->GetTitle();
+    const char* title = pConv->GetTitle();
     char buffer[BUFF_SIZE];
 
     stringstream errorMsg;
@@ -169,7 +169,7 @@ namespace OpenBabel
             // size should be 5 -- need a test here
             if (vs.size() != 5) return false; // timvdm 18/06/2008
             vs[3].erase(0,1); // "6 => remove the first " character
-            int atomicNum = atoi(vs[3].c_str());
+            unsigned int atomicNum = atoi(vs[3].c_str());
             if (atomicNum == 0)
               atomicNum = 1; // hydrogen ?
             if (atomicNum <= 0 || atomicNum > etab.GetNumberOfElements())

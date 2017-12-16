@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -47,7 +68,7 @@ int GetHillFormulaCounts( U_CHAR *nAtom, S_CHAR *nNum_H, int num_atoms,
 int MakeHillFormula( U_CHAR *nAtom, int num_atoms,
                   char *szLinearCT, int nLen_szLinearCT, int num_C, int num_H, int *bOverflow );
 
-#if( FIX_DALKE_BUGS == 1 )
+#if ( FIX_DALKE_BUGS == 1 )
 #else
 char *AllocateAndFillHillFormula( INChI *pINChI );
 #endif
@@ -122,7 +143,7 @@ int GetHillFormulaCounts( U_CHAR *nAtom, S_CHAR *nNum_H, int num_atoms,
     nNumNonHAtoms = num_atoms;
     for ( i = 0; i < num_atoms; i ++ ) {
         if ( nPrevAtom != nAtom[i] ) {
-            if (  mult ) {
+            if ( mult ) {
                 if ( bHydrogen ) {
                     num_H += mult;
                 }else
@@ -160,7 +181,7 @@ int GetHillFormulaCounts( U_CHAR *nAtom, S_CHAR *nNum_H, int num_atoms,
         }
     }
 
-    if (  mult ) {
+    if ( mult ) {
         if ( bHydrogen ) {
             num_H += mult;
         } else
@@ -282,7 +303,7 @@ char *AllocateAndFillHillFormula( INChI *pINChI )
     if ( !GetHillFormulaCounts( pINChI->nAtom, pINChI->nNum_H, pINChI->nNumberOfAtoms,
                           pINChI->nTautomer, pINChI->lenTautomer,
                           &num_C, &num_H, &nLen, &nNumNonHAtoms ) ) {
-        if ( pHillFormula = (char*)inchi_malloc( nLen+1 ) ) {
+        if ( (pHillFormula = (char*) inchi_malloc( nLen+1 )) ) {
             ret = MakeHillFormula( pINChI->nAtom+num_C, nNumNonHAtoms-num_C,
                   pHillFormula, nLen+1, num_C, num_H, &bOverflow );
             if ( ret != nLen || bOverflow ) {
@@ -401,9 +422,9 @@ int CopyLinearCTStereoToINChIStereo( INChI_Stereo *Stereo,
                     NULL, LinearCTStereoDbleInv+i, pCanonOrdInv, pCanonRankInv, at, bIsotopic );
         /* make sure double bond stereo is identical in original and inverted geometry */
         /* Note: all allenes are AFTER double bonds in LinearCTStereoDble... */
-        if ( bAllene != bAlleneInv || !bAllene &&
+        if ( bAllene != bAlleneInv || (!bAllene &&
              CompareLinCtStereoDble ( LinearCTStereoDble+i,    1,
-                                      LinearCTStereoDbleInv+i, 1 ) ) {
+                                      LinearCTStereoDbleInv+i, 1 )) ) {
             nErrorCode = -4;          /* double bond stereo Inv is NOT identical to Abs */
             goto exit_function;
         }
@@ -535,7 +556,7 @@ INCHI_MODE UnmarkAllUndefinedUnknownStereo( INChI_Stereo *Stereo, INCHI_MODE nUs
 {
     INCHI_MODE nRet = 0;
     int   i, n;
-    if ( !Stereo || Stereo && !Stereo->nNumberOfStereoCenters && !Stereo->nNumberOfStereoBonds) {
+    if ( !Stereo || (Stereo && !Stereo->nNumberOfStereoCenters && !Stereo->nNumberOfStereoBonds)) {
         return nRet;
     }
 
@@ -573,7 +594,7 @@ INCHI_MODE UnmarkAllUndefinedUnknownStereo( INChI_Stereo *Stereo, INCHI_MODE nUs
 
     return nRet;
 }
-#if( defined(INCHI_LIBRARY) || ADD_CMLPP==1 )
+#if ( defined(TARGET_API_LIB) || ADD_CMLPP==1 )
 /**********************************************************************************************/
 void WriteCoord( char *str, double x )
 {
@@ -726,8 +747,8 @@ int FillOutINChI( INChI *pINChI, INChI_Aux *pINChI_Aux,
     /* abs or rel stereo may establish one of two canonical numberings */
     if ( (pCS->nLenLinearCTStereoCarb > 0 || pCS->nLenLinearCTStereoDble > 0) &&
           pCS->nLenCanonOrdStereo > 0 &&
-         (pCS->LinearCTStereoCarb && pCS->LinearCTStereoCarbInv ||
-          pCS->LinearCTStereoDble && pCS->LinearCTStereoDbleInv) &&
+         ((pCS->LinearCTStereoCarb && pCS->LinearCTStereoCarbInv) ||
+          (pCS->LinearCTStereoDble && pCS->LinearCTStereoDbleInv)) &&
           pCS->nCanonOrdStereo    && pCS->nCanonOrdStereoInv
        ) {
 
@@ -913,8 +934,8 @@ int FillOutINChI( INChI *pINChI, INChI_Aux *pINChI_Aux,
         pINChI->lenTautomer = 0;
         pINChI_Aux->nNumberOfTGroups = 0;
         if ( t_group_info && ((t_group_info->tni.bNormalizationFlags & FLAG_NORM_CONSIDER_TAUT) ||
-                              t_group_info->nNumIsotopicEndpoints>1 &&
-                              (t_group_info->bTautFlagsDone & (TG_FLAG_FOUND_ISOTOPIC_H_DONE | TG_FLAG_FOUND_ISOTOPIC_ATOM_DONE)))
+                              (t_group_info->nNumIsotopicEndpoints>1 &&
+                              (t_group_info->bTautFlagsDone & (TG_FLAG_FOUND_ISOTOPIC_H_DONE | TG_FLAG_FOUND_ISOTOPIC_ATOM_DONE))))
            ) {
             /* only protons (re)moved or added */
             pINChI->lenTautomer  = 1;
@@ -977,7 +998,7 @@ int FillOutINChI( INChI *pINChI, INChI_Aux *pINChI_Aux,
         goto exit_function;
     }
 
-    if ( nStereoUnmarkMode = UnmarkAllUndefinedUnknownStereo( pINChI->Stereo, nUserMode ) ) {
+    if ( (nStereoUnmarkMode = UnmarkAllUndefinedUnknownStereo( pINChI->Stereo, nUserMode )) ) {
         pINChI->nFlags |= (nStereoUnmarkMode & REQ_MODE_SC_IGN_ALL_UU)? INCHI_FLAG_SC_IGN_ALL_UU : 0;    
         pINChI->nFlags |= (nStereoUnmarkMode & REQ_MODE_SB_IGN_ALL_UU)? INCHI_FLAG_SB_IGN_ALL_UU : 0;
         if ( (nStereoUnmarkMode & REQ_MODE_SC_IGN_ALL_UU) ||
@@ -1001,8 +1022,8 @@ int FillOutINChI( INChI *pINChI, INChI_Aux *pINChI_Aux,
     /* abs or rel stereo may establish one of two canonical numberings */
     if ( (pCS->nLenLinearCTIsotopicStereoCarb > 0 || pCS->nLenLinearCTIsotopicStereoDble > 0) &&
           pCS->nLenCanonOrdIsotopicStereo > 0 &&
-         (pCS->LinearCTIsotopicStereoCarb && pCS->LinearCTIsotopicStereoCarbInv ||
-          pCS->LinearCTIsotopicStereoDble && pCS->LinearCTIsotopicStereoDbleInv) &&
+         ((pCS->LinearCTIsotopicStereoCarb && pCS->LinearCTIsotopicStereoCarbInv) ||
+          (pCS->LinearCTIsotopicStereoDble && pCS->LinearCTIsotopicStereoDbleInv)) &&
           pCS->nCanonOrdIsotopicStereo    && pCS->nCanonOrdIsotopicStereoInv
           ) {
         /* found isotopic stereo */
@@ -1138,7 +1159,7 @@ int FillOutINChI( INChI *pINChI, INChI_Aux *pINChI_Aux,
         pINChI->nPossibleLocationsOfIsotopicH[0] = (AT_NUMB)j; /* length including the 0th element */
     }
 
-    if ( nStereoUnmarkMode = UnmarkAllUndefinedUnknownStereo( pINChI->StereoIsotopic, nUserMode ) ) {
+    if ( (nStereoUnmarkMode = UnmarkAllUndefinedUnknownStereo( pINChI->StereoIsotopic, nUserMode )) ) {
         pINChI->nFlags |= (nStereoUnmarkMode & REQ_MODE_SC_IGN_ALL_UU)? INCHI_FLAG_SC_IGN_ALL_ISO_UU : 0;    
         pINChI->nFlags |= (nStereoUnmarkMode & REQ_MODE_SB_IGN_ALL_UU)? INCHI_FLAG_SC_IGN_ALL_ISO_UU : 0;    
         if ( (nStereoUnmarkMode & REQ_MODE_SC_IGN_ALL_UU) ||

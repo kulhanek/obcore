@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -78,14 +99,14 @@ typedef struct tagAtomInvariantBytes {
     S_CHAR cNumberOfConnections;
     /* S_CHAR cNumberOfNonHydrogenBonds; */
     S_CHAR cAtomicNumber;
-#if( HYDROGENS_IN_INIT_RANKS == 1 ) 
+#if ( HYDROGENS_IN_INIT_RANKS == 1 ) 
     S_CHAR cNumberOfAttachedHydrogens;
 #endif
 } ATOM_INVARIANT_BYTES;
 
 typedef struct tagAtomInvariant {
     /* non-isotopic part */
-#if( USE_DISTANCES_FOR_RANKING == 1 )
+#if ( USE_DISTANCES_FOR_RANKING == 1 )
     AT_RANK         nDistanceFromTerminal;
 #endif
     ATOM_INVARIANT_BYTES b;
@@ -300,7 +321,7 @@ typedef struct tagCanonStat {
     int               bIgnoreIsotopic;
     int               bDoubleBondSquare; /* 0 or 2 */
     INCHI_MODE         nMode;
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
     int               bExtract;          /* for debug only */
 #endif
     NEIGH_LIST       *NeighList;

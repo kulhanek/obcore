@@ -45,7 +45,9 @@ public:
     "the atoms listed in reverse order and rings listed starting at different\n"
     "atoms, are identified and only a single canonical fragment is retained\n"
     "Each remaining fragment is assigned a hash number from 0 to 1020 which is\n"
-    "used to set a bit in a 1024 bit vector."
+    "used to set a bit in a 1024 bit vector.\n"
+    "For further details see:\n"
+    "http://baoilleach.blogspot.co.uk/2012/01/visualising-fragments-in-path-based.html \n"  
   ;}
 
 	//Calculates the fingerprint
@@ -171,8 +173,9 @@ void fingerprint2::getFragments(vector<int> levels, vector<int> curfrag,
 			{
 				//If complete ring (last bond is back to starting atom) add bond at front
 				//and save in ringset
-				curfrag[0] = bo;
+				curfrag[0] = pnewbond->IsAromatic() ? 5 : pnewbond->GetBO();
 				ringset.insert(curfrag);
+ 				curfrag[0] = 0;
 			}
 		}
 		else //no ring
@@ -235,12 +238,6 @@ void fingerprint2::DoRings()
 			rotate(t1.begin(),t1.begin()+2,t1.end());
 			if(t1>maxring)
 				maxring=t1;
-
-			//Add the non-ring form of all ring rotations
-			int tmp = t1[0];
-			t1[0] = 0;
-			fragset.insert(t1);
-			t1[0] = tmp;
 
 			//reverse the direction around ring
 			vector<int> t2(t1);

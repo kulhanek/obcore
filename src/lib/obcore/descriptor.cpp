@@ -265,7 +265,8 @@ double OBDescriptor::ParsePredicate(istream& optionText, char& ch1, char& ch2, s
   //Try to read a double. Rewind and read as a string
   streampos spos = optionText.tellg();
   optionText >> val;
-  if(!optionText.eof()) //only a number when the param has no additional text
+   //only a number when the param has no additional text or only a closing bracket
+  if(!optionText.eof() && isalpha(optionText.peek()))
     val = std::numeric_limits<double>::quiet_NaN();
   optionText.clear();
   optionText.seekg(spos);
@@ -383,32 +384,30 @@ bool OBDescriptor::CompareStringWithFilter(istream& optionText, string& sval, bo
   else
   {
     //Do a string comparison if either the filter or the OBPair value is not a number
-    string::size_type pos = sfilterval.find('*');
+    //If sval is quoted remove quotes
+    if(sval[0]=='\"' || sval[0]=='\'')
+      sval.erase(0,1);
+    if(sval[sval.size()-1]=='\"' || sval[sval.size()-1]=='\'')
+      sval.erase(sval.size()-1);    
+
+    bool leading=false, trailing=false;
+    if(sfilterval[0]=='*')
+    {
+      leading=true;
+      sfilterval.erase(0,1);
+    }
+    if(sfilterval[sfilterval.size()-1]=='*')
+    {
+      trailing=true;
+      sfilterval.erase(sfilterval.size()-1);
+    }
+    string::size_type pos = sval.find(sfilterval);
     if(pos!=string::npos)
     {
-      //filter string contains an asterisk
-      //cannot match if string is too small
-      if(sval.size() < sfilterval.size())
-        return false;
-
-      if(pos==sfilterval.size()-1)
-      {
-        // '*' is last char; delete it and subsequent chars
-        sfilterval.erase(pos);
-        sval.erase(pos);
-      }
-      else if(pos==0)
-      {
-        // '*' is first char; delete up to it
-        sfilterval.erase(0,1);
-        sval.erase(0,sval.size()-sfilterval.size());
-      }
-      else
-      {
-        // '*' is some other character. Not not currently supported.
-        obErrorLog.ThrowError("--filter option", "Wild card * can only be the first or last character.", obError, onceOnly);
-        return false;
-      }
+      if(trailing) //needs to be first
+        sval.erase(pos+sfilterval.size()); //erase aftermatch
+      if(leading)
+        sval.erase(0, pos); //erase before match 
     }
     return DoComparison(ch1, ch2, sval, sfilterval);
   }
@@ -449,7 +448,20 @@ void OBDescriptor::DeleteProperties(OBBase* pOb, const string& DescrList)
     stringstream ss(DescrList);
     char delim = DescrList[0];
     if(isspace(delim)||ispunctU(delim))
+    {
       ss.ignore();//skip delim char
+      //if list starts with "\t" delim is a tab; if "\\" or "\"is \ backslash
+      if(delim=='\\')
+      {
+        if(DescrList[1]=='\\')
+          ss.ignore();
+        else if(DescrList[1]=='t')
+        {
+          delim='\t';
+          ss.ignore();
+        }
+      }
+    }
     else
       delim = ' ';
 

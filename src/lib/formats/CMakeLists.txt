@@ -9,7 +9,6 @@ SET(FORMATS
         adfformat
         alchemyformat
         amberformat
-        apiinterface
         balstformat
         bgfformat
         boxformat
@@ -24,7 +23,6 @@ SET(FORMATS
         cifformat
         copyformat
         crkformat
-        csrformat
         cssrformat
         dmolformat
         fastaformat
@@ -42,7 +40,6 @@ SET(FORMATS
         gromos96format
         hinformat
         jaguarformat
-        mcdlformat
         mdlformat
         mmcifformat
         mmodformat
@@ -63,7 +60,6 @@ SET(FORMATS
         pdbqtformat
         povrayformat
         pqrformat
-        pqsformat
         qchemformat
         reportformat
         rsmiformat
@@ -99,8 +95,6 @@ ENDIF(UNIX)
 FOREACH(FORMAT ${FORMATS})
   ADD_LIBRARY(${FORMAT} SHARED ${FORMAT}.cpp)
 
-  ADD_DEPENDENCIES(${FORMAT} obcore_shared)
-
   TARGET_LINK_LIBRARIES(${FORMAT} ${OBCORE_LIB_NAME})
 
   SET_TARGET_PROPERTIES(${FORMAT} PROPERTIES
@@ -119,8 +113,6 @@ ENDFOREACH(FORMAT ${FORMATS})
 SET(INCHI_FORMAT inchiformat)
 SET(INCHI_FORMAT_SRC inchiformat.cpp getinchi.cpp)
 ADD_LIBRARY(${INCHI_FORMAT} SHARED ${INCHI_FORMAT_SRC})
-
-ADD_DEPENDENCIES(${INCHI_FORMAT} obcore_shared inchi_shared)
 
 TARGET_LINK_LIBRARIES(${INCHI_FORMAT} ${OBCORE_LIB_NAME} ${INCHI_LIB_NAME})
 

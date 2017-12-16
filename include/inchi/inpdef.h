@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -46,7 +67,7 @@ typedef S_SHORT ST_CAP_FLOW;
 #define ATT_PROTON       0x1000
 #define ATT_HalAnion     0x2000
 #define ATT_HalAcid      0x4000
-#if( FIX_NP_MINUS_BUG == 1 )
+#if ( FIX_NP_MINUS_BUG == 1 )
 #define ATT_NP_MINUS_V23 0x8000   /* =N(-) or =P(-) where = previously was triple */
 #endif
 
@@ -112,13 +133,13 @@ typedef struct tagInputAtom {
     S_CHAR        sb_parity[MAX_NUM_STEREO_BONDS];
     AT_NUMB       sn_orig_at_num[MAX_NUM_STEREO_BONDS]; /* orig. at number of sn_ord[] neighbors */
 
-#if( FIND_RING_SYSTEMS == 1 )
+#if ( FIND_RING_SYSTEMS == 1 )
     S_CHAR  bCutVertex;
     AT_NUMB nRingSystem;
     AT_NUMB nNumAtInRingSystem;
     AT_NUMB nBlockSystem;
 
-#if( FIND_RINS_SYSTEMS_DISTANCES == 1 )
+#if ( FIND_RINS_SYSTEMS_DISTANCES == 1 )
     AT_NUMB nDistanceFromTerminal;       /* terminal atom or ring system has 1, next has 2, etc. */
 #endif
 
@@ -136,7 +157,7 @@ typedef struct tagOrigAtom {
     int num_components;    /* set by MarkDisconnectedComponents() and disconnecting metals */
     int bDisconnectSalts;  /* whether salt disconnection is possible */
     int bDisconnectCoord;  /* 0 if no disconnection needed else (Num Implicit H to disconnect)+1 */
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
     int bExtract;
 #endif
     AT_NUMB *nCurAtLen;      /* has max_num_components elements */
@@ -264,7 +285,7 @@ typedef struct tagStructFptrs {
 #define FLAG_SET_INP_AT_NONCHIRAL  8
 
 /* BILLY 8/6/04 */
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -312,7 +333,7 @@ int AllocateInfoAtomData( INF_ATOM_DATA *inf_at_data, int num_atoms, int num_com
 int DuplicateInfoAtomData( INF_ATOM_DATA *inf_at_data_to, const INF_ATOM_DATA *inf_at_data_from);
 int CreateInpAtomData( INP_ATOM_DATA *inp_at_data, int num_atoms, int create_at_fixed_bonds );
 int CreateCompAtomData( COMP_ATOM_DATA *inp_at_data, int num_atoms, int num_components, int bIntermediateTaut );
-#ifndef INCHI_ANSI_ONLY
+#ifndef COMPILE_ANSI_ONLY
 int DisplayInputStructure( char *szOutputString, inp_ATOM  *at, INF_ATOM_DATA *inf_at_data, int num_at, DRAW_PARMS *dp );
 #endif
 void PrintFileName( const char *fmt, FILE *output_file, const char *szFname );
@@ -324,11 +345,11 @@ int bInchiTimeIsOver( struct tagInchiTime *TickEnd );
 #endif
 
 int get_endpoint_valence( U_CHAR el_number );
-#if( KETO_ENOL_TAUT == 1 )
+#if ( KETO_ENOL_TAUT == 1 )
 int get_endpoint_valence_KET( U_CHAR el_number );
 #endif
 
-#if( TEST_RENUMB_ATOMS == 1 )  /*  { */
+#if ( TEST_RENUMB_ATOMS == 1 )  /*  { */
 int CopyInpAtomData( INP_ATOM_DATA *dest_inp_at_data, INP_ATOM_DATA *src_inp_at_data );
 void RenumbInpAtomData( INP_ATOM_DATA *dest_inp_at_data, INP_ATOM_DATA *src_inp_at_data, AT_RANK *new_ord );
 void MakeNewOrd( int num_atoms, AT_RANK *new_ord );
@@ -338,7 +359,7 @@ int ReconcileAllCmlBondParities( inp_ATOM *at, int num_atoms, int bDisconnected 
 
 
 /* BILLY 8/6/04 */
-#ifndef INCHI_ALL_CPP
+#ifndef COMPILE_ALL_CPP
 #ifdef __cplusplus
 }
 #endif

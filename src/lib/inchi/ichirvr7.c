@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -26,7 +47,7 @@
 /* #define CHECK_WIN32_VC_HEAP */
 #include "mode.h"
 
-#if( READ_INCHI_STRING == 1 )
+#if ( READ_INCHI_STRING == 1 )
 
 #include "ichicomp.h"
 #include "ichi.h"
@@ -93,9 +114,9 @@ int InChI2Atom( ICHICONST INPUT_PARMS *ip,  STRUCT_DATA *sd, const char *szCurHd
             OneInput->nNumProtons[iINChI][TAUT_YES].pNumProtons[iComponent].nNumRemovedProtons;
     }
 
-    if ( bMobileH == TAUT_NON || bMobileH == TAUT_YES && OneInput->pInpInChI[iINChI][TAUT_NON] &&
+    if ( bMobileH == TAUT_NON || (bMobileH == TAUT_YES && OneInput->pInpInChI[iINChI][TAUT_NON] &&
          OneInput->pInpInChI[iINChI][TAUT_NON][iComponent].nNumberOfAtoms > 0 &&
-        !OneInput->pInpInChI[iINChI][TAUT_NON][iComponent].bDeleted ) {
+        !OneInput->pInpInChI[iINChI][TAUT_NON][iComponent].bDeleted) ) {
         pStruct->bFixedHExists = 1;
     }
     if ( bMobileH == TAUT_NON && iComponent < OneInput->nNumComponents[iINChI][TAUT_YES] &&
@@ -162,7 +183,7 @@ int MarkDisconectedIdenticalToReconnected ( InpInChI *pOneInput )
                     !CompareReversedINChI( pOneInput->pInpInChI[INCHI_REC][TAUT_NON]+k2,
                                            pOneInput->pInpInChI[INCHI_BAS][TAUT_NON]+k1,
                                            NULL, NULL );
-        if ( eqM && (!isF1 && !isF2 || eqF ) ) {
+        if ( eqM && ((!isF1 && !isF2) || eqF ) ) {
             pOneInput->pInpInChI[INCHI_BAS][TAUT_YES][k1].nLink = -(k2+1);
             pOneInput->pInpInChI[INCHI_REC][TAUT_YES][k2].nLink =  (k1+1);
             if ( eqF ) {
@@ -232,27 +253,27 @@ int MergeStructureComponents( ICHICONST INPUT_PARMS *ip, STRUCT_DATA *sd, long n
     ret = 0;
     pOneInput->num_atoms = 0;
     /* select highest detail level */
-    if ( num_components = pOneInput->nNumComponents[INCHI_REC][TAUT_NON] ) {
+    if ( (num_components = pOneInput->nNumComponents[INCHI_REC][TAUT_NON]) ) {
         iInchiRec = INCHI_REC;
         iMobileH  = TAUT_NON;
     } else
-    if ( num_components = pOneInput->nNumComponents[INCHI_REC][TAUT_YES] ) {
+    if ( (num_components = pOneInput->nNumComponents[INCHI_REC][TAUT_YES]) ) {
         iInchiRec = INCHI_REC;
         iMobileH  = TAUT_YES;
     } else
-    if ( num_components = pOneInput->nNumComponents[INCHI_BAS][TAUT_NON] ) {
+    if ( (num_components = pOneInput->nNumComponents[INCHI_BAS][TAUT_NON]) ) {
         iInchiRec = INCHI_BAS;
         iMobileH  = TAUT_NON;
     } else
-    if ( num_components = pOneInput->nNumComponents[INCHI_BAS][TAUT_YES] ) {
+    if ( (num_components = pOneInput->nNumComponents[INCHI_BAS][TAUT_YES]) ) {
         iInchiRec = INCHI_BAS;
         iMobileH  = TAUT_YES;
     } else {
         return 0; /* no components available */
     }
 
-    nAtomOffs = (int*)inchi_malloc((num_components+1) * sizeof(nAtomOffs[0]));
-    nDelHOffs = (int*)inchi_malloc((num_components+1) * sizeof(nDelHOffs[0]));
+    nAtomOffs = (int*) inchi_malloc((num_components+1) * sizeof(nAtomOffs[0]));
+    nDelHOffs = (int*) inchi_malloc((num_components+1) * sizeof(nDelHOffs[0]));
     if ( !nAtomOffs || !nDelHOffs ) {
         ret = RI_ERR_ALLOC;
         goto exit_function;
@@ -282,7 +303,7 @@ int MergeStructureComponents( ICHICONST INPUT_PARMS *ip, STRUCT_DATA *sd, long n
     tot_atoms = nDelHOffs[num_components];
 
     /* merge atoms together: 1. Allocate */
-    if ( NULL == (at = (inp_ATOM *)inchi_malloc( (tot_atoms+1) * sizeof(at[0]) ) ) ) {
+    if ( NULL == (at = (inp_ATOM *) inchi_malloc( (tot_atoms+1) * sizeof(at[0]) ) ) ) {
         ret = RI_ERR_ALLOC;
         goto exit_function;
     }
@@ -295,9 +316,9 @@ int MergeStructureComponents( ICHICONST INPUT_PARMS *ip, STRUCT_DATA *sd, long n
         pStruct1 = pStruct[iInchiRec][iMobileH][k].num_atoms? pStruct[iInchiRec][iMobileH]+k :
                    iAlternH>=0 &&
                    pStruct[iInchiRec][iAlternH][k].num_atoms? pStruct[iInchiRec][iAlternH]+k : NULL;
-        if ( len = nAtomOffs[k+1] - nAtomOffs[k] ) {
+        if ( (len = nAtomOffs[k+1] - nAtomOffs[k]) ) {
             memcpy( at + nAtomOffs[k], pStruct1->at2, len * sizeof(at[0]) );
-            if ( len2 = nDelHOffs[k+1] - nDelHOffs[k] ) {
+            if ( (len2 = nDelHOffs[k+1] - nDelHOffs[k]) ) {
                 memcpy( at + nDelHOffs[k], pStruct1->at2+len, len2 * sizeof(at[0]) );
             }
         }
@@ -377,7 +398,7 @@ exit_function:
     if ( nDelHOffs ) inchi_free( nDelHOffs );
     return ret;
 }
-#ifndef INCHI_ANSI_ONLY
+#ifndef COMPILE_ANSI_ONLY
 static PER_DRAW_PARMS pdp;
 /******************************************************************************************************/
 int DisplayAllRestoredComponents( inp_ATOM *at, int num_at, const char *szCurHdr )
@@ -535,8 +556,8 @@ int DisplayStructureComponents( ICHICONST INPUT_PARMS *ip, STRUCT_DATA *sd, long
     }
     num_components = k;
 
-    nAtomOffs = (int*)inchi_malloc((num_components+1) * sizeof(nAtomOffs[0]));
-    nDelHOffs = (int*)inchi_malloc((num_components+1) * sizeof(nDelHOffs[0]));
+    nAtomOffs = (int*) inchi_malloc((num_components+1) * sizeof(nAtomOffs[0]));
+    nDelHOffs = (int*) inchi_malloc((num_components+1) * sizeof(nDelHOffs[0]));
     if ( !nAtomOffs || !nDelHOffs ) {
         ret = RI_ERR_ALLOC;
         goto exit_function;
@@ -574,7 +595,7 @@ int DisplayStructureComponents( ICHICONST INPUT_PARMS *ip, STRUCT_DATA *sd, long
     tot_atoms = nDelHOffs[num_components];
 
     /* merge atoms together: 1. Allocate */
-    if ( NULL == (at = (inp_ATOM *)inchi_malloc( (tot_atoms+1) * sizeof(at[0]) ) ) ) {
+    if ( NULL == (at = (inp_ATOM *) inchi_malloc( (tot_atoms+1) * sizeof(at[0]) ) ) ) {
         ret = RI_ERR_ALLOC;
         goto exit_function;
     }
@@ -725,7 +746,7 @@ int AllInchiToStructure( ICHICONST INPUT_PARMS *ip_inp, STRUCT_DATA *sd_inp, lon
             }
             /* InChI --> structure conversion for all components except duplicated */
             for ( k = 0; k < cur_num_comp; k ++ ) { /* components */
-                if ( !iMobileH && !pOneInput->pInpInChI[iInchiRec][iMobileH][k].nNumberOfAtoms ||
+                if ( (!iMobileH && !pOneInput->pInpInChI[iInchiRec][iMobileH][k].nNumberOfAtoms) ||
                      pOneInput->pInpInChI[iInchiRec][iMobileH][k].bDeleted ||
                      pOneInput->pInpInChI[iInchiRec][iMobileH][k].nLink < 0 ) {
 
@@ -766,8 +787,8 @@ int AllInchiToStructure( ICHICONST INPUT_PARMS *ip_inp, STRUCT_DATA *sd_inp, lon
                                    0 /* AtNoOffset*/, bCurI2A_Flag, bHasSomeFixedH, pOneInput );
                 pStruct[iInchiRec][iMobileH][k].nLink = pOneInput->pInpInChI[iInchiRec][iMobileH][k].nLink;
                 if ( ret < 0 ) {
-#if( bRELEASE_VERSION != 1 )
-#ifndef INCHI_LIBRARY
+#if ( bRELEASE_VERSION != 1 )
+#ifndef TARGET_API_LIB
                     /* !!! Conversion Error -- Ignore for now !!! */
                     fprintf( stdout, "%ld %s Conversion failed: %d, %c%c comp %d\n",
                         num_inp, szCurHdr? szCurHdr : "Struct", ret, iInchiRec? 'R':'D', iMobileH? 'M':'F', k+1); 
@@ -826,7 +847,7 @@ int AddProtonAndIsoHBalanceToMobHStruct( ICHICONST INPUT_PARMS *ip, STRUCT_DATA 
             }
             nRemovedProtonsByNormFromRevrs = 0; /* Num protons removed from the Restored Structure by InChI Normalization */
             nRemovedProtonsByRevrs         = 0; /* Num protons removed by the Reconstruction from the Restored Structure */
-            if ( iInchiRec == INCHI_REC || iInchiRec == INCHI_BAS && (k1=pStruct[iInchiRec][TAUT_YES][k].nLink) >= 0 ) {
+            if ( iInchiRec == INCHI_REC || (iInchiRec == INCHI_BAS && (k1=pStruct[iInchiRec][TAUT_YES][k].nLink) >= 0) ) {
                 
                 REV_INCHI  *pRevInChI   = &pStruct[iInchiRec][TAUT_YES][k].RevInChI;
                 INChI_Aux  **pINChI_Aux2 = pRevInChI->pINChI_Aux[iInchiRec][0]; /* component 0*/
@@ -1044,7 +1065,7 @@ int CompareAllOrigInchiToRevInChI(StrFromINChI *pStruct[INCHI_NUM][TAUT_NUM], In
     for ( iComponent = 0; iComponent < num_components; iComponent ++ ) {
         int bMobileH = iMobileH;
         pInChI[0]     = pInChI[1]     = NULL;
-        if (  pOneInput->pInpInChI[iInchiRec][bMobileH][iComponent].nNumberOfAtoms &&
+        if ( pOneInput->pInpInChI[iInchiRec][bMobileH][iComponent].nNumberOfAtoms &&
              !pOneInput->pInpInChI[iInchiRec][bMobileH][iComponent].bDeleted ) {
             /* the requested InChI layer exists */
             pInChI[0]     = &pOneInput->pInpInChI[iInchiRec][bMobileH][iComponent];
@@ -1062,8 +1083,8 @@ int CompareAllOrigInchiToRevInChI(StrFromINChI *pStruct[INCHI_NUM][TAUT_NUM], In
         memset( CompareInchiFlags, 0, sizeof(CompareInchiFlags) );
         memset( &nCurRemovedProtons, 0, sizeof(nCurRemovedProtons) );
         iMobileHpStruct = 
-#if( bRELEASE_VERSION == 0 )
-#ifndef INCHI_LIBRARY
+#if ( bRELEASE_VERSION == 0 )
+#ifndef TARGET_API_LIB
         /* legacy: reproduce old output */
         OldPrintCompareOneOrigInchiToRevInChI(pStruct[iInchiRec][bMobileH]+iComponent, pInChI, bMobileH,
                                               iComponent, num_inp, szCurHdr);
@@ -1094,7 +1115,7 @@ int CompareAllOrigInchiToRevInChI(StrFromINChI *pStruct[INCHI_NUM][TAUT_NUM], In
             if ( nNumRemovedProtons.nNumRemovedProtons != pOneInput->nNumProtons[iInchiRec][iMobileH].nNumRemovedProtons ) {
                 /* restored structure InChI has less or more removed protons */
                 pOneInput->CompareInchiFlags[0][TAUT_YES] |= INCHIDIFF_MOBH_PROTONS;
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
                 /* debug output only */
                 {
                     int num_H_AddedByRevrs = pOneInput->nNumProtons[iInchiRec][iMobileH].nNumRemovedProtons
@@ -1108,7 +1129,7 @@ int CompareAllOrigInchiToRevInChI(StrFromINChI *pStruct[INCHI_NUM][TAUT_NUM], In
             for ( i = 0; i < NUM_H_ISOTOPES; i ++ ) {
                 if ( nNumRemovedProtons.nNumRemovedIsotopicH[i] != pOneInput->nNumProtons[iInchiRec][TAUT_YES].nNumRemovedIsotopicH[i] ) {
                     pOneInput->CompareInchiFlags[0][TAUT_YES] |= INCHIDIFF_MOB_ISO_H;
-#if( bRELEASE_VERSION == 0 )
+#if ( bRELEASE_VERSION == 0 )
                     /* debug output only */
                     {
                     int num_H_AddedByRevrs = pOneInput->nNumProtons[iInchiRec][TAUT_YES].nNumRemovedIsotopicH[i]
@@ -1560,7 +1581,7 @@ int CompareTwoPairsOfInChI( INChI *pInChI1[TAUT_NUM], INChI *pInChI2[TAUT_NUM],
     for ( iMobileH = 0; iMobileH < TAUT_NUM; iMobileH ++ ) {
         if ( !pInChI1[iMobileH] != !pInChI2[iMobileH] ) {
             if ( iMobileH == TAUT_NON &&
-                 pInChI1[TAUT_YES] && pInChI1[TAUT_YES] ) {
+                 pInChI1[TAUT_YES] && pInChI2[TAUT_YES] ) {
                 CompareInchiFlags[iMobileH] |= INCHIDIFF_COMP_HLAYER;
             } else {
                 CompareInchiFlags[iMobileH] |= INCHIDIFF_COMP_NUMBER;
@@ -1605,8 +1626,8 @@ int CompareOneOrigInchiToRevInChI(StrFromINChI *pStruct, INChI *pInChI[TAUT_NUM]
             return 0;
         }
 
-        if ( pStruct->RevInChI.num_components[i] > 1 && 
-             !pStruct->RevInChI.pINChI[i][1][b]->bDeleted ||
+        if ( (pStruct->RevInChI.num_components[i] > 1 &&
+             !pStruct->RevInChI.pINChI[i][1][b]->bDeleted) ||
              pStruct->RevInChI.num_components[i] < 1 ) {
             CompareInchiFlags[bMobileH] |= INCHIDIFF_COMP_NUMBER;
         }
@@ -1627,9 +1648,9 @@ int CompareOneOrigInchiToRevInChI(StrFromINChI *pStruct, INChI *pInChI[TAUT_NUM]
                 }
             }
             if ( b == b0 && b == TAUT_NON ) {
-                if ( pStruct->RevInChI.pINChI[i][0][TAUT_YES] &&
-                     !pStruct->RevInChI.pINChI[i][0][TAUT_YES]->bDeleted ||
-                     pInChI[1] && !pInChI[1]->bDeleted ) {
+                if ( (pStruct->RevInChI.pINChI[i][0][TAUT_YES] &&
+                     !pStruct->RevInChI.pINChI[i][0][TAUT_YES]->bDeleted) ||
+                     (pInChI[1] && !pInChI[1]->bDeleted) ) {
 
                     /* in addition to fixed-H also compare mobile-H InChI */
                     cmp = CompareReversedINChI3( pStruct->RevInChI.pINChI[i][0][TAUT_YES], pInChI[1], NULL, NULL, &err );
@@ -1671,7 +1692,7 @@ INCHI_MODE CompareReversedStereoINChI3( INChI_Stereo *s1/* InChI from reversed s
     int nNumSb1 = s1? s1->nNumberOfStereoBonds   : 0;
     int nNumSb2 = s2? s2->nNumberOfStereoBonds   : 0;
     
-    if ( (nNumSc1 || nNumSc1) &&
+    if ( (nNumSc1 || nNumSc2) &&
          ( nNumSc1 != nNumSc2 ||
            memcmp( s1->nNumber,  s2->nNumber,  nNumSc1*sizeof(s1->nNumber[0] ) ) ||
            memcmp( s1->t_parity, s2->t_parity, nNumSc1*sizeof(s1->t_parity[0]) ) ) ) {
@@ -1787,7 +1808,7 @@ INCHI_MODE CompareReversedStereoINChI3( INChI_Stereo *s1/* InChI from reversed s
                 j2 ++;
             } else
             if ( s1->nBondAtom1[j1] <  s2->nBondAtom1[j2] ||
-                 s1->nBondAtom1[j1] == s2->nBondAtom1[j2] && s1->nBondAtom2[j1] <  s2->nBondAtom2[j2]) {
+                 (s1->nBondAtom1[j1] == s2->nBondAtom1[j2] && s1->nBondAtom2[j1] <  s2->nBondAtom2[j2])) {
                 num_in1_only ++;
                 if ( s1->b_parity[j1] == AB_PARITY_UNDF ) {
                     num_extra_undf ++;
@@ -2042,8 +2063,8 @@ INCHI_MODE CompareReversedINChI3( INChI *i1 /* InChI from reversed struct */, IN
         /* number of endpoints */
         int num1 = 0, num2 = 0, num_M1=0, num_M2=0;
         int len, num_eq, num_in1_only, num_in2_only;
-        AT_NUMB *pe1 = (AT_NUMB *)inchi_malloc( (i1->lenTautomer+1) * sizeof(pe1[0]) );
-        AT_NUMB *pe2 = (AT_NUMB *)inchi_malloc( (i2->lenTautomer+1) * sizeof(pe2[0]) );
+        AT_NUMB *pe1 = (AT_NUMB *) inchi_malloc( (i1->lenTautomer+1) * sizeof(pe1[0]) );
+        AT_NUMB *pe2 = (AT_NUMB *) inchi_malloc( (i2->lenTautomer+1) * sizeof(pe2[0]) );
         num_H1 = num_H2=0;
         /* collect endpoints, H, (-) */
         if ( !pe1 || !pe2 ) {

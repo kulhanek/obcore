@@ -20,10 +20,10 @@ GNU General Public License for more details.
 #include <string.h>
 #include <openbabel/locale.h>
 
-#if defined HAVE_XLOCALE_H
+#if HAVE_XLOCALE_H
 #include <xlocale.h>
 #endif
-#if defined HAVE_LOCALE_H
+#if HAVE_LOCALE_H
 #include <locale.h>
 #endif
 
@@ -32,7 +32,7 @@ namespace OpenBabel
   class OBLocalePrivate {
   public:
     char *old_locale_string;
-#if defined HAVE_USELOCALE
+#if HAVE_USELOCALE
     locale_t new_c_num_locale;
     locale_t old_locale;
 #endif
@@ -40,7 +40,7 @@ namespace OpenBabel
 
     OBLocalePrivate(): counter(0)
     {
-#if defined HAVE_USELOCALE
+#if HAVE_USELOCALE
       new_c_num_locale = newlocale(LC_NUMERIC_MASK, NULL, NULL);
 #endif
     }
@@ -93,7 +93,7 @@ namespace OpenBabel
   {
     if (d->counter == 0) {
       // Set the locale for number parsing to avoid locale issues: PR#1785463
-#if defined HAVE_USELOCALE
+#if HAVE_USELOCALE
       // Extended per-thread interface
       d->old_locale = uselocale(d->new_c_num_locale);
 #else

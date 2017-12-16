@@ -1,18 +1,39 @@
 /*
  * International Chemical Identifier (InChI)
  * Version 1
- * Software version 1.03
- * May 9, 2010
- *
- * Originally developed at NIST
- * Modifications and additions by IUPAC and the InChI Trust
+ * Software version 1.04
+ * September 9, 2011
  *
  * The InChI library and programs are free software developed under the
- * auspices of the International Union of Pure and Applied Chemistry (IUPAC);
- * you can redistribute this software and/or modify it under the terms of 
- * the GNU Lesser General Public License as published by the Free Software 
- * Foundation:
- * http://www.opensource.org/licenses/lgpl-2.1.php
+ * auspices of the International Union of Pure and Applied Chemistry (IUPAC).
+ * Originally developed at NIST. Modifications and additions by IUPAC 
+ * and the InChI Trust.
+ *
+ * IUPAC/InChI-Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0.
+ * Copyright (C) IUPAC and InChI Trust Limited
+ * 
+ * This library is free software; you can redistribute it and/or modify it under the 
+ * terms of the IUPAC/InChI Trust Licence for the International Chemical Identifier 
+ * (InChI) Software version 1.0; either version 1.0 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+ * See the IUPAC/InChI Trust Licence for the International Chemical Identifier (InChI) 
+ * Software version 1.0 for more details.
+ * 
+ * You should have received a copy of the IUPAC/InChI Trust Licence for the 
+ * International Chemical Identifier (InChI) Software version 1.0 along with 
+ * this library; if not, write to:
+ * 
+ * The InChI Trust
+ * c/o FIZ CHEMIE Berlin
+ * Franklinstrasse 11
+ * 10587 Berlin
+ * GERMANY
+ * 
  */
 
 
@@ -64,7 +85,7 @@ int Canon_INChI3(int num_atoms, int num_at_tg, sp_ATOM* at,
                  CANON_STAT* pCS, INCHI_MODE nMode, int bTautFtcn);
 
 
-#ifdef INCHI_ANSI_ONLY
+#ifdef COMPILE_ANSI_ONLY
 
 static clock_t InchiClock(void);
 
@@ -155,8 +176,8 @@ long InchiTimeMsecDiff( inchiTime *TickEnd, inchiTime *TickStart )
         FillMaxMinClock( );
         if ( !TickEnd || !TickStart )
             return 0;
-        if ( TickEnd->clockTime >= 0 && TickStart->clockTime >= 0 ||
-             TickEnd->clockTime <= 0 && TickStart->clockTime <= 0) {
+        if ( (TickEnd->clockTime >= 0 && TickStart->clockTime >= 0) ||
+             (TickEnd->clockTime <= 0 && TickStart->clockTime <= 0)) {
             delta = TickEnd->clockTime - TickStart->clockTime;
         } else
         if ( TickEnd->clockTime >= HalfMaxPositiveClock &&
@@ -236,8 +257,8 @@ int bInchiTimeIsOver( inchiTime *TickStart )
         if ( !TickStart )
             return 0;
         clockCurrTime = InchiClock();
-        if ( clockCurrTime >= 0 && TickStart->clockTime >= 0 ||
-             clockCurrTime <= 0 && TickStart->clockTime <= 0) {
+        if ( (clockCurrTime >= 0 && TickStart->clockTime >= 0) ||
+             (clockCurrTime <= 0 && TickStart->clockTime <= 0)) {
             return (clockCurrTime > TickStart->clockTime);
         } else
         if ( clockCurrTime >= HalfMaxPositiveClock &&
@@ -507,7 +528,8 @@ int AllocateCS( CANON_STAT *pCS, int num_at, int num_at_tg, int nLenCT, int nLen
     }
     /* isotopic atoms & t-groups */
     if ( (nMode & CMODE_ISO) /*&& nLenIsotopic > 0*/ ||
-         (nMode & CMODE_ISO) && CANON_MODE_TAUT == (nMode & CANON_MODE_TAUT) && nLenLinearCTIsotopicTautomer > 0
+         ((nMode & CMODE_ISO) && CANON_MODE_TAUT == (nMode & CANON_MODE_TAUT) &&
+         nLenLinearCTIsotopicTautomer > 0)
         ) {
         num_err += !pCS_CALLOC(nSymmRankIsotopic, AT_RANK, num_at_tg);
         num_err += !pCS_CALLOC(nCanonOrdIsotopic, AT_RANK, num_at_tg); 
@@ -556,8 +578,8 @@ int AllocateCS( CANON_STAT *pCS, int num_at, int num_at_tg, int nLenCT, int nLen
             num_err += !pCS_CALLOC(nCanonOrdIsotopicStereoTaut, AT_RANK, num_t_groups);
         }
     }
-    if ( (nMode & CMODE_STEREO) && (nLenLinearCTStereoDble > 0 || nLenLinearCTStereoCarb > 0 ) ||
-         (nMode & CMODE_ISO_STEREO) && (nLenLinearCTIsotopicStereoDble > 0 || nLenLinearCTIsotopicStereoCarb > 0 ) ) {
+    if ( ((nMode & CMODE_STEREO) && (nLenLinearCTStereoDble > 0 || nLenLinearCTStereoCarb > 0 )) ||
+         ((nMode & CMODE_ISO_STEREO) && (nLenLinearCTIsotopicStereoDble > 0 || nLenLinearCTIsotopicStereoCarb > 0 )) ) {
         num_err += !pCS_CALLOC(bRankUsedForStereo, S_CHAR, num_at);
         num_err += !pCS_CALLOC(bAtomUsedForStereo, S_CHAR, num_at);
     }
@@ -889,13 +911,13 @@ int UpdateFullLinearCT( int num_atoms, int num_at_tg, sp_ATOM* at, AT_RANK *nRan
     /**********************************************************************/
     for ( rank = 1; rank <= num_atoms; rank ++ ) {
         i = (int)nAtomNumber[rank-1];  /* current atom */
-#if( CT_ATOMID == CT_ATOMID_IS_CURRANK )
+#if ( CT_ATOMID == CT_ATOMID_IS_CURRANK )
         r0_at_type = (AT_NUMB)rank; /* current Rank */
 #else
-#if( CT_ATOMID == CT_ATOMID_IS_INITRANK )
+#if ( CT_ATOMID == CT_ATOMID_IS_INITRANK )
         r0_at_type = (AT_NUMB)at[i].init_rank; /* chemical + neighborhood ID */
 #else
-#if( CT_ATOMID == CT_ATOMID_DONTINCLUDE )
+#if ( CT_ATOMID == CT_ATOMID_DONTINCLUDE )
 #else
  #error Undefined or wrong definition of CT_ATOMID
 #endif
@@ -946,10 +968,10 @@ int UpdateFullLinearCT( int num_atoms, int num_at_tg, sp_ATOM* at, AT_RANK *nRan
     for ( rank = num_atoms + 1; rank <= num_at_tg; rank ++ ) {
         j = (int)nAtomNumber[rank-1];  /* current "atom" */
         i = j - num_atoms;             /* current t-group */
-#if(   CT_ATOMID == CT_ATOMID_IS_CURRANK )
+#if ( CT_ATOMID == CT_ATOMID_IS_CURRANK )
         r0_at_type = (AT_NUMB)rank; /* current Rank */
 #else
-#if( CT_ATOMID == CT_ATOMID_IS_INITRANK )
+#if ( CT_ATOMID == CT_ATOMID_IS_INITRANK )
         r0_at_type = (AT_NUMB)rank; /* current Rank or  (AT_NUMB)at[i].init_rank; ==> chemical + neighborhood ID */
 #else
 #if ( CT_ATOMID == CT_ATOMID_DONTINCLUDE )

@@ -10,7 +10,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8 FATAL_ERROR)
 # ==============================================================================
 
 # define project version -------------------------
-SET(OBCORE_VERSION 2.3.1)
+SET(OBCORE_VERSION 2.4.0)
 
 # what languages we use --------------------------
 ENABLE_LANGUAGE(CXX)
@@ -31,15 +31,9 @@ ENDIF(NOT DEVELOPMENT_ROOT)
 # external/internal libraries --------------------------------------------------
 # ==============================================================================
 
-# boost =======================
-SET(BOOST_ROOT ${DEVELOPMENT_ROOT}/thirdparty/boost/1.59.0)
-INCLUDE_DIRECTORIES(${BOOST_ROOT} SYSTEM)
-
-ADD_DEFINITIONS(-DUSE_BOOST)
-
-# obcore ======================
-INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/2.3.1/include SYSTEM)
-include_directories(${DEVELOPMENT_ROOT}/thirdparty/obcore/2.3.1/include/inchi SYSTEM)
+INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/2.4.0/include SYSTEM)
+INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/2.4.0/include/inchi SYSTEM)
+INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/2.4.0/share/openbabel SYSTEM)
 SET(OBCORE_LIB_NAME obcore)
 SET(INCHI_LIB_NAME inchi)
 
@@ -75,8 +69,8 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
 IF(NOT DEFINED COMPOSITE_PROJECT)
     # C++ options
-    SET(CMAKE_CXX_FLAGS_RELEASE "-O2")
-    SET(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+    SET(CMAKE_CXX_FLAGS_RELEASE "-O2 -std=c++0x")
+    SET(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -std=c++0x")
 
     SET(CMAKE_BUILD_TYPE Release)
     #SET(CMAKE_BUILD_TYPE Debug)

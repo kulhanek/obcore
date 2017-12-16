@@ -187,6 +187,7 @@ share/openbabel/types.h
 src/lib/formats/APIInterface.cpp
 src/lib/formats/ArrayList.c
 src/lib/formats/ArrayList.h
+src/lib/formats/CMakeLists.txt
 src/lib/formats/CSRformat.cpp
 src/lib/formats/MCDLformat.cpp
 src/lib/formats/MNAformat.cpp

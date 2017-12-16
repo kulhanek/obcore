@@ -1,0 +1,16 @@
+include
+include/inchi
+include/libxml
+include/OB-BGL
+include/openbabel
+include/openbabel/depict
+include/openbabel/json
+include/openbabel/math
+include/openbabel/stereo
+share/openbabel
+src/lib/formats
+src/lib/obcore
+src/lib/obcore/charges
+src/lib/obcore/forcefields
+src/lib/obcore/ops
+src/lib/obcore/stereo

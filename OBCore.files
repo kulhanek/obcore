@@ -1,3 +1,4 @@
+README.md
 include/OB-BGL/example.cpp
 include/OB-BGL/mol_graph.h
 include/OB-BGL/verbose_visitors.h

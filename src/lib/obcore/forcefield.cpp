@@ -2903,6 +2903,12 @@ namespace OpenBabel
             dir = GetGradient(&*a) + _constraints.GetGradient(a->GetIdx());
           }
 
+          if( rstgrd ){
+            dir.SetX( dir.x() - rstgrd[coordIdx+0] );
+            dir.SetY( dir.y() - rstgrd[coordIdx+1] );
+            dir.SetZ( dir.z() - rstgrd[coordIdx+2] );
+          }
+
           // check to see how large the gradients are
           if (dir.length_2() > maxgrad)
             maxgrad = dir.length_2();
@@ -2933,7 +2939,7 @@ namespace OpenBabel
         LineSearch(_mol.GetCoordinates(), _gradientPtr);
         break;
       }
-      e_n2 = Energy() + _constraints.GetConstraintEnergy();
+      e_n2 = Energy() + _constraints.GetConstraintEnergy() + rstene;
 
       if ((_cstep % _pairfreq == 0) && _cutoff)
         UpdatePairsSimple(); // Update the non-bonded pairs (Cut-off)
@@ -3081,6 +3087,12 @@ namespace OpenBabel
             grad2 = GetGradient(&*a) + _constraints.GetGradient(a->GetIdx());
           }
 
+          if( rstgrd ){
+            grad2.SetX( grad2.x() - rstgrd[coordIdx+0] );
+            grad2.SetY( grad2.y() - rstgrd[coordIdx+1] );
+            grad2.SetZ( grad2.z() - rstgrd[coordIdx+2] );
+          }
+
           // Fletcher-Reeves formula for Beta
           // http://en.wikipedia.org/wiki/Nonlinear_conjugate_gradient_method
           // NOTE: We make sure to reset and use the steepest descent direction
@@ -3126,7 +3138,7 @@ namespace OpenBabel
       // save the direction
       memcpy(_gradientPtr, _grad1, sizeof(double)*_ncoords);
 
-      e_n2 = Energy() + _constraints.GetConstraintEnergy();
+      e_n2 = Energy() + _constraints.GetConstraintEnergy() + rstene;
 
       if ((_cstep % _pairfreq == 0) && _cutoff)
         UpdatePairsSimple(); // Update the non-bonded pairs (Cut-off)

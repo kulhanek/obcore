@@ -2848,6 +2848,323 @@ namespace OpenBabel
 
     return true;  // no convergence reached
   }
+  
+  // --------------------------------------------------------------------------------------
+  
+  
+  void OBForceField::SteepestDescentInitializeNemesis(int steps, double econv, int method)
+  {
+    if (!_validSetup)
+      return;
+
+    _nsteps = steps;
+    _cstep = 0;
+    _econv = econv;
+    _gconv = 1.0e-2; // gradient convergence (0.1) squared
+
+    if (_cutoff)
+      UpdatePairsSimple(); // Update the non-bonded pairs (Cut-off)
+
+    _e_n1 = Energy() + _constraints.GetConstraintEnergy();      
+  }
+    
+  // --------------------------------------------------------------------------------------    
+    
+  bool OBForceField::SteepestDescentNemesis(double* rstgrd,double rstene)
+  {
+   if (!_validSetup)
+      return 0;
+
+    _ncoords = _mol.NumAtoms() * 3;
+    double e_n2;
+    vector3 dir;
+    double maxgrad; // for convergence
+    
+    int n = 1;    
+
+    for (int i = 1; i <= n; i++) {
+      _cstep++;
+      maxgrad = 1.0e20;
+
+      FOR_ATOMS_OF_MOL (a, _mol) {
+        unsigned int idx = a->GetIdx();
+        unsigned int coordIdx = (idx - 1) * 3;
+
+        if (_constraints.IsFixed(idx) || (_fixAtom == idx) || (_ignoreAtom == idx)) {
+          _gradientPtr[coordIdx] = 0.0;
+          _gradientPtr[coordIdx+1] = 0.0;
+          _gradientPtr[coordIdx+2] = 0.0;
+        } else {
+          if (!HasAnalyticalGradients()) {
+            // use numerical gradients
+            dir = NumericalDerivative(&*a) + _constraints.GetGradient(a->GetIdx());
+          } else {
+            // use analytical gradients
+            dir = GetGradient(&*a) + _constraints.GetGradient(a->GetIdx());
+          }
+
+          // check to see how large the gradients are
+          if (dir.length_2() > maxgrad)
+            maxgrad = dir.length_2();
+
+          if (!_constraints.IsXFixed(idx))
+            _gradientPtr[coordIdx] = dir.x();
+          else
+            _gradientPtr[coordIdx] = 0.0;
+
+          if (!_constraints.IsYFixed(idx))
+            _gradientPtr[coordIdx+1] = dir.y();
+          else
+            _gradientPtr[coordIdx+1] = 0.0;
+
+          if (!_constraints.IsZFixed(idx))
+            _gradientPtr[coordIdx+2] = dir.z();
+          else
+            _gradientPtr[coordIdx+2] = 0.0;
+        }
+      }
+      // perform a linesearch
+      switch (_linesearch) {
+      case LineSearchType::Newton2Num:
+        Newton2NumLineSearch(_gradientPtr);
+        break;
+      default:
+      case LineSearchType::Simple:
+        LineSearch(_mol.GetCoordinates(), _gradientPtr);
+        break;
+      }
+      e_n2 = Energy() + _constraints.GetConstraintEnergy();
+
+      if ((_cstep % _pairfreq == 0) && _cutoff)
+        UpdatePairsSimple(); // Update the non-bonded pairs (Cut-off)
+
+      IF_OBFF_LOGLVL_LOW {
+        if (_cstep % 10 == 0) {
+          snprintf(_logbuf, BUFF_SIZE, " %4d    %8.5f    %8.5f\n", _cstep, e_n2, _e_n1);
+          OBFFLog(_logbuf);
+        }
+      }
+
+      if (IsNear(e_n2, _e_n1, _econv)
+          && (maxgrad < _gconv)) { // gradient criteria (0.1) squared
+        IF_OBFF_LOGLVL_LOW
+          OBFFLog("    STEEPEST DESCENT HAS CONVERGED\n");
+        return false;
+      }
+
+      if (_nsteps == _cstep) {
+        return false;
+      }
+
+      _e_n1 = e_n2;
+    }
+
+    return true;  // no convergence reached        
+  }
+  
+  // --------------------------------------------------------------------------------------      
+    
+  void OBForceField::ConjugateGradientsInitializeNemesis(int steps, double econv, int method)
+  {
+   if (!_validSetup || steps==0)
+      return;
+
+    double e_n2;
+    vector3 dir;
+
+    _cstep = 0;
+    _nsteps = steps;
+    _econv = econv;
+    _gconv = 1.0e-2; // gradient convergence (0.1) squared
+    _ncoords = _mol.NumAtoms() * 3;
+
+    if (_cutoff)
+      UpdatePairsSimple(); // Update the non-bonded pairs (Cut-off)
+
+    _e_n1 = Energy() + _constraints.GetConstraintEnergy();
+
+    if (_grad1 != NULL)
+      delete [] _grad1;
+    _grad1 = new double[_ncoords];
+    memset(_grad1, '\0', sizeof(double)*_ncoords);
+
+    // Take the first step (same as steepest descent because there is no
+    // gradient from the previous step.
+    FOR_ATOMS_OF_MOL (a, _mol) {
+      unsigned int idx = a->GetIdx();
+      unsigned int coordIdx = (idx - 1) * 3;
+
+      if (_constraints.IsFixed(idx) || (_fixAtom == idx) || (_ignoreAtom == idx)) {
+        _gradientPtr[coordIdx] = 0.0;
+        _gradientPtr[coordIdx+1] = 0.0;
+        _gradientPtr[coordIdx+2] = 0.0;
+      } else {
+        if (!HasAnalyticalGradients()) {
+          // use numerical gradients
+          dir = NumericalDerivative(&*a) + _constraints.GetGradient(a->GetIdx());
+        } else {
+          // use analytical gradients
+          dir = GetGradient(&*a) + _constraints.GetGradient(a->GetIdx());
+        }
+
+        if (!_constraints.IsXFixed(idx))
+          _gradientPtr[coordIdx] = dir.x();
+        else
+          _gradientPtr[coordIdx] = 0.0;
+
+        if (!_constraints.IsYFixed(idx))
+          _gradientPtr[coordIdx+1] = dir.y();
+        else
+          _gradientPtr[coordIdx+1] = 0.0;
+
+        if (!_constraints.IsZFixed(idx))
+          _gradientPtr[coordIdx+2] = dir.z();
+        else
+          _gradientPtr[coordIdx+2] = 0.0;
+      }
+    }
+    // perform a linesearch
+    switch (_linesearch) {
+    case LineSearchType::Newton2Num:
+      Newton2NumLineSearch(_gradientPtr);
+      break;
+    default:
+    case LineSearchType::Simple:
+      LineSearch(_mol.GetCoordinates(), _gradientPtr);
+      break;
+    }
+    e_n2 = Energy() + _constraints.GetConstraintEnergy();
+
+    // save the direction and energy
+    memcpy(_grad1, _gradientPtr, sizeof(double)*_ncoords);
+    _e_n1 = e_n2;    
+  }
+    
+  // --------------------------------------------------------------------------------------        
+    
+  bool OBForceField::ConjugateGradientsNemesis(double* rstgrd, double rstene)
+  {
+   if (!_validSetup)
+      return 0;
+
+    int n = 1;
+   
+    double e_n2;
+    double g2g2, g1g1, beta;
+    vector3 grad2, dir2;
+    vector3 grad1, dir1; // temporaries to perform dot product, etc.
+    double maxgrad; // for convergence
+
+    if (_ncoords != _mol.NumAtoms() * 3)
+      return false;
+
+    e_n2 = 0.0;
+
+    for (int i = 1; i <= n; i++) {
+      _cstep++;
+      maxgrad = 1.0e20;
+
+      FOR_ATOMS_OF_MOL (a, _mol) {
+        unsigned int idx = a->GetIdx();
+        unsigned int coordIdx = (a->GetIdx() - 1) * 3;
+
+        if (_constraints.IsFixed(idx) || (_fixAtom == idx) || (_ignoreAtom == idx)) {
+          _grad1[coordIdx] = 0.0;
+          _grad1[coordIdx+1] = 0.0;
+          _grad1[coordIdx+2] = 0.0;
+        } else {
+          if (!HasAnalyticalGradients()) {
+            // use numerical gradients
+            grad2 = NumericalDerivative(&*a) + _constraints.GetGradient(a->GetIdx());
+          } else {
+            // use analytical gradients
+            grad2 = GetGradient(&*a) + _constraints.GetGradient(a->GetIdx());
+          }
+
+          // Fletcher-Reeves formula for Beta
+          // http://en.wikipedia.org/wiki/Nonlinear_conjugate_gradient_method
+          // NOTE: We make sure to reset and use the steepest descent direction
+          //   after NumAtoms steps
+          if (_cstep % _mol.NumAtoms() != 0) {
+            g2g2 = dot(grad2, grad2);
+            grad1 = vector3(_grad1[coordIdx], _grad1[coordIdx+1], _grad1[coordIdx+2]);
+            g1g1 = dot(grad1, grad1);
+            beta = g2g2 / g1g1;
+            grad2 += beta * grad1;
+          }
+
+          // check to see how large the gradients are
+          if (grad2.length_2() > maxgrad)
+            maxgrad = grad2.length_2();
+
+          if (!_constraints.IsXFixed(idx))
+            _grad1[coordIdx] = grad2.x();
+          else
+            _grad1[coordIdx] = 0.0;
+
+          if (!_constraints.IsYFixed(idx))
+            _grad1[coordIdx+1] = grad2.y();
+          else
+            _grad1[coordIdx+1] = 0.0;
+
+          if (!_constraints.IsZFixed(idx))
+            _grad1[coordIdx+2] = grad2.z();
+          else
+            _grad1[coordIdx+2] = 0.0;
+        }
+      }
+      // perform a linesearch
+      switch (_linesearch) {
+      case LineSearchType::Newton2Num:
+        Newton2NumLineSearch(_grad1);
+        break;
+      default:
+      case LineSearchType::Simple:
+        LineSearch(_mol.GetCoordinates(), _grad1);
+        break;
+      }
+      // save the direction
+      memcpy(_gradientPtr, _grad1, sizeof(double)*_ncoords);
+
+      e_n2 = Energy() + _constraints.GetConstraintEnergy();
+
+      if ((_cstep % _pairfreq == 0) && _cutoff)
+        UpdatePairsSimple(); // Update the non-bonded pairs (Cut-off)
+
+      if (IsNear(e_n2, _e_n1, _econv)
+          && (maxgrad < _gconv)) { // gradient criteria (0.1) squared
+        IF_OBFF_LOGLVL_LOW {
+          snprintf(_logbuf, BUFF_SIZE, " %4d    %8.3f    %8.3f\n", _cstep, e_n2, _e_n1);
+          OBFFLog(_logbuf);
+          OBFFLog("    CONJUGATE GRADIENTS HAS CONVERGED\n");
+        }
+        return false;
+      }
+
+      IF_OBFF_LOGLVL_LOW {
+        if (_cstep % 10 == 0) {
+          snprintf(_logbuf, BUFF_SIZE, " %4d    %8.3f    %8.3f\n", _cstep, e_n2, _e_n1);
+          OBFFLog(_logbuf);
+        }
+      }
+
+      if (_nsteps == _cstep)
+        return false;
+
+      _e_n1 = e_n2;
+    }
+
+    return true; // no convergence reached  
+    }
+  
+
+  // ---------------------------------------------------------------------------
+
+  double  OBForceField::GetLastEnergy(void)
+  {
+    return(_e_n1);
+  }
+  // ---------------------------------------------------------------------------
 
   void OBForceField::SteepestDescent(int steps, double econv, int method)
   {

@@ -1356,6 +1356,15 @@ namespace OpenBabel
     bool ConjugateGradientsTakeNSteps(int n);
     //@}
 
+    // NEMESIS versions
+    void SteepestDescentInitializeNemesis(int steps = 1000, double econv = 1e-6f, int method = OBFF_ANALYTICAL_GRADIENT);
+    bool SteepestDescentNemesis(double* rstgrd,double rstene);
+    void ConjugateGradientsInitializeNemesis(int steps = 1000, double econv = 1e-6f, int method = OBFF_ANALYTICAL_GRADIENT);
+    bool ConjugateGradientsNemesis(double* rstgrd, double rstene);
+
+    //! get last energy
+    double  GetLastEnergy(void);
+
     /////////////////////////////////////////////////////////////////////////
     // Molecular Dynamics                                                  //
     /////////////////////////////////////////////////////////////////////////

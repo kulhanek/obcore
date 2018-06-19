@@ -25,6 +25,15 @@ using namespace std;
 namespace OpenBabel
 {
 
+
+// kulhanek
+void OBPlugNotification::notify(const std::string& text)
+{
+}
+
+OBPlugNotification* OBPlugNotification::PlugNotification = NULL;
+
+
 OBPlugin::PluginMapType& OBPlugin::GetTypeMap(const char* PluginID)
 {
   PluginMapType::iterator itr;

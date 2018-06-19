@@ -44,6 +44,17 @@ struct OBERROR CharPtrLess : public std::binary_function<const char*,const char*
   { return strcasecmp(p1,p2)<0; }
 };
 
+
+// kulhanek
+class OBCONV OBPlugNotification {
+  public:
+  virtual void notify(const std::string& text);
+
+  /// notification subsystem
+  static OBPlugNotification* PlugNotification;
+};
+
+
 /** \class OBPlugin plugin.h <openbabel/plugin.h>
     \brief Base class for all types of dynamic classes discovered at runtime
     \since version 2.2

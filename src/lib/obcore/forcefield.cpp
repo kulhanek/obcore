@@ -2771,7 +2771,7 @@ namespace OpenBabel
 
     for (int i = 1; i <= n; i++) {
       _cstep++;
-      maxgrad = 1.0e20;
+      maxgrad =0.0;  // kulhanek fix
 
       FOR_ATOMS_OF_MOL (a, _mol) {
         unsigned int idx = a->GetIdx();
@@ -2884,7 +2884,7 @@ namespace OpenBabel
 
     for (int i = 1; i <= n; i++) {
       _cstep++;
-      maxgrad = 1.0e20;
+      maxgrad = 0.0; // kulhanek fix
 
       FOR_ATOMS_OF_MOL (a, _mol) {
         unsigned int idx = a->GetIdx();
@@ -3068,7 +3068,7 @@ namespace OpenBabel
 
     for (int i = 1; i <= n; i++) {
       _cstep++;
-      maxgrad = 1.0e20;
+      maxgrad = 0.0;  // kulhanek fix
 
       FOR_ATOMS_OF_MOL (a, _mol) {
         unsigned int idx = a->GetIdx();
@@ -3294,7 +3294,7 @@ namespace OpenBabel
 
     for (int i = 1; i <= n; i++) {
       _cstep++;
-      maxgrad = 1.0e20;
+      maxgrad = 0.0;  // kulhanek fix
 
       FOR_ATOMS_OF_MOL (a, _mol) {
         unsigned int idx = a->GetIdx();

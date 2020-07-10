@@ -74,6 +74,10 @@ void OBPlugin::LoadAllPlugins()
   vector<string>::iterator itr;
   for(itr=files.begin();itr!=files.end();++itr) {
     if(DLHandler::openLib(*itr))
+      // kulhanek
+      if( OBPlugNotification::PlugNotification != NULL ){
+        OBPlugNotification::PlugNotification->notify(*itr);
+      }
       count++;
   }
   if(!count) {

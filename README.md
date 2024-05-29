@@ -1,7 +1,7 @@
 # OBCore
-Core part of OpenBabel. This package is adopted for [Nemesis](https://github.com/kulhanek/nemesis).
+Core part of OpenBabel (v3.1.1). This package is adopted for [Nemesis](https://github.com/kulhanek/nemesis) (v24.x).
 
-## Original source
-[http://openbabel.org/wiki/Main_Page](http://openbabel.org/wiki/Main_Page)
+## Original source 
+[https://github.com/openbabel/openbabel](https://github.com/openbabel/openbabel)
 
 

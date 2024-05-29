@@ -5,22 +5,19 @@ extern "C" {
 const char* obprefix(const char* suffix);
 }
 
-#if defined(WIN32)
 /* Where the data files are located */
-#define BABEL_DATADIR obprefix("\\share\\openbabel")
-#else
+/* kulhanek */
 #define BABEL_DATADIR obprefix("/share/openbabel")
-#endif
 
 /* The version of Open Babel */
-#define BABEL_VERSION "2.4.0"
+#define BABEL_VERSION "3.1.0"
 
 /* Version check macro
    Can be used like #if (OB_VERSION >= OB_VERSION_CHECK(2, 2, 99)) */
 #define OB_VERSION_CHECK(major, minor, patch) ((major<<16)|(minor<<8)|(patch))
 
 /* OB_VERSION is (major << 16) + (minor << 8) + patch */
-#define OB_VERSION OB_VERSION_CHECK(2, 4, 0)
+#define OB_VERSION OB_VERSION_CHECK(3, 1, 0)
 
 /* The file extension used for shared modules */
 #define MODULE_EXTENSION ".so"
@@ -42,8 +39,8 @@ const char* obprefix(const char* suffix);
 
 /* Used to export symbols for DLL / shared library builds */
 #if defined(MAKE_OBDLL) // e.g. in src/main.cpp
- #ifndef EXTERN
-  #define EXTERN   OB_EXPORT extern
+ #ifndef OB_EXTERN
+  #define OB_EXTERN   OB_EXPORT extern
  #endif
  #ifndef OBAPI
   #define OBAPI    OB_EXPORT
@@ -72,8 +69,8 @@ const char* obprefix(const char* suffix);
 
 #else   // defined(MAKE_OBDLL)
 
- #ifndef EXTERN
-  #define EXTERN   OB_IMPORT extern
+ #ifndef OB_EXTERN
+  #define OB_EXTERN   OB_IMPORT extern
  #endif
  #ifndef OBAPI
   #define OBAPI    OB_IMPORT
@@ -98,19 +95,19 @@ const char* obprefix(const char* suffix);
   #ifndef OBDEPICT
  #define OBDEPICT  OB_IMPORT
  #endif
- 
+
  #endif
 
 #endif
 
 #ifdef _MSC_VER
- // Supress warning on deprecated functions
+ // Suppress warning on deprecated functions
  #pragma warning(disable : 4996)
- // Supress warning that compiler is ignoring C++ exception specification
+ // Suppress warning that compiler is ignoring C++ exception specification
  #pragma warning( disable : 4290 )
- // Supress warning on signed/unsigned comparison with < or > (harmless, but maybe should be fixed)
+ // Suppress warning on signed/unsigned comparison with < or > (harmless, but maybe should be fixed)
  #pragma warning( disable : 4018 )
- // Supress warning on forcing int etc. value to bool 'true' or 'false' (performance warning)
+ // Suppress warning on forcing int etc. value to bool 'true' or 'false' (performance warning)
  #pragma warning( disable : 4800 )
  //
  #pragma warning( disable : 4251 )
@@ -159,17 +156,12 @@ const char* obprefix(const char* suffix);
 #define HAVE_CLOCK_T 1
 
 /* shared pointer implementation to be used */
-#define OB_SHARED_PTR_IMPLEMENTATION std::tr1::shared_ptr
+#define OB_SHARED_PTR_IMPLEMENTATION std::shared_ptr
 
 /* header to be included for shared pointers */
-#define OB_SHARED_PTR_HEADER <tr1/memory>
+#define OB_SHARED_PTR_HEADER <memory>
 
 #if defined(WIN32)
- #ifndef HAVE_ISFINITE
-  #define isfinite _finite
-  #define HAVE_ISFINITE 1
- #endif
-
  #ifndef HAVE_SNPRINTF
   #define snprintf _snprintf
   #define HAVE_SNPRINTF 1
@@ -193,12 +185,8 @@ const char* obprefix(const char* suffix);
  #define SCANDIR_CONST
 #endif
 
-//kulhanek
-#if defined(WIN32)
-#define OB_MODULE_PATH obprefix("\\lib\\formats\\")
-#else
+/* kulhanek */
 #define OB_MODULE_PATH obprefix("/lib/formats")
-#endif
 
 #ifndef TIME_WITH_SYS_TIME
   #ifdef HAVE_SYS_TIME
@@ -211,4 +199,3 @@ const char* obprefix(const char* suffix);
     #define TIME_WITH_SYS_TIME 0
   #endif
 #endif
-

@@ -23,11 +23,15 @@ GNU General Public License for more details.
 #include <set>
 
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/ring.h>
+#include <openbabel/obiter.h>
 #include <openbabel/generic.h>
 #include <openbabel/math/matrix3x3.h>
+#include <openbabel/elements.h>
 
 // needed for msvc to have at least one reference to AtomClass, AliasData in openbabel library
-#include <openbabel/atomclass.h>
 #include <openbabel/alias.h>
 
 using namespace std;
@@ -146,10 +150,10 @@ namespace OpenBabel
       would allow the simple version of Clone() above. See
       OBRotameterData::Clone for an example of a more complicated version.
       For classes which are not intended to support copying, Clone() can
-      return NULL
+      return nullptr
       @code
       virtual OBGenericData* Clone(OBBase* parent) const
-         {return NULL;}
+         {return nullptr;}
       @endcode
       Clone() is a pure virtual function so that you need to decide what
       kind of function you need and include it explicitly.
@@ -239,7 +243,7 @@ namespace OpenBabel
     _bgn(0), _end(0), _ord(0), _stereo(0)
   {  }
 
-  OBVirtualBond::OBVirtualBond(int bgn,int end,int ord,int stereo):
+  OBVirtualBond::OBVirtualBond(unsigned int bgn, unsigned int end, unsigned int ord, int stereo):
     OBGenericData("VirtualBondData", OBGenericDataType::VirtualBondData, perceived),
     _bgn(bgn), _end(end), _ord(ord), _stereo(stereo)
   {  }
@@ -252,7 +256,7 @@ namespace OpenBabel
     _mOrtho(matrix3x3()),
     _mOrient(matrix3x3()),
     _offset(vector3()),
-    _spaceGroupName(""), _spaceGroup( NULL ),
+    _spaceGroupName(""), _spaceGroup(nullptr),
     _lattice(Undefined)
   {  }
 
@@ -287,7 +291,7 @@ namespace OpenBabel
   {
     _mOrtho.FillOrth(alpha, beta, gamma, a, b, c);
     _mOrient = matrix3x3(1);
-    _spaceGroup = NULL;
+    _spaceGroup = nullptr;
     _spaceGroupName = "";
     _lattice = OBUnitCell::Undefined;
   }
@@ -303,7 +307,7 @@ namespace OpenBabel
                      v2.length(),        // b
                      v3.length());       // c
     _mOrient = m.transpose() * _mOrtho.inverse();
-    _spaceGroup = NULL;
+    _spaceGroup = nullptr;
     _spaceGroupName = "";
     _lattice = OBUnitCell::Undefined;
   }
@@ -402,6 +406,33 @@ namespace OpenBabel
     return vector3(x, y, z);
   }
 
+  vector3 OBUnitCell::UnwrapCartesianNear(vector3 new_loc, vector3 ref_loc) const
+  {
+    vector3 bond_dir = MinimumImageCartesian(new_loc - ref_loc);
+    return ref_loc + bond_dir;
+  }
+
+  vector3 OBUnitCell::UnwrapFractionalNear(vector3 new_loc, vector3 ref_loc) const
+  {
+    vector3 bond_dir = MinimumImageFractional(new_loc - ref_loc);
+    return ref_loc + bond_dir;
+  }
+
+  vector3 OBUnitCell::MinimumImageCartesian(vector3 cart) const
+  {
+    vector3 frac = CartesianToFractional(cart);
+    frac = MinimumImageFractional(frac);
+    return FractionalToCartesian(frac);
+  }
+
+  vector3 OBUnitCell::MinimumImageFractional(vector3 frac) const
+  {
+    double x = frac.x() - round(frac.x());
+    double y = frac.y() - round(frac.y());
+    double z = frac.z() - round(frac.z());
+    return vector3(x, y, z);
+  }
+
   OBUnitCell::LatticeType OBUnitCell::GetLatticeType( int spacegroup ) const
   {
     //	1-2 	Triclinic
@@ -455,7 +486,7 @@ namespace OpenBabel
   {
     if (_lattice != Undefined)
       return _lattice;
-    else if (_spaceGroup != NULL)
+    else if (_spaceGroup != nullptr)
       return GetLatticeType(_spaceGroup->GetId());
 
     double a = GetA();
@@ -541,7 +572,7 @@ namespace OpenBabel
 
     if (name.length () == 0)
       {
-        if (_spaceGroup != NULL)
+        if (_spaceGroup != nullptr)
           return _spaceGroup->GetId();
         else
           name = _spaceGroupName;
@@ -580,7 +611,7 @@ namespace OpenBabel
   {
     const SpaceGroup *sg = GetSpaceGroup(); // the actual space group and transformations for this unit cell
 
-    if(sg == NULL)
+    if (sg == nullptr)
       return ;
 
     // For each atom, we loop through: convert the coords back to inverse space, apply the transformations and create new atoms
@@ -663,8 +694,18 @@ namespace OpenBabel
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, CartesianToFractional, vector3);
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, WrapCartesianCoordinate, vector3);
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, WrapFractionalCoordinate, vector3);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, MinimumImageCartesian, vector3);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, MinimumImageFractional, vector3);
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG(int, GetSpaceGroupNumber, std::string);
   OBUNITCELL_CALL_CONST_OVERLOAD(double, GetCellVolume);
+  // Based on OBUNITCELL_CALL_CONST_OVERLOAD_ARG above
+#define OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(_type, _name, _argsig, _argsig2) \
+  _type OBUnitCell::_name( _argsig arg1, _argsig2 arg2 ) \
+  { \
+    return const_cast<const OBUnitCell*>(this)->_name(arg1, arg2); \
+  }
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(vector3, UnwrapCartesianNear, vector3, vector3);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(vector3, UnwrapFractionalNear, vector3, vector3);
 
   double OBUnitCell::GetA() const
   {
@@ -842,13 +883,13 @@ namespace OpenBabel
   OBRing *OBRingData::BeginRing(std::vector<OBRing*>::iterator &i)
   {
     i = _vr.begin();
-    return((i == _vr.end()) ? (OBRing*)NULL : (OBRing*)*i);
+    return i == _vr.end() ? nullptr : (OBRing*)*i;
   }
 
   OBRing *OBRingData::NextRing(std::vector<OBRing*>::iterator &i)
   {
     ++i;
-    return((i == _vr.end()) ? (OBRing*)NULL : (OBRing*)*i);
+    return i == _vr.end() ? nullptr : (OBRing*)*i;
   }
 
   //
@@ -859,7 +900,7 @@ namespace OpenBabel
   **\brief Angle default constructor
   */
   OBAngle::OBAngle():
-    _vertex((OBAtom *)NULL), _termini((OBAtom *)NULL, (OBAtom *)NULL), _radians(0.0)
+    _vertex(nullptr), _termini(nullptr, nullptr), _radians(0.0)
   {  }
 
   /*!
@@ -899,7 +940,7 @@ namespace OpenBabel
   */
   void OBAngle::Clear()
   {
-    _vertex         = 0;
+    _vertex         = nullptr;
     _termini.first  = 0;
     _termini.second = 0;
     _radians        = 0.0;
@@ -1191,9 +1232,9 @@ namespace OpenBabel
     vector<triple<OBAtom*,OBAtom*,double> >::iterator ad;
     for(ad = _ads.begin();ad != _ads.end() && (Aprotor || Dprotor);++ad)
       {
-        if(!ad->first->IsHydrogen())
+        if (ad->first->GetAtomicNum() != OBElements::Hydrogen)
           Aprotor = false;
-        if(!ad->second->IsHydrogen())
+        if (ad->second->GetAtomicNum() != OBElements::Hydrogen)
           Dprotor = false;
       }
     return (Aprotor || Dprotor);
@@ -1315,124 +1356,6 @@ namespace OpenBabel
     return(true);
   }
 
-  //
-  // Member functions for OBChiralDarta
-  //
-  bool OBChiralData::SetAtom4Refs(std::vector<unsigned int> atom4refs, atomreftype t)
-  {
-    if (atom4refs.size() != 4)
-      {
-        obErrorLog.ThrowError(__FUNCTION__, "Incorrect number of atoms atom4refs, should be 4", obDebug);
-        return(false);
-      }
-    switch(t){
-    case input: _atom4refs = atom4refs;break;
-    case output:_atom4refo = atom4refs;break;
-    case calcvolume:_atom4refc = atom4refs;break;
-    default:
-      obErrorLog.ThrowError(__FUNCTION__, "AtomRefType called is invalid", obDebug);
-      return(false);
-    }
-    return (true);
-  }
-
-  int OBChiralData::AddAtomRef(unsigned int atomref, atomreftype t)
-  {
-    switch(t){
-    case input: _atom4refs.push_back(atomref);break;
-    case output: _atom4refo.push_back(atomref);break;
-    case calcvolume:_atom4refc.push_back(atomref);break;
-    default:
-      obErrorLog.ThrowError(__FUNCTION__, "AtomRefType called is invalid", obDebug);
-      return(false);
-    }
-
-    return (_atom4refs.size());
-  }
-
-  unsigned int OBChiralData::GetAtomRef(int a, atomreftype t)
-  {
-    switch(t){
-    case input: return(_atom4refs[a]);break;
-    case output: return(_atom4refo[a]);break;
-    case calcvolume: return(_atom4refc[a]);break;
-    default:
-      obErrorLog.ThrowError(__FUNCTION__, "AtomRefType called is invalid", obDebug);
-      return(false);
-    }
-  }
-  std::vector<unsigned int> OBChiralData::GetAtom4Refs(atomreftype t) const
-  {
-    switch (t){
-    case output:
-      return(_atom4refo);
-      break;
-    case input:
-      return(_atom4refs);
-      break;
-    case calcvolume:
-      return(_atom4refc);
-      break;
-    default:
-      obErrorLog.ThrowError(__FUNCTION__, "AtomRefType called is invalid", obDebug);
-      return(_atom4refo);
-    }
-  }
-
-  unsigned int OBChiralData::GetSize(atomreftype t) const
-  {
-    switch (t)
-      {
-      case output:
-        return(unsigned int)_atom4refo.size();
-        break;
-      case input:
-        return(unsigned int)_atom4refs.size();
-        break;
-      case calcvolume:
-        return(unsigned int)_atom4refc.size();
-      default:
-        obErrorLog.ThrowError(__FUNCTION__, "AtomRefType called is invalid", obDebug);
-        return(0);
-      }
-  }
-
-  // Chiral data is a perceived data type. We might read in some chiral info
-  // but this class derives and converts from whatever is read
-  OBChiralData::OBChiralData()
-    : OBGenericData("ChiralData", OBGenericDataType::ChiralData, perceived)
-  {  }
-
-  OBChiralData::OBChiralData(const OBChiralData &src)
-    : OBGenericData(src)
-  {
-    _atom4refs = src._atom4refs;
-    _atom4refo = src._atom4refo;
-    _atom4refc = src._atom4refc;
-    parity     = src.parity;
-  }
-
-  OBChiralData & OBChiralData::operator=(const OBChiralData &src)
-  {
-    if(this == &src)
-      return(*this);
-
-    _source = src._source;
-
-    _atom4refs = src._atom4refs;
-    _atom4refo = src._atom4refo;
-    _atom4refc = src._atom4refc;
-    parity=src.parity;
-    return(*this);
-  }
-
-  void OBChiralData::Clear()
-  {
-    _atom4refs.clear();
-    parity=0;
-    _atom4refo.clear();
-    _atom4refc.clear();
-  }
 
 //
 //member functions for OBDOSData class
@@ -1458,13 +1381,11 @@ void OBDOSData::SetData(double fermi,
 
   // member functions for OBOrbitalData
 
-  void OBOrbitalData::LoadClosedShellOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, int alphaHOMO)
+  void OBOrbitalData::LoadClosedShellOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, unsigned int alphaHOMO)
   {
     if (energies.size() < symmetries.size())
       return; // something is very weird -- it's OK to pass no symmetries (we'll assume "A")
     if (energies.size() == 0)
-      return;
-    if (alphaHOMO <= 0)
       return;
     if (alphaHOMO > energies.size())
       return;
@@ -1491,13 +1412,11 @@ void OBDOSData::SetData(double fermi,
       }
   }
 
-  void OBOrbitalData::LoadAlphaOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, int alphaHOMO)
+  void OBOrbitalData::LoadAlphaOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, unsigned int alphaHOMO)
   {
     if (energies.size() < symmetries.size())
       return; // something is very weird -- it's OK to pass no symmetries (we'll assume "A")
     if (energies.size() == 0)
-      return;
-    if (alphaHOMO <= -1)
       return;
     if (alphaHOMO > energies.size())
       return;
@@ -1522,13 +1441,11 @@ void OBDOSData::SetData(double fermi,
       }
   }
 
-  void OBOrbitalData::LoadBetaOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, int betaHOMO)
+  void OBOrbitalData::LoadBetaOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, unsigned int betaHOMO)
   {
     if (energies.size() < symmetries.size())
       return; // something is very weird -- it's OK to pass no symmetries (we'll assume "A")
     if (energies.size() == 0)
-      return;
-    if (betaHOMO <= -1)
       return;
     if (betaHOMO > energies.size())
       return;
@@ -1640,6 +1557,11 @@ void OBVibrationData::SetData(const std::vector< std::vector< vector3 > > & vLx,
 unsigned int OBVibrationData::GetNumberOfFrequencies() const
 {
   return this->_vFrequencies.size();
+}
+
+void OBFreeGrid::Clear()
+{
+  _points.clear();
 }
 
 } //end namespace OpenBabel

@@ -14,6 +14,11 @@ GNU General Public License for more details.
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/elements.h>
+
 
 using namespace std;
 namespace OpenBabel
@@ -64,7 +69,7 @@ namespace OpenBabel
   bool CacheFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -73,8 +78,6 @@ namespace OpenBabel
 
     char type_name[16];
     char buffer[BUFF_SIZE];
-
-    mol.Kekulize();
 
     ofs << "molstruct88_Apr_30_1993_11:02:29 <molecule> 0x1d00\n";
     ofs << "Written by Molecular Editor on <date>\n";
@@ -98,7 +101,7 @@ namespace OpenBabel
     for(atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
       {
         // 16 = sizeof(type_name)
-        strncpy(type_name,etab.GetSymbol(atom->GetAtomicNum()), 16);
+        strncpy(type_name,OBElements::GetSymbol(atom->GetAtomicNum()), 16);
         // sizeof(type_name) - 1)
         type_name[15] = '\0';
 
@@ -125,7 +128,7 @@ namespace OpenBabel
     vector<OBBond*>::iterator j;
     for (bond = mol.BeginBond(j);bond;bond = mol.NextBond(j))
       {
-        switch (bond->GetBO())
+        switch (bond->GetBondOrder())
           {
           case 1:
             strcpy(bstr,"single");

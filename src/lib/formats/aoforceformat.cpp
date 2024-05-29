@@ -15,6 +15,13 @@ GNU General Public License for more details.
 ***********************************************************************/
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
 
 namespace OpenBabel {
 
@@ -43,7 +50,7 @@ AoforceFormat theAoforceFormat;
 
 bool AoforceFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv) {
   OBMol* pmol = pOb->CastAndClear<OBMol>();
-  if (pmol == NULL) return false;
+  if (pmol == nullptr) return false;
 
   std::istream &ifs = *pConv->GetInStream();
   std::string line;
@@ -65,11 +72,10 @@ bool AoforceFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv) {
                        atof(vs[1].c_str()),
                        atof(vs[2].c_str()));
         coords *= 0.529177249;  // Bohr to Angstrom
-        int iso;
         atom->SetVector(coords);
-        atom->SetAtomicNum(etab.GetAtomicNum(vs[3], iso));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(vs[3].c_str()));
         atom->SetPartialCharge(atof(vs[5].c_str()));
-        atom->SetIsotope(atof(vs[7].c_str()));
+        atom->SetIsotope(atoi(vs[7].c_str()));
       }
     } else if (line.find("   mode   ") != std::string::npos) {
       // Normal modes and vibrational frequencies

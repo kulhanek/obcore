@@ -20,6 +20,8 @@ GNU General Public License for more details.
 */
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
 #include <openbabel/mcdlutil.h>
 #include <openbabel/data.h>
 #include <openbabel/obconversion.h>
@@ -562,7 +564,7 @@ namespace OpenBabel {
     bool result=false;
     int i,j,k;
 
-    if ((structure == NULL) || (query == NULL)) return result;
+    if (structure == nullptr || query == nullptr) return result;
     i=nHQuery;
     if (i>0) {   //if explicitly defined H is accociated with query atom
       j=structure->nv;
@@ -731,7 +733,7 @@ namespace OpenBabel {
       clear();
     };
     TSimpleMolecule() {
-      refofs=NULL;
+      refofs = nullptr;
     };
 
     int nAtoms();
@@ -943,7 +945,7 @@ namespace OpenBabel {
     unsigned int nBondNo;
     neighbourlist* bk;
     std::vector<int>bondList;
-    std::vector<int>* blStore=NULL;
+    std::vector<int>* blStore = nullptr;
     bool testBad,testOK;
     unsigned int m, j, n1, n2, n, k;
     int rs;
@@ -953,10 +955,12 @@ namespace OpenBabel {
     int at;
     double r1,r2,s1,s3;
 
-    if (bkExt != NULL) bk=bkExt; else {
+    if (bkExt != nullptr) {
+      bk=bkExt;
+    } else {
       bk=(neighbourlist *)malloc(nAtoms() * sizeof(adjustedlist));
       defineBondConn(bk);
-    };
+    }
     nBondNo=0;
     testBad=false;
     testOK=true;
@@ -967,7 +971,7 @@ namespace OpenBabel {
         vaweBond(n,bk,rs,bondList);
         if (rs > 0) {
           //I have to analize bondList to determine second cycle to exclude adamanthane
-          if (blStore == NULL) {
+          if (blStore == nullptr) {
             //Save
             blStore= new std::vector<int>(rs);
             for (j=0; j<blStore->size(); j++) (*blStore)[j]=bondList[j];
@@ -1048,8 +1052,8 @@ namespace OpenBabel {
       if (! testBad) result=true;
     };
     //end addition from 16 April 2006
-    if (bkExt == NULL) free(bk);
-    if (blStore != NULL) delete(blStore);
+    if (bkExt == nullptr) free(bk);
+    if (blStore != nullptr) delete(blStore);
     return result;
   };
 
@@ -1129,7 +1133,7 @@ namespace OpenBabel {
       if (getAtom(aN)->nb == 3) {
         //three-bond connection-search for projec. of tetrahedron
 
-        if (threeBondResolve(aN,-1,xV,yV,NULL)) {
+        if (threeBondResolve(aN,-1,xV,yV,nullptr)) {
           return;
         };
 
@@ -1278,7 +1282,7 @@ namespace OpenBabel {
     n=0;
     s=value.substr(n,2); //2 symbols - number of atoms
     n=n+2;
-    kk=strtol(s.c_str(),NULL,10);
+    kk=strtol(s.c_str(),nullptr,10);
     for (i=0; i<kk; i++) {
       sa=new TSingleAtom();
       s=value.substr(n,1);
@@ -1293,27 +1297,27 @@ namespace OpenBabel {
       n=n+1;
       s=value.substr(n,4);
       n=n+4;
-      k=strtol(s.c_str(),NULL,10);
+      k=strtol(s.c_str(),nullptr,10);
       sa->rx=(double)k/10000.0;
       s=value.substr(n,4);
       n=n+4;
-      k=strtol(s.c_str(),NULL,10);
+      k=strtol(s.c_str(),nullptr,10);
       sa->ry=(double)k/10000.0;
       addAtom(sa);
     };
     s=value.substr(n,2);  //2 symbols - number of bonds
     n=n+2;
-    kk=strtol(s.c_str(),NULL,10);
+    kk=strtol(s.c_str(),nullptr,10);
     for (i=0; i<kk; i++) {
       sb=new TSingleBond();
       sb->tb=ANY_BOND;  //any bond
       s=value.substr(n,2);
       n=n+2;
-      k=strtol(s.c_str(),NULL,10);
+      k=strtol(s.c_str(),nullptr,10);
       sb->at[0]=k-1;
       s=value.substr(n,2);
       n=n+2;
-      k=strtol(s.c_str(),NULL,10);
+      k=strtol(s.c_str(),nullptr,10);
       sb->at[1]=k-1;
       addBond(sb);
     };
@@ -1360,7 +1364,7 @@ namespace OpenBabel {
       sb=source.getBond(i);
       fBond.push_back(sb->clone());
     };
-    if (refofs == NULL) refofs=source.refofs;
+    if (refofs == nullptr) refofs=source.refofs;
   };
 
   void TSimpleMolecule::deleteBond(int index) {
@@ -1374,7 +1378,7 @@ namespace OpenBabel {
         n++;
       } else {
         delete(getBond(i));
-        fBond[i]=NULL;
+        fBond[i]=nullptr;
       };
     fBond.resize(n);
     for (i=0; i<n; i++) fBond[i]=tempBond[i];
@@ -1394,7 +1398,7 @@ namespace OpenBabel {
         n++;
       } else {
         delete(getAtom(i));
-        fAtom[i]=NULL;
+        fAtom[i]=nullptr;
       };
     fAtom.resize(n);
     for (i=0; i<n; i++) fAtom[i]=tempAtom[i];
@@ -1404,7 +1408,7 @@ namespace OpenBabel {
     for (i=0; i<tempBond.size(); i++) {
       if ((getBond(i)->at[0] == index) || (getBond(i)->at[1] == index)) {
         delete(getBond(i));
-        fBond[i]=NULL;
+        fBond[i]=nullptr;
       } else {
         if (getBond(i)->at[0] > index) getBond(i)->at[0]=getBond(i)->at[0]-1;
         if (getBond(i)->at[1] > index) getBond(i)->at[1]=getBond(i)->at[1]-1;
@@ -2033,7 +2037,7 @@ namespace OpenBabel {
             (atomDefine[atomCycle[cN][atomCycle[cN].size() - 1]]==0);
         };
         //        {now first atom in the cycle definition list must be inserted into the priority list early, and the last atom-no}
-        for (j=0;j<atomCycle[cN].size()-maxAtDef; j++) {
+        for (j=0;currNumDef < atomClean && j<atomCycle[cN].size()-maxAtDef; j++) {
           //          for each undefined atom from selected cycle}
           //atom is added to priority list}
           dsATN[currNumDef]=atomCycle[cN][maxAtDef+j];
@@ -2568,7 +2572,7 @@ namespace OpenBabel {
               ux1=getAtom(dsNA1[i])->rx-ux;
               uy1=getAtom(dsNA1[i])->ry-uy;
               //coordinates of all atoms for the cycle under study are calculated}
-
+              if ((nb + i) > dsATN.size()) nb=dsATN.size()-i; // Check added to avoid segfault below, see issue #1851
               for (j=0; j<nb; j++) {
                 getAtom(dsATN[i+j-0])->rx=ux+ux1*cos((j+1)*fi)+uy1*sin((j+1)*fi);
                 getAtom(dsATN[i+j-0])->ry=uy-ux1*sin((j+1)*fi)+uy1*cos((j+1)*fi);
@@ -3076,7 +3080,7 @@ namespace OpenBabel {
       TSingleBond* dblbond = sm.getBond(i);
       if (dblbond->bstereo_refs.empty())
         continue;
-    
+
       an1 = dblbond->at[0];
       an2 = dblbond->at[1];
 
@@ -3123,7 +3127,7 @@ namespace OpenBabel {
     if ((a1 < 0) || (a2 < 0) || (a1 >= aeqList.size()) || (a2 >= aeqList.size())) return result;
     l1 = (std::vector<int> *)(aeqList.at(a1));
     l2 = (std::vector<int> *)(aeqList.at(a2));
-    if ((l1 == NULL) || (l2 == NULL)) return result;
+    if (l1 == nullptr || l2 == nullptr) return result;
     if (l1->size() != l2->size()) return result;
     result=true;
     for (i=0; i<l1->size(); i++) if ((*l1)[i] != (*l2)[i]) {
@@ -3334,7 +3338,7 @@ namespace OpenBabel {
   int TSimpleMolecule::correctOverlapped() {
     double r;
     TSimpleMolecule * smCopy=new TSimpleMolecule();
-    TSimpleMolecule * bestStore=NULL;
+    TSimpleMolecule * bestStore=nullptr;
     TSimpleMolecule * tmpStore = new TSimpleMolecule();
     int i, j, n, k, kk;
     bool test;
@@ -3477,9 +3481,9 @@ namespace OpenBabel {
       result=k;
     };
     //freeing resources
-    if (smCopy != NULL) delete(smCopy);
-    if (bestStore != NULL) delete(bestStore);
-    if (tmpStore != NULL) delete(tmpStore);
+    if (smCopy != nullptr) delete(smCopy);
+    if (bestStore != nullptr) delete(bestStore);
+    if (tmpStore != nullptr) delete(tmpStore);
 
     return result;
   };
@@ -3910,7 +3914,7 @@ namespace OpenBabel {
     std::vector<int> queryBQTested;
     std::vector<int>* fIncludedList;
     TEditedMolecule() : TSimpleMolecule() {
-      fIncludedList=NULL;
+      fIncludedList=nullptr;
 	  fIOPT10=false;
 	  fIOPT11=false;
 	  fIOPT13=true;
@@ -3966,8 +3970,8 @@ namespace OpenBabel {
     int l2=0;
     bool test;
     double r1,r2,r3,r4,emBLength;
-    TSingleAtom * sa=NULL;
-    TSingleBond * sb=NULL;
+    TSingleAtom * sa=nullptr;
+    TSingleBond * sb=nullptr;
     int result=0;
 
 
@@ -4395,10 +4399,10 @@ namespace OpenBabel {
     bool test;
     TSingleAtom * sa;
     TSingleBond * sb;
-    TEditedMolecule * result=NULL;
+    TEditedMolecule * result=nullptr;
 
     if ((atomN < 0) || (atomN >= nAtoms())) return result;
-    if (enumerator != NULL) for (i=0; i<nAtoms(); i++) (*enumerator)[i]=-1;
+    if (enumerator != nullptr) for (i=0; i<nAtoms(); i++) (*enumerator)[i]=-1;
     for (i=0; i<nAtoms(); i++) inverseList[i]=-1;
     test=makeFragment(list,atomN,-1);
 
@@ -4414,7 +4418,7 @@ namespace OpenBabel {
     for (i=0; i<list.size(); i++) {
         sa=this->getAtom(list[i])->clone();
         result->addAtom(sa);
-        if (enumerator != NULL) (*enumerator)[list[i]]=i;
+        if (enumerator != nullptr) (*enumerator)[list[i]]=i;
       }
     if (nBonds() > 0) for (i=0; i<nBonds(); i++)
                         if (inverseList[getBond(i)->at[0]] >= 0) {
@@ -4492,7 +4496,7 @@ namespace OpenBabel {
 
     //At this step memory was not allocated to: BK1,BEQ,AEQ. Realloction will be
     //required for three above temporary allocated arrays}
-    removeHydrogen(&queryQHydr,NULL);  //Connection is calculated inside RemoveHydr}
+    removeHydrogen(&queryQHydr,nullptr);  //Connection is calculated inside RemoveHydr}
     if (fIOPT13) atomBondChange();  //semipolar bond conversion
     defineBondConn(queryBK);
     //initial values
@@ -4628,12 +4632,12 @@ namespace OpenBabel {
     int i,j,i1;
     bool test,test1,test2;
 
-    if (qEnumerator != NULL) {
+    if (qEnumerator != nullptr) {
       if (qEnumerator->size() != nAtoms()) qEnumerator->resize(nAtoms());
       for (i=0; i<qEnumerator->size(); i++) (*qEnumerator)[i]=i;
     };
     for (i=0; i<nAtoms(); i++) {
-      if (qHydr != NULL) (*qHydr)[i]=0;
+      if (qHydr != nullptr) (*qHydr)[i]=0;
       if ((! fIOPT11) && (getAtom(i)->na==104)) getAtom(i)->na=1;
       //D->H if no isotop sensitivity}
     };
@@ -4654,18 +4658,18 @@ namespace OpenBabel {
             };
 
           deleteAtom(i);
-          if ((qHydr != NULL) && (i<(nAtoms()-1))) deleteIntElement(qHydr,i);
+          if (qHydr != nullptr && i < nAtoms() - 1) deleteIntElement(qHydr,i);
 
           if (i1>i)  i1=i1-1;
           //shift of attribute's arrays
-          if (qEnumerator != NULL) {
+          if (qEnumerator != nullptr) {
             for (j=0; j<qEnumerator->size(); j++) {
               if ((*qEnumerator)[j] == i) (*qEnumerator)[j]=-i1; else
                 if ((*qEnumerator)[j] > i)  (*qEnumerator)[j]=(*qEnumerator)[j]-1; else
                   if (((*qEnumerator)[j] < 0) && (abs((*qEnumerator)[j]) > i)) (*qEnumerator)[j]=(*qEnumerator)[j]+1;
             };
           };
-          if ((i1 > 0) && (qHydr != NULL)) (*qHydr)[i1]=(*qHydr)[i1]+1;
+          if (i1 > 0 && qHydr != nullptr) (*qHydr)[i1]=(*qHydr)[i1]+1;
           //counter of explicitly defined hydrogens
           i--;
         };
@@ -4674,7 +4678,7 @@ namespace OpenBabel {
     if (test1) {
       defineAtomConn();
       //Inverse enumerator creation... New QA->OldQA array}
-      if (qEnumerator != NULL) {
+      if (qEnumerator != nullptr) {
         //??? Is it required ?}
       };
     };
@@ -4752,7 +4756,7 @@ namespace OpenBabel {
     //     rated. This array is used for cyclic conditions definition (last bond in
     //     the cycle must be created between already-defined query atoms-no genera-
     //     tion).
-    //TEST-on output contains TRUE, if assignment was successfull, FALSE otherwise
+    //TEST-on output contains TRUE, if assignment was successful, FALSE otherwise
     //TEST1-on output contains TRUE if all bonds, connected to last assigned atom
     //      in structure will be tested, FALSE otherwise. If TEST1=TRUE and TEST=
     //      FALSE it means, that last atom in structure had been unproperly assigned
@@ -4843,7 +4847,7 @@ namespace OpenBabel {
     bool result=false;
     bool whiletest1,whiletest2;
 
-    if ((molecule1==NULL) || (! fIsQueryPrepare)) return result;
+    if (molecule1 == nullptr || !fIsQueryPrepare) return result;
     if (molecule1->nAtoms()==0) return result;
 
     if (molecule1->listarSize()>aSTested.size()) aSTested.resize(molecule1->listarSize());
@@ -4927,7 +4931,7 @@ namespace OpenBabel {
         };
     } else if (nBonds()==0) test2=false; else {
       //General case - substructure search
-      if (fIncludedList != NULL) {
+      if (fIncludedList != nullptr) {
         for (j=0; j<molecule1->nAtoms(); j++) for (k=0; k<nAtoms(); k++) aEQ[j][k]=false;
         for (k=0; k<nAtoms(); k++) {
           j=(*fIncludedList)[k];
@@ -5027,7 +5031,7 @@ namespace OpenBabel {
       };
     };
 
-    if ((bondLabel != NULL) && (nBonds()>0)) {
+    if (bondLabel != nullptr && nBonds() > 0) {
       bondLabel->resize(molecule1->nBonds());
       if (test2) for (j=0; j<molecule1->nBonds(); j++) if (bSTested[j]>=0) (*bondLabel)[j]=1; else (*bondLabel)[j]=0;
     };
@@ -5304,7 +5308,7 @@ namespace OpenBabel {
     int i,j,n,n1,n2,w;
     bool test;
 
-    if (atomList == NULL) {
+    if (atomList == nullptr) {
       for (i=0; i<sm->nAtoms(); i++) atomCleaned[i]=true;
     } else {
       for (i=0; i<sm->nAtoms(); i++) atomCleaned[i]=false;
@@ -5385,7 +5389,7 @@ namespace OpenBabel {
         };
     };
   };
-  
+
   void TemplateRedraw::rescaleSingleFragment(TSimpleMolecule * sm, std::vector<int>* atomList, PartFragmentDefinition& pf, double offset) {
     int i,n;
     double xMin,xMax,yMin,yMax;
@@ -5404,7 +5408,7 @@ namespace OpenBabel {
       if ((sm->getAtom(n)->ry > yMax) || (yMax == RUNDEF)) yMax=sm->getAtom(n)->ry;
     };
     // LPW: Nearly horizontal molecules were being scaled which resulted in
-    // some nonsensical structures.  This code ensures that coordinates with 
+    // some nonsensical structures.  This code ensures that coordinates with
     // "almost" horizontal or vertical geometries don't get scaled.
     bool Xeq = (fabs(xMax - xMin) < 0.01);
     bool Yeq = (fabs(yMax - yMin) < 0.01);
@@ -5638,7 +5642,7 @@ namespace OpenBabel {
 
   int TemplateRedraw::coordinatesPrepare(TEditedMolecule& sm, int kk, int anTemplateNo) {
 
-    TEditedMolecule * em=NULL;
+    TEditedMolecule * em=nullptr;
     int i, j, k, fragmentAN, templateAN;
     int atomClean;
     int bondClean;
@@ -5664,17 +5668,17 @@ namespace OpenBabel {
     result=-1;
 
 
-    for (i=kk; i<queryData.size(); i++) if ((TEditedMolecule *)queryData[i]->fragmentSearch(&sm,NULL)) {
+    for (i=kk; i<queryData.size(); i++) if ((TEditedMolecule *)queryData[i]->fragmentSearch(&sm,nullptr)) {
         em=(TEditedMolecule *)queryData[i];
         if (! internalBondsPresent(em,&sm)) {
           result=i+1;
           break;
         };
-        em=NULL;
+        em=nullptr;
       };
 
 
-    if (em == NULL) {
+    if (em == nullptr) {
       if (anTemplateNo >= 0) {
         sm.addAtom(6,0,0.0,0.0);
         sm.addBond(1,anTemplateNo,sm.nAtoms()-1);
@@ -5751,18 +5755,18 @@ namespace OpenBabel {
               test=true;
               emTemplate=new TEditedMolecule();
 			  if (tm.getBond(i)->at[1] < nFound) {
-				templateAN=tm.getBond(i)->at[0]; 
-				fragmentAN=tm.getBond(i)->at[1]; 
+				templateAN=tm.getBond(i)->at[0];
+				fragmentAN=tm.getBond(i)->at[1];
 			  } else {
 			    templateAN=tm.getBond(i)->at[1];
-				fragmentAN=tm.getBond(i)->at[0]; 
+				fragmentAN=tm.getBond(i)->at[0];
 			  }
               templateAtomNumber.push_back(tm.getAtom(templateAN)->enumerator);  //in template....
               fragmentAtomNumber.push_back(tm.getAtom(fragmentAN)->enumerator);
               tm.deleteBond(i);  //must be called prior extract fragment
               tm.defineAtomConn();
-              smFragment=tm.extractFragment(fragmentAN,NULL);
-              smRest=tm.extractFragment(templateAN,NULL);
+              smFragment=tm.extractFragment(fragmentAN,nullptr);
+              smRest=tm.extractFragment(templateAN,nullptr);
               tm.moleculeCopy(*smRest);
               //I have to delete unnecessary atoms and bond here...
               emTemplate->moleculeCopy(*smFragment);
@@ -5777,7 +5781,7 @@ namespace OpenBabel {
       atomClean=tm.nAtoms()-nFound;
       listAtomClean.resize(0);
       for (i=0; i<atomClean; i++) listAtomClean.push_back(nFound+i);
-      
+
       vector<int> listBondClean;
       bondClean=0;
       for (i=0; i<tm.nBonds(); i++) {
@@ -5895,7 +5899,7 @@ namespace OpenBabel {
           n=atomList[j];
           atomTested[n]=1;
         };
-        sm=smCopy.extractFragment(i,NULL);
+        sm=smCopy.extractFragment(i,nullptr);
         sm->defineAtomConn();
         if ((i == 0) && (sm->nAtoms() == 1)) testSingleAtom=true;
         molList.push_back(sm);
@@ -5983,7 +5987,7 @@ namespace OpenBabel {
       pf->fragID1=0;
       pf->fragID2=0;
       pf->fragID3=0;
-      pf->fragFirstAtomNo=nA+1;
+      pf->fragFirstAtomNo=nA; // Was nA+1, lead to off-by-one problems with fragments
       pf->fragmentCount=1;
       pf->fragWidth=xMax-xMin;
       pf->fragHeight=yMax-yMin;
@@ -6048,7 +6052,7 @@ namespace OpenBabel {
     1. All atoms, except explicit hydrogens, are replaced with generic ANY_ATOM (matched with any atom in subgraph isomorphisme search)
     2. All bonds are replaces with generic ANY_BOND, which can be matched with any bond in molecule
     3. All hydrogen are removed, but they are used for search-query and structure atom matching is believed fo be
-    sucessfukk if chemical structure contains more or equal number of hydrogens, than query. Using explicitly-defined hydrogens
+    successful if chemical structure contains more or equal number of hydrogens, than query. Using explicitly-defined hydrogens
     on query enables ones to remove substitutors attachment for atom, which are sterically hidden on templates
     if the file will not be found, predefined templates will be used
   */
@@ -6115,7 +6119,7 @@ namespace OpenBabel {
     sm.defineAtomConn();
     sm.allAboutCycles();
 
-    result=em.fragmentSearch(&sm,NULL);
+    result=em.fragmentSearch(&sm,nullptr);
     return result;
   };
 
@@ -6155,7 +6159,7 @@ namespace OpenBabel {
     sm.defineAtomConn();
     sm.allAboutCycles();
 
-    result=em.fragmentSearch(&sm,NULL);
+    result=em.fragmentSearch(&sm,nullptr);
     return result;
   };
 

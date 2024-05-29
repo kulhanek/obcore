@@ -18,15 +18,19 @@ GNU General Public License for more details.
 ***********************************************************************/
 
 #include <openbabel/mol.h>
+#include <openbabel/bond.h>
+#include <openbabel/ring.h>
 #include <openbabel/alias.h>
-#include <openbabel/atomclass.h>
+#include <openbabel/generic.h>
 #include <openbabel/depict/depict.h>
 #include <openbabel/depict/painter.h>
+#include <openbabel/elements.h>
 #include <algorithm> // std::reverse
 #include <iterator> // std::istream_iterator
 #include <openbabel/stereo/stereo.h>
 #include <openbabel/stereo/cistrans.h>
 #include <openbabel/obiter.h>
+#include <openbabel/obfunctions.h>
 
 #include <cmath>
 
@@ -49,7 +53,7 @@ namespace OpenBabel
   class OBDepictPrivate
   {
     public:
-      OBDepictPrivate() : mol(0), painter(0), bondLength(40.0), penWidth(2.0),
+      OBDepictPrivate() : mol(nullptr), painter(nullptr), bondLength(40.0), penWidth(2.0),
           bondSpacing(6.0), bondWidth(8.0), fontSize(16), subscriptSize(13),
           aliasMode(false), bondColor("black"), options(0){}
       virtual ~OBDepictPrivate(){};
@@ -126,7 +130,7 @@ namespace OpenBabel
   OBDepict::~OBDepict()
   {
     delete d->mol;
-    d->mol = NULL;
+    d->mol = nullptr;
     delete d;
   }
 
@@ -246,7 +250,7 @@ namespace OpenBabel
 
     const double bias = -0.1; //towards left-alignment, which is more natural
     int alignment = 0;
-    if ((atom->GetValence() == 2) && (abs(direction.y()) > abs(direction.x()))) {
+    if ((atom->GetExplicitDegree() == 2) && (abs(direction.y()) > abs(direction.x()))) {
       if (direction.y() <= 0.0)
         alignment = Up;
       else
@@ -343,7 +347,7 @@ namespace OpenBabel
       else
         painter->SetPenColor(bondColor);
 
-      DrawRingBond(begin, end, center, ringBond->GetBO());
+      DrawRingBond(begin, end, center, ringBond->GetBondOrder());
       drawnBonds.SetBitOn(ringBond->GetId());
     }
   }
@@ -353,18 +357,33 @@ namespace OpenBabel
     DrawRing(ring, drawnBonds);
   }
 
+  enum Radical { NOT_RADICAL, ONE_DOT, TWO_DOT };
+
+  // Assign 0, 1, or 2 radical dots
+  // - if spin is specified, then this determines the number of dots
+  // - otherwise, the degree of undervalence determines it
+  static Radical AssignRadicalDots(OBAtom* atom)
+  {
+    unsigned int spin = atom->GetSpinMultiplicity();
+    if (spin)
+      return spin == 2 ? TWO_DOT : ONE_DOT;
+
+    unsigned int actualvalence = atom->GetTotalValence();
+    unsigned int typicalvalence = GetTypicalValence(atom->GetAtomicNum(), actualvalence, atom->GetFormalCharge());
+    int diff = typicalvalence - actualvalence;
+    if (diff <= 0)
+      return NOT_RADICAL;
+    return diff == 2 ? TWO_DOT : ONE_DOT;
+  }
+
   bool OBDepict::DrawMolecule(OBMol *mol)
   {
     if (!d->painter)
       return false;
 
-    if (d->mol != NULL)
+    if (d->mol != nullptr)
       delete d->mol;
     d->mol = new OBMol(*mol); // Copy it
-
-    OBAtomClassData* pac = NULL;
-    if(mol->HasData("Atom Class"))
-      pac = static_cast<OBAtomClassData*>(mol->GetData("Atom Class"));
 
     double width=0.0, height=0.0;
 
@@ -385,7 +404,30 @@ namespace OpenBabel
       for (OBBond *bond = mol->BeginBond(j); bond; bond = mol->NextBond(j))
         bondLengthSum += bond->GetLength();
       const double averageBondLength = bondLengthSum / mol->NumBonds();
-      const double f = mol->NumBonds() ? d->bondLength / averageBondLength : 1.0;
+      double f;
+      if(mol->NumBonds()>0) {
+        f = d->bondLength / averageBondLength;
+      } else if(mol->NumAtoms()>1){
+        /* In molecules without bonds but more than one atom,
+           use the minimum atom distance as a substitute for average bond length. */
+        f = DBL_MAX;
+        OBAtomIterator i2;
+        OBAtom *atom2;
+        vector3 a1pos;
+        double currdist;
+        for (atom = d->mol->BeginAtom(i); atom; atom = d->mol->NextAtom(i)) {
+          a1pos = atom->GetVector();
+          for (atom2 = d->mol->BeginAtom(i2); atom2; atom2 = d->mol->NextAtom(i2)) {
+            if(atom != atom2) {
+              currdist = a1pos.distSq(atom2->GetVector());
+              if(currdist < f && currdist != 0)
+                f = currdist;
+            }
+          }
+        }
+        f = d->bondLength / sqrt(f);
+      } else
+        f = 1.0;
       for (atom = d->mol->BeginAtom(i); atom; atom = d->mol->NextAtom(i))
         atom->SetVector(atom->GetX() * f, - atom->GetY() * f, atom->GetZ());
 
@@ -394,7 +436,7 @@ namespace OpenBabel
       double min_y, max_y;
       double min_z, max_z;
       atom = d->mol->BeginAtom(i);
-      if (atom != NULL) {
+      if (atom != nullptr) {
         min_x = max_x = atom->GetX();
         min_y = max_y = atom->GetY();
         min_z = max_z = atom->GetZ();
@@ -482,7 +524,7 @@ namespace OpenBabel
           if (!ct->GetConfig().specified)
             crossed_dbl_bond = true;
         }
-        d->DrawSimpleBond(begin, end, bond->GetBO(), crossed_dbl_bond);
+        d->DrawSimpleBond(begin, end, bond->GetBondOrder(), crossed_dbl_bond);
       }
     }
 
@@ -534,13 +576,16 @@ namespace OpenBabel
         d->painter->SetPenColor(OBColor(atom->GetData("color")->GetValue()));
       else if(d->options & bwAtoms)
         d->painter->SetPenColor(d->bondColor);
-      else
-        d->painter->SetPenColor(OBColor(etab.GetRGB(atom->GetAtomicNum())));
+      else {
+        double r, g, b;
+        OBElements::GetRGB(atom->GetAtomicNum(), &r, &g, &b);
+        d->painter->SetPenColor(OBColor(r, g, b));
+      }
 
       //charge and radical
       int charge = atom->GetFormalCharge();
-      int spin = atom->GetSpinMultiplicity();
-      if(charge || spin) {
+      Radical radical = AssignRadicalDots(atom); // none, one or two
+      if(charge || radical != NOT_RADICAL) {
         OBFontMetrics metrics = d->painter->GetFontMetrics("N");
         double yoffset = d->HasLabel(atom) ? -0.2 * metrics.height : -0.2 * metrics.height;
         /*switch (GetLabelAlignment(atom)) {
@@ -564,54 +609,67 @@ namespace OpenBabel
           }
         }
         d->painter->DrawText(x + 0.4*metrics.width, y+yoffset, ss.str());
-        if(spin) {
-          string radchars = (spin==2 ? "." : "..");
-          //yoffset += 0.5 * metrics.height;
+        if (radical != NOT_RADICAL) {
+          string radchars;
+          radchars = radical == ONE_DOT ? "." : "..";
           d->painter->SetFontSize(2 * metrics.fontSize);
           d->painter->DrawText(x + (0.4 + ss.str().size())*metrics.width,
-            y+yoffset, radchars);
+            y + yoffset, radchars);
         }
         d->painter->SetFontSize(metrics.fontSize);//restore
       }
 
-      if (atom->IsCarbon()) {
+      if (atom->GetAtomicNum() == OBElements::Carbon) {
         if(!(d->options & drawAllC))
         {
-          if (atom->GetValence() > 1)
+          if (atom->GetExplicitDegree() > 1)
             continue;
-          if ((atom->GetValence() == 1) && !(d->options & drawTermC))//!d->drawTerminalC)
+          if ((atom->GetExplicitDegree() == 1) && !(d->options & drawTermC))//!d->drawTerminalC)
             continue;
         }
       }
 
+      bool written = false;
       stringstream ss;
-      AliasData* ad = NULL;
-      if(d->aliasMode && atom->HasData(AliasDataType))
-        ad = static_cast<AliasData*>(atom->GetData(AliasDataType));
 
       //For unexpanded aliases use appropriate form of alias instead of element symbol, Hs, etc
+      AliasData* ad = nullptr;
+      if (d->aliasMode && atom->HasData(AliasDataType))
+        ad = static_cast<AliasData*>(atom->GetData(AliasDataType));
       if(ad && !ad->IsExpanded())
       {
         ss <<ad->GetAlias(rightAligned);
         OBColor aliasColor = !ad->GetColor().empty() ? ad->GetColor() : d->bondColor;
           d->painter->SetPenColor(aliasColor);
+        written = true;
       }
 
-      //Atoms with no AliasData, but 0 atomic num and atomclass==n are output as Rn
-      else if(pac && atom->GetAtomicNum()==0 && pac->HasClass(atom->GetIdx()))
-      {
-        ss << 'R' << pac->GetClass(atom->GetIdx());
-        d->painter->SetPenColor(OBColor("black"));
+      if (!written) {
+        //Atoms with no AliasData, but 0 atomic num and atomclass==n are output as Rn
+        if (atom->GetAtomicNum()==0) {
+          OBGenericData *data = atom->GetData("Atom Class");
+          if (data) {
+            OBPairInteger* acdata = dynamic_cast<OBPairInteger*>(data); // Could replace with C-style cast if willing to live dangerously
+            if (acdata) {
+              int ac = acdata->GetGenericValue();
+              if (ac >= 0) {
+                ss << 'R' << ac;
+                d->painter->SetPenColor(OBColor("black"));
+                written = true;
+              }
+            }
+          }
+        }
       }
 
-      else {
+      if (!written) {
         const char* atomSymbol;
-        if(atom->IsHydrogen() && atom->GetIsotope()>1)
+        if(atom->GetAtomicNum() == OBElements::Hydrogen && atom->GetIsotope()>1)
           atomSymbol = atom->GetIsotope()==2 ? "D" : "T";
         else
-          atomSymbol = etab.GetSymbol(atom->GetAtomicNum());
+          atomSymbol = OBElements::GetSymbol(atom->GetAtomicNum());
 
-        unsigned int hCount = atom->ImplicitHydrogenCount();
+        unsigned int hCount = atom->GetImplicitHCount();
         // LPW: The allExplicit option will omit the drawing of extra hydrogens
         // to fill the valence.
         if((d->options & allExplicit))
@@ -748,9 +806,9 @@ namespace OpenBabel
       bool useAsymmetricDouble = options & OBDepict::asymmetricDoubleBond;
       if (HasLabel(beginAtom) && HasLabel(endAtom))
         useAsymmetricDouble = false;
-      if (HasLabel(beginAtom) && endAtom->GetValence() == 3)
+      if (HasLabel(beginAtom) && endAtom->GetExplicitDegree() == 3)
         useAsymmetricDouble = false;
-      if (HasLabel(endAtom) && beginAtom->GetValence() == 3)
+      if (HasLabel(endAtom) && beginAtom->GetExplicitDegree() == 3)
         useAsymmetricDouble = false;
       if (crossed_dbl_bond)
         useAsymmetricDouble = false; // The bond looks very strange otherwise in the case of cis
@@ -979,9 +1037,9 @@ namespace OpenBabel
 
   bool OBDepictPrivate::HasLabel(OBAtom *atom)
   {
-    if (!atom->IsCarbon())
+    if (atom->GetAtomicNum() != OBElements::Carbon)
       return true;
-    if ((options & OBDepict::drawAllC) || ((options & OBDepict::drawTermC) && (atom->GetValence() == 1)))
+    if ((options & OBDepict::drawAllC) || ((options & OBDepict::drawTermC) && (atom->GetExplicitDegree() == 1)))
       return true;
     return false;
   }
@@ -990,8 +1048,8 @@ namespace OpenBabel
   {
     // Remove any existing wedge and hash bonds
     FOR_BONDS_OF_MOL(b,mol)  {
-      b->UnsetWedge();
-      b->UnsetHash();
+      b->SetWedge(false);
+      b->SetHash(false);
     }
 
     std::map<OBBond*, enum OBStereo::BondDirection> updown;
@@ -1013,6 +1071,23 @@ namespace OpenBabel
     const vector3 begin = beginAtom->GetVector();
     const vector3 end = endAtom->GetVector();
     const vector3 vb = (end - begin).normalize();
+
+    // calculate the expected opacity and width
+    // to simulate perspective
+    penWidth = 3.0;
+    bondColor.alpha = 1.0;
+
+    if (fabs(zScale) > 1.0e-1) {
+      double beginAtomScale = (beginAtom->GetZ() - zMin) / zScale;
+      double endAtomScale = (endAtom->GetZ() - zMin) / zScale;
+      double averageScale = (beginAtomScale + endAtomScale)/2.0;
+      if (averageScale < 0.15)
+        averageScale = 0.15;
+
+      penWidth = 3.0 * averageScale;
+      bondColor.alpha = averageScale;
+    }
+    painter->SetPenWidth(penWidth);
 
     if (order == 1) {
       painter->DrawLine(begin.x(), begin.y(), end.x(), end.y());
@@ -1120,12 +1195,29 @@ OBBitVec& drawnBonds)
 
       OBBond *ringBond = mol->GetBond(begin, end);
 
+      // calculate the expected opacity and width
+      // to simulate perspective
+      penWidth = 3.0;
+      bondColor.alpha = 1.0;
+
+      if (fabs(zScale) > 1.0e-1) {
+        double beginAtomScale = (begin->GetZ() - zMin) / zScale;
+        double endAtomScale = (end->GetZ() - zMin) / zScale;
+        double averageScale = (beginAtomScale + endAtomScale)/2.0;
+        if (averageScale < 0.15)
+          averageScale = 0.15;
+
+        penWidth = 3.0 * averageScale;
+        bondColor.alpha = averageScale;
+      }
+      painter->SetPenWidth(penWidth);
+
       if((options & OBDepict::internalColor) && ringBond->HasData("color"))
         painter->SetPenColor(OBColor(ringBond->GetData("color")->GetValue()));
       else
         painter->SetPenColor(bondColor);
 
-      DrawAromaticRingBond(prev,begin, end, next, center, maxdist * 1.2);
+      DrawAromaticRingBond(prev,begin, end, next, center, maxdist);
       drawnBonds.SetBitOn(ringBond->GetId());
     }
   }
@@ -1137,31 +1229,27 @@ OBBitVec& drawnBonds)
     const vector3 end   = endAtom->GetVector();
     const vector3 next  = nextAtom->GetVector();
 
-    const vector3 b1 = (prev- begin).normalize();
-    const vector3 b2 = (end - begin).normalize();
-    const vector3 b_med = (b1 + b2);
-    const vector3 orthogonalLine = cross(b2, VZ).normalize();
-    const double brestrict = dot(orthogonalLine, b_med);
-    const double bd = brestrict? dist/abs(brestrict):dist;
-    const vector3 b_arom = begin + b_med * bd;
+    const vector3 orthogonalLine = cross(end - begin, VZ).normalize();
+    const vector3 offset = orthogonalLine * 0.5 * bondSpacing;
+    painter->DrawLine(begin.x() - offset.x(), begin.y() - offset.y(),
+                      end.x() - offset.x(), end.y() - offset.y());
 
-    const vector3 b3 = (next - end).normalize();
-    const vector3 e_med = (b3 - b2);
-    const double erestrict = dot(orthogonalLine, e_med);
-    const double ed = erestrict? dist/abs(erestrict):dist;
-    const vector3 e_arom = end + e_med * ed;
-
-    painter->DrawLine(begin.x(), begin.y(), end.x(), end.y());
     static const float dashpattern[] = {5., 5.};
     static const vector<double> pat = vector<double>(dashpattern,dashpattern + sizeof(dashpattern)/sizeof(double));
-    painter->DrawLine(b_arom.x(), b_arom.y(), e_arom.x(), e_arom.y(), pat);
+    painter->DrawLine(begin.x() + offset.x(), begin.y() + offset.y(),
+                      end.x() + offset.x(), end.y() + offset.y(), pat);
   }
 
   void OBDepictPrivateBallAndStick::DrawAtom(OBAtom *atom)
   {
-    OBColor atomColor = etab.GetRGB(atom->GetAtomicNum());
-    // TODO: enable opacity as an option
+    double r, g, b;
+    OBElements::GetRGB(atom->GetAtomicNum(), &r, &g, &b);
+    OBColor atomColor = OBColor(r, g, b);
     double opacity = 1.0;
+    if (fabs(zScale) > 1.0e-1)
+      opacity = sqrt((atom->GetZ() - zMin) / zScale);
+    if (opacity < 0.2)
+      opacity = 0.2;
 
     painter->SetFillRadial(OBColor("white"),atomColor);
     painter->DrawBall(atom->GetVector().x(), atom->GetVector().y(),GetAtomRadius(atom), opacity);
@@ -1169,14 +1257,14 @@ OBBitVec& drawnBonds)
 
   double OBDepictPrivateBallAndStick::GetAtomRadius(OBAtom *atom)
   {
-    double radius = etab.GetCovalentRad(atom->GetAtomicNum());
+    double radius = OBElements::GetCovalentRad(atom->GetAtomicNum());
     double perspective = 1.0;
     if (fabs(zScale) > 1.0e-1)
       perspective = (atom->GetZ() - zMin) / zScale;
     if (perspective < 0.5)
       perspective = 0.5;
 
-    return perspective * radius * bondLength / 3.0;
+    return perspective * radius * bondLength / 1.1;
   }
 
   void OBDepictPrivateBallAndStick::DrawAtomLabel(const std::string &label, int alignment, const vector3 &pos)

@@ -14,6 +14,14 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
+
 
 #define RYDBERG_TO_KCAL_PER_MOL 313.755026
 #define RYDBERG_TO_ELECTRON_VOLT 13.60569193
@@ -73,7 +81,7 @@ namespace OpenBabel {
   bool PWscfFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -210,7 +218,7 @@ namespace OpenBabel {
         tokenize(vs, buffer);
         int size = vs.size();
         while (size == 4) {
-          atomicNum = etab.GetAtomicNum(vs[0].c_str());
+          atomicNum = OBElements::GetAtomicNum(vs[0].c_str());
           x = atof((char*)vs[1].c_str());
           y = atof((char*)vs[2].c_str());
           z = atof((char*)vs[3].c_str());

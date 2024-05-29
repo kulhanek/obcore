@@ -16,6 +16,12 @@ GNU General Public License for more details.
 
 #include <openbabel/math/matrix3x3.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/data.h>
+#include <cstdlib>
+
 
 using namespace std;
 namespace OpenBabel
@@ -67,7 +73,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -83,7 +89,7 @@ namespace OpenBabel
   bool CHEM3D1Format::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -136,7 +142,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -152,7 +158,7 @@ namespace OpenBabel
   bool CHEM3D2Format::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -247,16 +253,21 @@ namespace OpenBabel
         ttab.Translate(tmp1,tmp);
         atom->SetType(tmp1);
         atom->SetVector(v);
-        atom->SetAtomicNum(etab.GetAtomicNum(atomic_type));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(atomic_type));
 
         for (k = 6;k < vs.size(); k++)
           mol.AddBond(atom->GetIdx(),atoi((char*)vs[k].c_str()),1);
       }
 
     // clean out remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     mol.PerceiveBondOrders();
 
@@ -294,10 +305,10 @@ namespace OpenBabel
                      mol_typ,atom->GetIdx(),atom->GetType());
             obErrorLog.ThrowError(__FUNCTION__, buffer, obInfo);
             atnum = atom->GetAtomicNum();
-            type_num = atnum * 10 + atom->GetValence();
+            type_num = atnum * 10 + atom->GetExplicitDegree();
             snprintf(type_name, sizeof(type_num), "%d",type_num);
           }
-        strncpy(ele_type, etab.GetSymbol(atom->GetAtomicNum()), sizeof(ele_type));
+        strncpy(ele_type, OBElements::GetSymbol(atom->GetAtomicNum()), sizeof(ele_type));
         ele_type[sizeof(ele_type) - 1] = '\0';
         snprintf(buffer, BUFF_SIZE, "%-3s %-5d %8.4f  %8.4f  %8.4f %5s",
                 ele_type,

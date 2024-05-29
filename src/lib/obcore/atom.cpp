@@ -20,11 +20,19 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/atom.h>
-#include <openbabel/stereo/stereo.h>
+#include <openbabel/bond.h>
 #include <openbabel/mol.h>
+#include <openbabel/obiter.h>
+#include <openbabel/generic.h>
 #include <openbabel/molchrg.h>
+#include <openbabel/ring.h>
 #include <openbabel/phmodel.h>
 #include <openbabel/builder.h>
+#include <openbabel/elements.h>
+#include <openbabel/chains.h>
+#include <openbabel/obutil.h>
+#include <openbabel/residue.h>
+#include <openbabel/chains.h>
 
 #include <openbabel/math/matrix3x3.h>
 
@@ -34,9 +42,10 @@ extern "C" int strncasecmp(const char *s1, const char *s2, size_t n);
 
 using namespace std;
 
+
 namespace OpenBabel
 {
-
+  OB_EXTERN OBChainsParser chainsparser;
   /** \class OBAtom atom.h <openbabel/atom.h>
       \brief Atom class
 
@@ -95,9 +104,10 @@ namespace OpenBabel
       \endcode
   */
 
-  extern OBAromaticTyper  aromtyper;
-  extern OBAtomTyper      atomtyper;
-  extern OBPhModel        phmodel;
+  extern THREAD_LOCAL OBAromaticTyper  aromtyper;
+  extern THREAD_LOCAL OBAtomTyper      atomtyper;
+  extern THREAD_LOCAL OBPhModel        phmodel;
+  OB_EXTERN OBTypeTable      ttab;
 
   //
   // OBAtom member functions
@@ -105,13 +115,13 @@ namespace OpenBabel
 
   OBAtom::OBAtom()
   {
-    _parent = (OBMol*)NULL;
+    _parent = nullptr;
     Clear();
   }
 
   OBAtom::~OBAtom()
   {
-    if (_residue != NULL)
+    if (_residue != nullptr)
       {
         _residue->RemoveAtom(this);
       }
@@ -128,7 +138,7 @@ namespace OpenBabel
 
   bool OBAtom::Clear()
   {
-    _c = (double**)NULL;
+    _c = nullptr;
     _cidx = 0;
     _flags=0;
     _idx = 0;
@@ -136,13 +146,13 @@ namespace OpenBabel
     _ele = (char)0;
     _isotope = 0;
     _spinmultiplicity=0; // CM 18 Sept 2003
-    _impval = 0;
+    _imph = 0;
     _fcharge = 0;
     _type[0] = '\0';
     _pcharge = 0.0;
     _vbond.clear();
     _vbond.reserve(4);
-    _residue = (OBResidue*)NULL;
+    _residue = nullptr;
     _id = NoId;
 
     return(OBBase::Clear());
@@ -164,18 +174,19 @@ namespace OpenBabel
     if (!src)
       return;
 
-    _hyb = src->GetHyb();
-    _ele = src->GetAtomicNum();
-    _isotope = src->GetIsotope();
-    _fcharge = src->GetFormalCharge();
-    _spinmultiplicity = src->GetSpinMultiplicity();
-    strncpy(_type,src->GetType(), sizeof(_type) - 1);
+    _hyb = src->_hyb;
+    _ele = src->_ele;
+    _imph = src->_imph;
+    _isotope = src->_isotope;
+    _fcharge = src->_fcharge;
+    _spinmultiplicity = src->_spinmultiplicity;
+    strncpy(_type,src->_type, sizeof(_type) - 1);
     _type[sizeof(_type) - 1] = '\0';
-    _pcharge = src->GetPartialCharge();
+    _pcharge = src->_pcharge;
     _v = src->GetVector();
-    _flags = src->GetFlag();
-    _residue = (OBResidue*)NULL;
-    _id = src->GetId();
+    _flags = src->_flags;
+    _residue = nullptr;
+    _id = src->_id;
 
     _vdata.clear();
     //Copy all the OBGenericData, providing the new atom
@@ -266,9 +277,9 @@ namespace OpenBabel
     OBBondIterator i,j;
 
     for (a1 = BeginNbrAtom(i);a1;a1 = NextNbrAtom(i))
-      if (includePandS || (!a1->IsPhosphorus() && !a1->IsSulfur()))
+      if (includePandS || (a1->GetAtomicNum() != OBElements::Phosphorus && a1->GetAtomicNum() != OBElements::Sulfur))
         for (a2 = a1->BeginNbrAtom(j);a2;a2 = a1->NextNbrAtom(j))
-          if (a2 != this && ((*j)->GetBO() == 2 || (*j)->GetBO() == 3 || (*j)->GetBO() == 5))
+          if (a2 != this && ((*j)->GetBondOrder() == 2 || (*j)->GetBondOrder() == 3 || (*j)->GetBondOrder() == 5))
             return(true);
 
     return(false);
@@ -279,7 +290,7 @@ namespace OpenBabel
     OBBond *bond;
     OBBondIterator i;
     for (bond = BeginBond(i);bond;bond = NextBond(i))
-      if (bond->GetBO() == order)
+      if (bond->GetBondOrder() == order)
         return(true);
 
     return(false);
@@ -291,7 +302,7 @@ namespace OpenBabel
     OBBond *bond;
     OBBondIterator i;
     for (bond = BeginBond(i);bond;bond = NextBond(i))
-      if (bond->GetBO() == order)
+      if (bond->GetBondOrder() == order)
         count++;
 
     return(count);
@@ -299,12 +310,12 @@ namespace OpenBabel
 
   int OBAtom::HighestBondOrder()
   {
-    int highest = 0;
+    unsigned int highest = 0;
     OBBond *bond;
     OBBondIterator i;
     for(bond = BeginBond(i); bond; bond = NextBond(i))
-      if(bond->GetBO() > highest)
-        highest = bond->GetBO();
+      if(bond->GetBondOrder() > highest)
+        highest = bond->GetBondOrder();
 
     return(highest);
   }
@@ -314,7 +325,7 @@ namespace OpenBabel
     OBBond *bond;
     OBBondIterator i;
     for (bond = BeginBond(i);bond;bond = NextBond(i))
-      if (bond->GetBO() != 1)
+      if (bond->GetBondOrder() != 1)
         return(true);
 
     return(false);
@@ -322,7 +333,7 @@ namespace OpenBabel
 
   bool OBAtom::IsPolarHydrogen()
   {
-    if (!IsHydrogen())
+    if (GetAtomicNum() != OBElements::Hydrogen)
       return(false);
 
     OBAtom *atom;
@@ -346,7 +357,7 @@ namespace OpenBabel
 
   bool OBAtom::IsNonPolarHydrogen()
   {
-    if (!IsHydrogen())
+    if (GetAtomicNum() != OBElements::Hydrogen)
       return(false);
 
     OBAtom *atom;
@@ -429,59 +440,29 @@ namespace OpenBabel
 
   void OBAtom::SetIsotope(unsigned int iso)
   {
-    if (_ele == 1 && iso == 2)
-      SetType("D");
-    else if (_ele == 1 && (iso == 1 || iso == 0))
-      SetType("H");
-
     _isotope = iso;
-  }
-
-  OBAtom *OBAtom::GetNextAtom()
-  {
-    OBMol *mol = (OBMol*)GetParent();
-    return(((unsigned)GetIdx() == mol->NumAtoms())? NULL : mol->GetAtom(GetIdx()+1));
   }
 
   OBResidue *OBAtom::GetResidue()
   {
-    return GetResidue(true); // default is to always perceive chains
-  }
+    OBMol *mol = this->GetParent();
+    if (!mol->HasChainsPerceived())
+      chainsparser.PerceiveChains(*mol);
 
-  OBResidue *OBAtom::GetResidue(bool perception)
-  {
-    if (_residue != NULL)
-      return _residue;
-    else if (perception && !((OBMol*)GetParent())->HasChainsPerceived())
-      {
-        ((OBMol*)GetParent())->SetChainsPerceived();
-        if ( chainsparser.PerceiveChains(*((OBMol*)GetParent())) )
-          return _residue;
-        else
-          {
-            if (_residue)
-              {
-                delete _residue;
-                _residue = NULL;
-              }
-            return NULL;
-          }
-      }
-    else
-      return NULL;
+    return _residue;
   }
 
   double OBAtom::GetAtomicMass() const
   {
     if (_isotope == 0)
-      return etab.GetMass(_ele);
+      return OBElements::GetMass(_ele);
     else
-      return isotab.GetExactMass(_ele, _isotope);
+      return OBElements::GetExactMass(_ele, _isotope);
   }
 
   double OBAtom::GetExactMass() const
   {
-    return isotab.GetExactMass(_ele, _isotope);
+    return OBElements::GetExactMass(_ele, _isotope);
   }
 
   char *OBAtom::GetType()
@@ -511,22 +492,6 @@ namespace OpenBabel
     return(_type);
   }
 
-  unsigned int OBAtom::GetImplicitValence() const
-  {
-    //Special case for [H] to avoid infite loop: SMARTS Match() <-> AssignSpinMultiplicity()
-    if(GetAtomicNum() == 1) {
-      unsigned int val = GetValence();
-      if (val == 0 && GetFormalCharge() == 0 && GetSpinMultiplicity() == 0)
-        return 1;
-      return val;
-    }
-    OBMol *mol = (OBMol*)((OBAtom*)this)->GetParent();
-    if (mol && !mol->HasImplicitValencePerceived())
-      atomtyper.AssignImplicitValence(*((OBMol*)((OBAtom*)this)->GetParent()));
-
-    return((unsigned int)_impval);
-  }
-
   unsigned int OBAtom::GetHyb() const
   {
     //hybridization is assigned when atoms are typed
@@ -538,20 +503,20 @@ namespace OpenBabel
   }
 
 
-  unsigned int OBAtom::GetHvyValence() const
+  unsigned int OBAtom::GetHvyDegree() const
   {
     unsigned int count=0;
 
     OBBond *bond;
     OBBondIterator i;
     for (bond = ((OBAtom*)this)->BeginBond(i); bond; bond = ((OBAtom*)this)->NextBond(i))
-      if (!(bond->GetNbrAtom((OBAtom*)this)->IsHydrogen()))
+      if (bond->GetNbrAtom((OBAtom*)this)->GetAtomicNum() != OBElements::Hydrogen)
         count++;
 
     return(count);
   }
 
-  unsigned int OBAtom::GetHeteroValence() const
+  unsigned int OBAtom::GetHeteroDegree() const
   {
     unsigned int count=0;
     OBBond *bond;
@@ -590,7 +555,7 @@ namespace OpenBabel
   //! Returns true if nitrogen is part of an amide
   bool OBAtom::IsAmideNitrogen()
   {
-    if (!IsNitrogen())
+    if (GetAtomicNum() != OBElements::Nitrogen)
       return(false);
 
     OBAtom *nbratom,*atom;
@@ -602,7 +567,7 @@ namespace OpenBabel
       {
         nbratom = bond->GetNbrAtom(atom);
         for (abbond = nbratom->BeginBond(j);abbond;abbond = nbratom->NextBond(j))
-          if (abbond->GetBO() == 2 &&
+          if (abbond->GetBondOrder() == 2 &&
               (((abbond->GetNbrAtom(nbratom))->GetAtomicNum() == 8) ||
                ((abbond->GetNbrAtom(nbratom))->GetAtomicNum() == 16)))
             return(true);
@@ -613,14 +578,14 @@ namespace OpenBabel
 
   bool OBAtom::IsAromaticNOxide()
   {
-    if (!IsNitrogen() || !IsAromatic())
+    if (GetAtomicNum() != OBElements::Nitrogen || !IsAromatic())
       return(false);
 
     OBAtom *atom;
     OBBondIterator i;
 
     for (atom = BeginNbrAtom(i);atom;atom = NextNbrAtom(i))
-      if (atom->IsOxygen() && !(*i)->IsInRing() && (*i)->GetBO() == 2)
+      if (atom->GetAtomicNum() == OBElements::Oxygen && !(*i)->IsInRing() && (*i)->GetBondOrder() == 2)
         return(true);
 
     return(false);
@@ -628,18 +593,18 @@ namespace OpenBabel
 
   bool OBAtom::IsCarboxylOxygen()
   {
-    if (!IsOxygen())
+    if (GetAtomicNum() != OBElements::Oxygen)
       return(false);
-    if (GetHvyValence() != 1)
+    if (GetHvyDegree() != 1)
       return(false);
 
     OBAtom *atom;
     OBBond *bond;
     OBBondIterator i;
 
-    atom = NULL;
+    atom = nullptr;
     for (bond = BeginBond(i);bond;bond = NextBond(i))
-      if ((bond->GetNbrAtom(this))->IsCarbon())
+      if ((bond->GetNbrAtom(this))->GetAtomicNum() == OBElements::Carbon)
         {
           atom = bond->GetNbrAtom(this);
           break;
@@ -657,17 +622,17 @@ namespace OpenBabel
 
   bool OBAtom::IsPhosphateOxygen()
   {
-    if (!IsOxygen())
+    if (GetAtomicNum() != OBElements::Oxygen)
       return(false);
-    if (GetHvyValence() != 1)
+    if (GetHvyDegree() != 1)
       return(false);
     OBAtom *atom;
     OBBond *bond;
     OBBondIterator i;
 
-    atom = NULL;
+    atom = nullptr;
     for (bond = BeginBond(i);bond;bond = NextBond(i))
-      if ((bond->GetNbrAtom(this))->IsPhosphorus())
+      if ((bond->GetNbrAtom(this))->GetAtomicNum() == OBElements::Phosphorus)
         {
           atom = bond->GetNbrAtom(this);
           break;
@@ -684,18 +649,18 @@ namespace OpenBabel
 
   bool OBAtom::IsSulfateOxygen()
   {
-    if (!IsOxygen())
+    if (GetAtomicNum() != OBElements::Oxygen)
       return(false);
-    if (GetHvyValence() != 1)
+    if (GetHvyDegree() != 1)
       return(false);
 
     OBAtom *atom;
     OBBond *bond;
     OBBondIterator i;
 
-    atom = NULL;
+    atom = nullptr;
     for (bond = BeginBond(i);bond;bond = NextBond(i))
-      if ((bond->GetNbrAtom(this))->IsSulfur())
+      if ((bond->GetNbrAtom(this))->GetAtomicNum() == OBElements::Sulfur)
         {
           atom = bond->GetNbrAtom(this);
           break;
@@ -712,26 +677,26 @@ namespace OpenBabel
 
   // Helper function for IsHBondAcceptor
   static bool IsSulfoneOxygen(OBAtom* atm)
-  // Stefano Forli 
+  // Stefano Forli
   //atom is connected to a sulfur that has a total
   //of 2 attached free oxygens, and it's not a sulfonamide
   //e.g. C-SO2-C
   // Is this atom an oxygen in a sulfone(R1 - SO2 - R2) group ?
   {
-    if (!atm->IsOxygen())
+    if (atm->GetAtomicNum() != OBElements::Oxygen)
       return(false);
-    if (atm->GetHvyValence() != 1){
+    if (atm->GetHvyDegree() != 1){
       //cerr << "sulfone> O valence is not 1\n";
       return(false);
       }
 
-    OBAtom *nbr = NULL;
+    OBAtom *nbr = nullptr;
     OBBond *bond1,*bond2;
     OBBondIterator i,j;
 
     // searching for attached sulfur
     for (bond1 = atm->BeginBond(i); bond1; bond1 = atm->NextBond(i))
-      if ((bond1->GetNbrAtom(atm))->IsSulfur())
+      if ((bond1->GetNbrAtom(atm))->GetAtomicNum() == OBElements::Sulfur)
         { nbr = bond1->GetNbrAtom(atm);
           break; }
     if (!nbr){
@@ -739,7 +704,7 @@ namespace OpenBabel
       return(false); }
 
     // check for sulfate
-    //cerr << "sulfone> If we're here... " << atom->GetAtomicNum() <<"\n" << atom->IsSulfur() << "\n";
+    //cerr << "sulfone> If we're here... " << atom->GetAtomicNum() <<"\n" << atom->GetAtomicNum() == OBElements::Sulfur << "\n";
     //cerr << "sulfone> number of free oxygens:" << atom->CountFreeOxygens() << "\n";
     if (nbr->CountFreeOxygens() != 2){
       //cerr << "sulfone> count of free oxygens not 2" << atom->CountFreeOxygens() << '\n' ;
@@ -748,7 +713,7 @@ namespace OpenBabel
     // check for sulfonamide
     for (bond2 = nbr->BeginBond(j);bond2;bond2 = nbr->NextBond(j)){
       //cerr<<"NEIGH: " << (bond2->GetNbrAtom(atom))->GetAtomicNum()<<"\n";
-      if ((bond2->GetNbrAtom(nbr))->IsNitrogen()){
+      if ((bond2->GetNbrAtom(nbr))->GetAtomicNum() == OBElements::Nitrogen){
         //cerr << "sulfone> sulfonamide null\n" ;
         return(false);}}
     //cerr << "sulfone> none of the above\n";
@@ -761,18 +726,18 @@ namespace OpenBabel
 
   bool OBAtom::IsNitroOxygen()
   {
-    if (!IsOxygen())
+    if (GetAtomicNum() != OBElements::Oxygen)
       return(false);
-    if (GetHvyValence() != 1)
+    if (GetHvyDegree() != 1)
       return(false);
 
     OBAtom *atom;
     OBBond *bond;
     OBBondIterator i;
 
-    atom = NULL;
+    atom = nullptr;
     for (bond = BeginBond(i);bond;bond = NextBond(i))
-      if ((bond->GetNbrAtom(this))->IsNitrogen())
+      if ((bond->GetNbrAtom(this))->GetAtomicNum() == OBElements::Nitrogen)
         {
           atom = bond->GetNbrAtom(this);
           break;
@@ -806,48 +771,28 @@ namespace OpenBabel
     return(false);
   }
 
-  bool OBAtom::IsNotCorH()
-  {
-    switch(GetAtomicNum())
-      {
-      case 1:
-      case 6:
-        return(false);
-      }
-    return(true);
-  }
-
   bool OBAtom::IsAromatic() const
   {
-    if (((OBAtom*)this)->HasFlag(OB_AROMATIC_ATOM))
-      return(true);
-
-    OBMol	*mol = (OBMol*)((OBAtom*)this)->GetParent();
-
+    OBMol *mol = ((OBAtom*)this)->GetParent();
     if (!mol->HasAromaticPerceived())
-      {
-        aromtyper.AssignAromaticFlags(*mol);
-        if (((OBAtom*)this)->HasFlag(OB_AROMATIC_ATOM))
-          return(true);
-      }
+      aromtyper.AssignAromaticFlags(*mol);
 
-    return(false);
+    if (((OBAtom*)this)->HasFlag(OB_AROMATIC_ATOM))
+      return true;
+
+    return false;
   }
 
   bool OBAtom::IsInRing() const
   {
-    if (((OBAtom*)this)->HasFlag(OB_RING_ATOM))
-      return(true);
-
-    OBMol *mol = (OBMol*)((OBAtom*)this)->GetParent();
+    OBMol *mol = ((OBAtom*)this)->GetParent();
     if (!mol->HasRingAtomsAndBondsPerceived())
-      {
-        mol->FindRingAtomsAndBonds();
-        if (((OBAtom*)this)->HasFlag(OB_RING_ATOM))
-          return(true);
-      }
+      mol->FindRingAtomsAndBonds();
 
-    return(false);
+    if (((OBAtom*)this)->HasFlag(OB_RING_ATOM))
+      return true;
+
+    return false;
   }
 
   //! @todo
@@ -856,6 +801,12 @@ namespace OpenBabel
     OBMol *mol = (OBMol*) GetParent();
     OBStereoFacade stereoFacade(mol);
     return stereoFacade.HasTetrahedralStereo(_id);
+  }
+
+  bool OBAtom::IsPeriodic() const
+  {
+    OBMol *mol = (OBMol*)((OBAtom*)this)->GetParent();
+    return mol->IsPeriodic();
   }
 
   bool OBAtom::IsInRingSize(int size) const
@@ -954,9 +905,7 @@ namespace OpenBabel
         k = j;
         for (c = NextNbrAtom(k); c; c = NextNbrAtom(k))
           {
-            v1 = b->GetVector() - GetVector();
-            v2 = c->GetVector() - GetVector();
-            degrees = vectorAngle(v1, v2);
+            degrees = b->GetAngle((OBAtom*)this, c);
             if (degrees < minDegrees)
               minDegrees = degrees;
           }
@@ -980,9 +929,7 @@ namespace OpenBabel
         k = j;
         for (c = NextNbrAtom(k); c; c = NextNbrAtom(k))
           {
-            v1 = b->GetVector() - GetVector();
-            v2 = c->GetVector() - GetVector();
-            degrees = vectorAngle(v1, v2);
+            degrees = b->GetAngle((OBAtom*)this, c);
             avgDegrees += degrees;
             n++;
           }
@@ -1004,7 +951,7 @@ namespace OpenBabel
     for (bond = ((OBAtom*)this)->BeginBond(i);bond;bond = ((OBAtom*)this)->NextBond(i))
       {
         atom = bond->GetNbrAtom((OBAtom*)this);
-        if (atom->IsOxygen() && atom->GetHvyValence() == 1)
+        if (atom->GetAtomicNum() == OBElements::Oxygen && atom->GetHvyDegree() == 1)
           count++;
       }
 
@@ -1021,68 +968,27 @@ namespace OpenBabel
     for (bond = ((OBAtom*)this)->BeginBond(i);bond;bond = ((OBAtom*)this)->NextBond(i))
       {
         atom = bond->GetNbrAtom((OBAtom*)this);
-        if (atom->IsSulfur() && atom->GetHvyValence() == 1)
+        if (atom->GetAtomicNum() == OBElements::Sulfur && atom->GetHvyDegree() == 1)
           count++;
       }
 
     return(count);
   }
 
-  unsigned int OBAtom::BOSum() const
+  unsigned int OBAtom::GetExplicitValence() const
   {
-    unsigned int bo;
-    unsigned int bosum=0;
-    OBBond *bond;
+    unsigned int bosum = 0;
+
     OBBondIterator i;
+    for (OBBond *bond = ((OBAtom*)this)->BeginBond(i); bond; bond = ((OBAtom*)this)->NextBond(i))
+      bosum += bond->GetBondOrder();
 
-    for (bond = ((OBAtom*)this)->BeginBond(i);bond;bond = ((OBAtom*)this)->NextBond(i))
-      {
-        bo = bond->GetBO();
-        bosum += (bo < 5) ? 2*bo : 3;
-      }
-
-    bosum /= 2;
-    return(bosum);
+    return bosum;
   }
 
-  unsigned int OBAtom::KBOSum() const
+  unsigned int OBAtom::GetTotalValence() const
   {
-    OBBond *bond;
-    unsigned int bosum;
-    OBBondIterator i;
-
-    bosum = GetImplicitValence();
-
-    for (bond = ((OBAtom*)this)->BeginBond(i);bond;bond = ((OBAtom*)this)->NextBond(i))
-      {
-        if (bond->IsKDouble())
-          bosum++;
-        else if (bond->IsKTriple())
-          bosum += 2;
-      }
-
-    return(bosum);
-  }
-
-  unsigned int OBAtom::ImplicitHydrogenCount() const
-  {
-    //handles H,C,N,S,O,X
-    OBMol *mol = (OBMol*)((OBAtom*)this)->GetParent();
-    if (mol && !mol->HasImplicitValencePerceived())
-      atomtyper.AssignImplicitValence(*((OBMol*)((OBAtom*)this)->GetParent()));
-
-    // _impval is assigned by the atomtyper -- same as calling GetImplicitValence()
-    int impval = _impval - GetValence();
-
-    // we need to modify this implicit valence if we're a radical center
-    int mult = GetSpinMultiplicity();
-    if(mult==2) //radical
-      impval-=1;
-    else if(mult==1 || mult==3) //carbene
-      impval-=2;
-    else if(mult>=4) //CH, Catom
-      impval -= mult-1;
-    return((impval>0)?impval:0);
+    return GetExplicitValence() + _imph;
   }
 
   unsigned int OBAtom::ExplicitHydrogenCount(bool ExcludeIsotopes) const
@@ -1093,7 +999,7 @@ namespace OpenBabel
     OBAtom *atom;
     OBBondIterator i;
     for (atom = ((OBAtom*)this)->BeginNbrAtom(i);atom;atom = ((OBAtom*)this)->NextNbrAtom(i))
-      if (atom->IsHydrogen() && !(ExcludeIsotopes && atom->GetIsotope()!=0))
+      if (atom->GetAtomicNum() == OBElements::Hydrogen && !(ExcludeIsotopes && atom->GetIsotope()!=0))
         numH++;
 
     return(numH);
@@ -1135,7 +1041,7 @@ namespace OpenBabel
       int S = SHELL[N];
       int V = VALENCE[N];
       int C = GetFormalCharge();
-      int B = ImplicitHydrogenCount() + BOSum();
+      int B = GetTotalValence();
       // TODO: Do we actually want to divide by 2 here? (counting pairs instead of single)
       counts.first = (S - V - B + C) / 2;  // Acid: Number of electrons pairs desired
       counts.second = (V - B - C) / 2;     // Base: Number of electrons pairs available
@@ -1176,36 +1082,44 @@ namespace OpenBabel
   OBBond *OBAtom::BeginBond(OBBondIterator &i)
   {
     i = _vbond.begin();
-    return((i == _vbond.end()) ? (OBBond*)NULL : (OBBond*)*i);
+    return i == _vbond.end() ? nullptr : (OBBond*)*i;
   }
 
   OBBond *OBAtom::NextBond(OBBondIterator &i)
   {
     i++;
-    return((i == _vbond.end()) ? (OBBond*)NULL : (OBBond*)*i);
+    return i == _vbond.end() ? nullptr : (OBBond*)*i;
   }
 
   OBAtom *OBAtom::BeginNbrAtom(OBBondIterator &i)
   {
     i = _vbond.begin();
-    return((i != _vbond.end()) ? ((OBBond*) *i)->GetNbrAtom(this):NULL);
+    return i != _vbond.end() ? ((OBBond*) *i)->GetNbrAtom(this) : nullptr;
   }
 
   OBAtom *OBAtom::NextNbrAtom(OBBondIterator &i)
   {
     i++;
-    return((i != _vbond.end()) ?  ((OBBond*) *i)->GetNbrAtom(this):NULL);
+    return i != _vbond.end() ? ((OBBond*) *i)->GetNbrAtom(this) : nullptr;
   }
 
   double OBAtom::GetDistance(OBAtom *b)
   {
-    return(( this->GetVector() - b->GetVector() ).length());
+    if (!IsPeriodic())
+      {
+        return(( this->GetVector() - b->GetVector() ).length());
+      }
+    else
+      {
+        OBUnitCell *box = (OBUnitCell*)GetParent()->GetData(OBGenericDataType::UnitCell);
+        return (box->MinimumImageCartesian(this->GetVector() - b->GetVector())).length();
+      }
   }
 
   double OBAtom::GetDistance(int b)
   {
     OBMol *mol = (OBMol*)GetParent();
-    return(( this->GetVector() - mol->GetAtom(b)->GetVector() ).length());
+    return( this->GetDistance(mol->GetAtom(b)) );
   }
 
   double OBAtom::GetDistance(vector3 *v)
@@ -1219,6 +1133,13 @@ namespace OpenBabel
 
     v1 = this->GetVector() - b->GetVector();
     v2 = c->GetVector() - b->GetVector();
+    if (IsPeriodic())
+      {
+        OBUnitCell *box = (OBUnitCell*)GetParent()->GetData(OBGenericDataType::UnitCell);
+        v1 = box->MinimumImageCartesian(v1);
+        v2 = box->MinimumImageCartesian(v2);
+      }
+
     if (IsNearZero(v1.length(), 1.0e-3)
       || IsNearZero(v2.length(), 1.0e-3)) {
         return(0.0);
@@ -1230,17 +1151,7 @@ namespace OpenBabel
   double OBAtom::GetAngle(int b, int c)
   {
     OBMol *mol = (OBMol*)GetParent();
-    vector3 v1,v2;
-
-    v1 = this->GetVector() - mol->GetAtom(b)->GetVector();
-    v2 = mol->GetAtom(c)->GetVector() - mol->GetAtom(b)->GetVector();
-
-    if (IsNearZero(v1.length(), 1.0e-3)
-      || IsNearZero(v2.length(), 1.0e-3)) {
-        return(0.0);
-    }
-
-    return(vectorAngle(v1, v2));
+    return(this->GetAngle(mol->GetAtom(b), mol->GetAtom(c)));
   }
 
   bool OBAtom::GetNewBondVector(vector3 &v,double length)
@@ -1249,9 +1160,24 @@ namespace OpenBabel
     return(true);
   }
 
+  //! \return a "corrected" bonding radius based on the hybridization.
+  //! Scales the covalent radius by 0.95 for sp2 and 0.90 for sp hybrids
+  static double CorrectedBondRad(unsigned int elem, unsigned int hyb)
+  {
+    double rad = OBElements::GetCovalentRad(elem);
+    switch (hyb) {
+    case 2:
+      return rad * 0.95;
+    case 1:
+      return rad * 0.90;
+    default:
+      return rad;
+    }
+  }
+
   bool OBAtom::HtoMethyl()
   {
-    if (!IsHydrogen())
+    if (GetAtomicNum() != OBElements::Hydrogen)
       return(false);
 
     obErrorLog.ThrowError(__FUNCTION__,
@@ -1277,12 +1203,12 @@ namespace OpenBabel
       }
 
     double br1,br2;
-    br1 = etab.CorrectedBondRad(6,3);
-    br2 = etab.CorrectedBondRad(atom->GetAtomicNum(),atom->GetHyb());
+    br1 = CorrectedBondRad(6,3);
+    br2 = CorrectedBondRad(atom->GetAtomicNum(),atom->GetHyb());
     bond->SetLength(atom,br1+br2);
 
     OBAtom *hatom;
-    br2 = etab.CorrectedBondRad(1,0);
+    br2 = CorrectedBondRad(1,0);
     vector3 v;
 
     for (int j = 0;j < 3;++j)
@@ -1329,13 +1255,13 @@ namespace OpenBabel
     //if (hyb == GetHyb()) return(true);
     if (GetAtomicNum() == 1)
       return(false);
-    if (hyb == 0 && GetHvyValence() > 1)
+    if (hyb == 0 && GetHvyDegree() > 1)
       return(false);
-    if (hyb == 1 && GetHvyValence() > 2)
+    if (hyb == 1 && GetHvyDegree() > 2)
       return(false);
-    if (hyb == 2 && GetHvyValence() > 3)
+    if (hyb == 2 && GetHvyDegree() > 3)
       return(false);
-    if (hyb == 3 && GetHvyValence() > 4)
+    if (hyb == 3 && GetHvyDegree() > 4)
       return(false);
 
     OBMol *mol = (OBMol*)GetParent();
@@ -1345,7 +1271,7 @@ namespace OpenBabel
     OBBondIterator i;
 
     for (nbr = BeginNbrAtom(i);nbr;nbr = NextNbrAtom(i))
-      if (nbr->IsHydrogen())
+      if (nbr->GetAtomicNum() == OBElements::Hydrogen)
         delatm.push_back(nbr);
 
     //delete attached hydrogens
@@ -1370,28 +1296,28 @@ namespace OpenBabel
 
     //adjust attached acyclic bond lengths
     double br1,br2, length;
-    br1 = etab.CorrectedBondRad(GetAtomicNum(),hyb);
+    br1 = CorrectedBondRad(GetAtomicNum(),hyb);
     for (nbr = BeginNbrAtom(i);nbr;nbr = NextNbrAtom(i))
       if (!(*i)->IsInRing())
         {
-          br2 = etab.CorrectedBondRad(nbr->GetAtomicNum(),nbr->GetHyb());
+          br2 = CorrectedBondRad(nbr->GetAtomicNum(),nbr->GetHyb());
           length = br1 + br2;
           if ((*i)->IsAromatic())
             length *= 0.93;
-          else if ((*i)->GetBO() == 2)
+          else if ((*i)->GetBondOrder() == 2)
             length *= 0.91;
-          else if ((*i)->GetBO() == 3)
+          else if ((*i)->GetBondOrder() == 3)
             length *= 0.87;
           ((OBBond*) *i)->SetLength(this, length);
         }
 
-    if (GetValence() > 1)
+    if (GetExplicitDegree() > 1)
       {
         double angle;
         matrix3x3 m;
         vector3 v1,v2,v3,v4,n,s;
         OBAtom *r1,*r2,*r3,*a1,*a2,*a3,*a4;
-        r1 = r2 = r3 = a1 = a2 = a3 = a4 = NULL;
+        r1 = r2 = r3 = a1 = a2 = a3 = a4 = nullptr;
 
         //find ring atoms first
         for (nbr = BeginNbrAtom(i);nbr;nbr = NextNbrAtom(i))
@@ -1636,14 +1562,14 @@ namespace OpenBabel
         impval = 1;
       }
 
-    int hcount = impval-GetHvyValence();
+    int hcount = impval-GetHvyDegree();
     if (hcount)
       {
         int k;
         vector3 v;
         OBAtom *atom;
-        double brsum = etab.CorrectedBondRad(1,0)+
-          etab.CorrectedBondRad(GetAtomicNum(),GetHyb());
+        double brsum = CorrectedBondRad(1,0)+
+          CorrectedBondRad(GetAtomicNum(),GetHyb());
         SetHyb(hyb);
 
         mol->BeginModify();
@@ -1670,7 +1596,7 @@ namespace OpenBabel
     for (bond = BeginBond(i) ; bond ; bond = NextBond(i))
       if (bond->GetNbrAtom(this) == nbr)
         return bond;
-    return NULL;
+    return nullptr;
   }
 
   /*Now in OBBase
@@ -1808,8 +1734,8 @@ namespace OpenBabel
       return true;
     if (_ele == 7) {
       // N+ ions and sp2 hybrid N with 3 valences should not be Hbond acceptors
-      if (!((GetValence() == 4 && GetHyb() == 3)
-            || (GetValence() == 3 && GetHyb() == 2)))
+      if (!((GetExplicitDegree() == 4 && GetHyb() == 3)
+            || (GetExplicitDegree() == 3 && GetHyb() == 2)))
             return true;
     }
     // Changes from Paolo Tosco
@@ -1819,21 +1745,21 @@ namespace OpenBabel
   }
 
   // new function, Stefano Forli
-  // Incorporate ideas and data from Kubyni and others. 
+  // Incorporate ideas and data from Kubyni and others.
   // [1] Kubinyi, H. "Changing paradigms in drug discovery.
   //    "SPECIAL PUBLICATION-ROYAL SOCIETY OF CHEMISTRY 304.1 (2006): 219-232.
   //
-  // [2] Kingsbury, Charles A. "Why are the Nitro and Sulfone 
+  // [2] Kingsbury, Charles A. "Why are the Nitro and Sulfone
   //     Groups Poor Hydrogen Bonders?." (2015).
   //
-  // [3] Per Restorp, Orion B. Berryman, Aaron C. Sather, Dariush Ajami 
+  // [3] Per Restorp, Orion B. Berryman, Aaron C. Sather, Dariush Ajami
   //     and Julius Rebek Jr., Chem. Commun., 2009, 5692 DOI: 10.1039/b914171e
   //
   // [4] Dunitz, Taylor. "Organic fluorine hardly ever accepts
   //     hydrogen bonds." Chemistry-A European Journal 3.1 (1997): 83-92.
   //
   // This function has a finer grain than the original
-  // implementation, checking also the neighbor atoms. 
+  // implementation, checking also the neighbor atoms.
   // Accordingly to these rules, the function will return:
   //
   //    aliph-O-aliph ether   -> true   [1]
@@ -1849,7 +1775,7 @@ namespace OpenBabel
   //    aromatic O            -> false  [1]
   //    O-nitro               -> false  [2]
   //    organic F (R-F)       -> false  [4]
-  //    
+  //
   bool OBAtom::IsHbondAcceptor() {
       if (_ele == 8) {
         // oxygen; this should likely be a separate function
@@ -1868,20 +1794,20 @@ namespace OpenBabel
           return(false);
           }
         FOR_NBORS_OF_ATOM(nbr, this){
-          if (nbr->IsAromatic()){ 
+          if (nbr->IsAromatic()){
             aroCount += 1;
             if (aroCount == 2){ // aromatic ether (aro-O-aro) (NO)
-              return(false); 
+              return(false);
             }
           }
-          else { 
-            if (nbr->IsHydrogen()) { // hydroxyl (YES)
-              return(true); 
+          else {
+            if (nbr->GetAtomicNum() == OBElements::Hydrogen) { // hydroxyl (YES)
+              return(true);
             }
             else {
               bond = nbr->GetBond(this);
-              if ( (bond->IsEster()) && (!(IsCarboxylOxygen()))) 
-                 return(false); 
+              if ( (bond->IsEster()) && (!(IsCarboxylOxygen())))
+                 return(false);
             }
           }
         }
@@ -1899,8 +1825,8 @@ namespace OpenBabel
     };
     if (_ele == 7) {
       // N+ ions and sp2 hybrid N with 3 valences should not be Hbond acceptors
-      if (!((GetValence() == 4 && GetHyb() == 3)
-        || (GetValence() == 3 && GetHyb() == 2)))
+      if (!((GetExplicitDegree() == 4 && GetHyb() == 3)
+        || (GetExplicitDegree() == 3 && GetHyb() == 2)))
         return true;
     };
     // Changes from Paolo Tosco
@@ -1919,7 +1845,7 @@ namespace OpenBabel
     OBAtom *nbr;
     OBBondIterator i;
     for (nbr = BeginNbrAtom(i);nbr;nbr = NextNbrAtom(i))
-      if (nbr->IsHydrogen())
+      if (nbr->GetAtomicNum() == OBElements::Hydrogen)
         return true;
 
     return false;
@@ -1927,7 +1853,7 @@ namespace OpenBabel
 
   bool OBAtom::IsHbondDonorH()
   {
-    if (!IsHydrogen()) return(false);
+    if (GetAtomicNum() != OBElements::Hydrogen) return(false);
 
     // Recursive definition -- this atom is an H atom
     // are any neighbors HbondDonors?

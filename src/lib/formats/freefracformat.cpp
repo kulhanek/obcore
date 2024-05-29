@@ -14,6 +14,13 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/obiter.h>
+#include <cstdlib>
+
 #include <openbabel/math/matrix3x3.h>
 
 using namespace std;
@@ -113,7 +120,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -183,13 +190,13 @@ namespace OpenBabel
 
         // check to see if first column is number or element symbol
         // (PCModel has files of the form X Y Z symbol)
-        atomicNum = etab.GetAtomicNum(vs[0].c_str());
+        atomicNum = OBElements::GetAtomicNum(vs[0].c_str());
         if (atomicNum == 0 && (isdigit(vs[0][0]) || ispunct(vs[0][0])))
           {
             x = atof(vs[0].c_str());
             y = atof(vs[1].c_str());
             z = atof(vs[2].c_str());
-            atomicNum = etab.GetAtomicNum(vs[3].c_str());
+            atomicNum = OBElements::GetAtomicNum(vs[3].c_str());
           }
         else
           {
@@ -205,9 +212,14 @@ namespace OpenBabel
       }
 
     // clean out any remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     if (!pConv->IsOption("b",OBConversion::INOPTIONS))
       mol.ConnectTheDots();
@@ -224,7 +236,7 @@ namespace OpenBabel
   bool FreeFormFractionalFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -232,7 +244,7 @@ namespace OpenBabel
     OBMol &mol = *pmol;
 
     char buffer[BUFF_SIZE];
-    OBUnitCell *uc = NULL;
+    OBUnitCell *uc = nullptr;
 
     ofs << mol.GetTitle() << endl;
 
@@ -252,11 +264,11 @@ namespace OpenBabel
     FOR_ATOMS_OF_MOL(atom, mol)
       {
         v = atom->GetVector();
-        if (uc != NULL)
+        if (uc != nullptr)
           v = uc->CartesianToFractional(v);
 
         snprintf(buffer, BUFF_SIZE, "%s %10.5f%10.5f%10.5f",
-                 etab.GetSymbol(atom->GetAtomicNum()),
+                 OBElements::GetSymbol(atom->GetAtomicNum()),
                  v.x(),
                  v.y(),
                  v.z());

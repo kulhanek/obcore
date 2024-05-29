@@ -114,6 +114,7 @@ namespace OpenBabel
     streamsize oldprec = m_ofs.precision(1);
     m_ofs << fixed << "<line x1=\"" << x1 << "\" y1=\"" << y1 << "\" x2=\""
       << x2 << "\" y2=\"" << y2 << "\"";
+    m_ofs << " opacity=\"" << m_Pencolor.alpha << "\"";
     // if(m_Pencolor!=m_OrigBondcolor) // TODO: Bring this line back once Pybel is fine with this
       m_ofs << " stroke=" << MakeRGB(m_Pencolor);
     m_ofs << " stroke-width=\"" << m_PenWidth << "\"";
@@ -150,7 +151,7 @@ namespace OpenBabel
   void SVGPainter::DrawText(double x, double y, const std::string &text)
   {
     m_ofs << "<text x=\"" << x << "\" y=\"" << y << "\""
-      << " fill=" << MakeRGB(m_Pencolor) << " stroke=" << MakeRGB(m_Pencolor) << "stroke-width=\"1\" "
+      << " fill=" << MakeRGB(m_Pencolor) << "stroke-width=\"0\" font-weight=\"bold\" "
       << "font-size=\"" << m_fontPointSize << "\" >"
       << text << "</text>\n";
   }
@@ -162,7 +163,7 @@ namespace OpenBabel
     metrics.ascent   = m_fontPointSize;
     metrics.descent  = m_fontPointSize * -0.23; // Offset from baseline of bottom of text
     metrics.height   = m_fontPointSize *  1.26; // Distance between successive lines of text
-    metrics.width = 0.0;
+    metrics.width    = 0.0;
     for(string::size_type i=0;i<text.size();++i)
       metrics.width += m_fontPointSize * (isalpha(text[i]) ? 0.75 : 0.5);
 
@@ -177,15 +178,15 @@ namespace OpenBabel
   {
     if (!isfinite(opacity))
       opacity = 1.0;
-    if (opacity < 0.25)
-      opacity = 0.25;
+    if (opacity < 0.2)
+      opacity = 0.2;
 
     m_ofs << "<circle cx=\"" << x << "\" cy=\"" << y << "\" r=\"" << r << "\" ";
     m_ofs << "opacity=\"" << opacity << "\" ";
     if (m_isFillcolor) {
       m_ofs << "style=\"stroke:black;fill:" << MakeRGB(m_Fillcolor) << "\"/>\n";
     } else {
-      m_ofs << "style=\"stroke:black;fill:url(#radial";
+      m_ofs << "style=\"stroke:black;stroke-width:0.5;fill:url(#radial";
       m_ofs << RGBcode(m_Gradientcolor.first)<< RGBcode(m_Gradientcolor.second) << ")\"/>\n";
     }
   }
@@ -198,7 +199,7 @@ namespace OpenBabel
         m_ofs << "<radialGradient id='radial";
         m_ofs << RGBcode(it->first)<< RGBcode(it->second) << "' ";
         m_ofs << "cx='50%' cy='50%' r='50%' fx='30%' fy='30%'>\n";
-        m_ofs << "  <stop offset=' 0%' stop-color=" << MakeRGB(it->first) << " stop-opacity='0.8'/>\n";
+        m_ofs << "  <stop offset=' 0%' stop-color=" << MakeRGB(it->first) << " stop-opacity='1.0'/>\n";
         m_ofs << "  <stop offset='100%' stop-color=" << MakeRGB(it->second) << " stop-opacity ='1.0'/>\n";
         m_ofs << "</radialGradient>\n";
       }

@@ -25,6 +25,7 @@ GNU General Public License for more details.
 #include<openbabel/forcefield.h>
 #include <openbabel/obconversion.h>
 #include<openbabel/generic.h>
+#include <cstdlib>
 
 #define CONFAB_VER "1.1.0"
 
@@ -66,7 +67,7 @@ namespace OpenBabel
 
       virtual bool WorksWith(OBBase* pOb) const
       {
-        return dynamic_cast<OBMol*>(pOb) != NULL;
+        return dynamic_cast<OBMol*>(pOb) != nullptr;
       }
       virtual bool Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion*);
       
@@ -87,7 +88,7 @@ namespace OpenBabel
 
 
   //////////////////////////////////////////////////////////
-  bool OpConfab::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion* pConv=NULL)
+  bool OpConfab::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion* pConv=nullptr)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
     if(!pmol)
@@ -152,10 +153,16 @@ namespace OpenBabel
 
     pff->GetConformers(mol);
     int nconfs = include_original ? mol.NumConformers() : mol.NumConformers() - 1;
+    unsigned int c = include_original ? 0 : 1;
+
+    // If mol.NumRotors is 0 and originals have not been included, then nconfs
+    // may be 0. Here, if nconfs is 0, we include the original input conformer
+    if (nconfs == 0) {
+      nconfs = mol.NumConformers();
+      c = 0;
+    }
 
     cout << "..generated " << nconfs << " conformers" << endl;
-
-    unsigned int c = include_original ? 0 : 1;
 
     for (; c < mol.NumConformers(); ++c) {
       mol.SetConformer(c);

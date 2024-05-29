@@ -26,6 +26,9 @@
 
 
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+
 #include <openbabel/obconversion.h>
 #include <openbabel/obmolecformat.h>
 
@@ -42,6 +45,11 @@
   typedef unsigned __int8 uint8_t;
   typedef unsigned __int16 uint16_t;
 #endif
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 
 using namespace std;
 
@@ -264,7 +272,7 @@ namespace OpenBabel
   bool STLFormat::WriteMolecule( OBBase* pOb, OBConversion* pConv )
   {
     OBMol* pmol = dynamic_cast< OBMol* >(pOb);
-    if( pmol == 0 ) return false;
+    if (pmol == nullptr) return false;
 
     ostream& os = *pConv->GetOutStream();
 
@@ -289,7 +297,7 @@ namespace OpenBabel
     vector<Triangle> triangles;
     FOR_ATOMS_OF_MOL(a, *pmol) {
       const double *coord = a->GetCoordinate();
-      const double vdwrad = scale_factor * etab.GetVdwRad( a->GetAtomicNum() ) + probe_radius;
+      const double vdwrad = scale_factor * OBElements::GetVdwRad( a->GetAtomicNum() ) + probe_radius;
       if( cpk_colours ) {
         col =  stl_colour(  a->GetAtomicNum() ) ;
       }

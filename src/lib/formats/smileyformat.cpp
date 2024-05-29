@@ -13,6 +13,12 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+
 #include <openbabel/typer.h>
 #include <openbabel/stereo/tetrahedral.h>
 #include <openbabel/stereo/cistrans.h>
@@ -73,8 +79,8 @@ namespace OpenBabel
 
       if (aromatic)
         atom->SetAromatic();
-      else if (hCount == -1)
-        atom->ForceImplH();
+      //else if (hCount == -1)
+      //  atom->ForceImplH();
 
       if (hCount > -1) {
         if (hCount == 0)
@@ -83,7 +89,6 @@ namespace OpenBabel
         for (int i = 0; i < hCount; ++i) {
           OBAtom *hydrogen = mol->NewAtom();
           hydrogen->SetAtomicNum(1);
-          hydrogen->SetImplicitValence(1);
           mol->AddBond(atom->GetIdx(), hydrogen->GetIdx(), 1);
           upDown.push_back(IsNotUpDown);
         }
@@ -382,15 +387,6 @@ namespace OpenBabel
     // handle aromaticity
     pmol->SetAromaticPerceived();
 
-    OBAtomTyper typer;
-    typer.AssignImplicitValence(*pmol);
-
-    // fix aromatic nitrogens
-    FOR_ATOMS_OF_MOL (atom, pmol) {
-      if (atom->IsNitrogen() && atom->IsAromatic() && /*atom->IsInRingSize(6) &&*/ atom->GetValence() == 2)
-        atom->SetImplicitValence(2);
-    }
-
     // create cis/trans stereo objects
     CreateCisTrans(pmol, callback.upDown);
     StereoFrom0D(pmol);
@@ -401,12 +397,12 @@ namespace OpenBabel
   bool SmileyFormat::AssignNbrAtoms(const std::vector<OpenBabelCallback::UpDown> &upDown,
       OBAtom *atom, unsigned long &aboveId, unsigned long &belowId)
   {
-    OBAtom *above = 0;
-    OBAtom *below = 0;
-    OBAtom *unspecified = 0;
+    OBAtom *above = nullptr;
+    OBAtom *below = nullptr;
+    OBAtom *unspecified = nullptr;
 
     FOR_BONDS_OF_ATOM (bond, atom) {
-      if (bond->IsDouble())
+      if (!bond->IsAromatic() && bond->GetBondOrder() == 2)
         continue;
 
       OBAtom *nbr = bond->GetNbrAtom(atom);
@@ -463,7 +459,7 @@ namespace OpenBabel
   void SmileyFormat::CreateCisTrans(OBMol *mol, const std::vector<OpenBabelCallback::UpDown> &upDown)
   {
     FOR_BONDS_OF_MOL (doubleBond, mol) {
-      if (!doubleBond->IsDouble() || doubleBond->IsAromatic())
+      if (doubleBond->GetBondOrder() != 2 || doubleBond->IsAromatic())
         continue;
 
       OBAtom *source = doubleBond->GetBeginAtom();
@@ -473,8 +469,8 @@ namespace OpenBabel
 
       // Check that both atoms on the double bond have at least one
       // other neighbor, but not more than two other neighbors;
-      int v1 = source->GetValence();
-      int v2 = target->GetValence();
+      int v1 = source->GetExplicitDegree();
+      int v2 = target->GetExplicitDegree();
       if (v1 < 2 || v1 > 3 || v2 < 2 || v2 > 3)
         continue;
 

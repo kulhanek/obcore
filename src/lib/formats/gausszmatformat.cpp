@@ -14,6 +14,15 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/internalcoord.h>
+#include <openbabel/generic.h>
+
+#include <cstdlib>
 
 //Possible replacement for strcasestr. See end of file
 const char *_strcasestr(const char *s, const char *pattern);
@@ -48,7 +57,7 @@ namespace OpenBabel
     };
 
     virtual const char* SpecificationURL()
-    { return "http://www.gaussian.com/";};
+    { return "https://www.gaussian.com/zmat/"; };
 
     virtual const char* GetMIMEType()
     { return "chemical/x-gaussian-input"; };
@@ -66,7 +75,7 @@ namespace OpenBabel
   bool GaussianZMatrixInputFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -77,7 +86,7 @@ namespace OpenBabel
     const char *keywords = pConv->IsOption("k",OBConversion::OUTOPTIONS);
     const char *keywordsEnable = pConv->IsOption("k",OBConversion::GENOPTIONS);
     const char *keywordFile = pConv->IsOption("f",OBConversion::OUTOPTIONS);
-    string defaultKeywords = "#Put Keywords Here, check Charge and Multiplicity.";
+    string defaultKeywords = "!Put Keywords Here, check Charge and Multiplicity.\n#";
 
     if(keywords) {
       defaultKeywords = keywords;
@@ -136,7 +145,7 @@ namespace OpenBabel
     OBAtom *a,*b,*c;//, *atom;
 
     vector<OBInternalCoord*> vic;
-    vic.push_back((OBInternalCoord*)NULL);
+    vic.push_back(nullptr);
 		FOR_ATOMS_OF_MOL(atom, mol)
       vic.push_back(new OBInternalCoord);
 
@@ -150,7 +159,7 @@ namespace OpenBabel
         b = vic[atom->GetIdx()]->_b;
         c = vic[atom->GetIdx()]->_c;
 
-				type = etab.GetSymbol(atom->GetAtomicNum());
+				type = OBElements::GetSymbol(atom->GetAtomicNum());
 				if (atom->GetIsotope() != 0) {
 					snprintf(buffer, BUFF_SIZE, "(Iso=%d)", atom->GetIsotope());
 					type += buffer;
@@ -234,7 +243,7 @@ namespace OpenBabel
   bool GaussianZMatrixInputFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -246,7 +255,7 @@ namespace OpenBabel
 
     OBAtom *atom;
 		vector<OBInternalCoord*> vic;
-	  vic.push_back((OBInternalCoord*)NULL); // OBMol indexed from 1 -- potential atom index problem
+	  vic.push_back(nullptr); // OBMol indexed from 1 -- potential atom index problem
 
     vector<string> vs;
     int charge = 0;
@@ -290,7 +299,7 @@ namespace OpenBabel
         }
       }
 
-			if (strcasestr(buffer, "VARIABLE") != NULL) {
+			if (strcasestr(buffer, "VARIABLE") != nullptr) {
 				readVariables = true;
         continue;
 			}
@@ -317,7 +326,7 @@ namespace OpenBabel
         j = i+1;
         tokenize(vs, atomLines[i]);
         atom = mol.NewAtom();
-        atom->SetAtomicNum(etab.GetAtomicNum(vs[0].c_str()));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(vs[0].c_str()));
 
         if (j == 1) {
           continue; // first atom, just create it
@@ -404,6 +413,6 @@ _strcasestr(const char *s, const char *pattern)
 	    return s;
 	s++;
     }
-    return 0;
+    return nullptr;
 }
 

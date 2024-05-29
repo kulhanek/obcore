@@ -20,7 +20,12 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 #include <openbabel/math/matrix3x3.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/obiter.h>
 #include <openbabel/obutil.h>
+#include <openbabel/internalcoord.h>
+
+#include <cstring>
 
 #ifdef HAVE_CONIO_H
 #include <conio.h>
@@ -447,9 +452,9 @@ namespace OpenBabel
     if (vic.empty())
       return;
 
-    if (vic[0] != NULL) {
+    if (vic[0] != nullptr) {
       std::vector<OBInternalCoord*>::iterator it = vic.begin();
-      vic.insert(it, static_cast<OBInternalCoord*>(NULL));
+      vic.insert(it, nullptr);
     }
 
     if (vic.size() != mol.NumAtoms() + 1) {
@@ -539,6 +544,7 @@ namespace OpenBabel
   //! a set of internal (z-matrix) coordinates as supplied in the
   //! vector<OBInternalCoord*> argument.
   //! Implements <a href="http://qsar.sourceforge.net/dicts/blue-obelisk/index.xhtml#cartesianCoordinatesIntoZmatrixCoordinates">blue-obelisk:cartesianCoordinatesIntoZmatrixCoordinates</a>.
+  //! \todo Consider lengths, angles, and torsions for periodic systems
   void CartesianToInternal(std::vector<OBInternalCoord*> &vic,OBMol &mol)
   {
     double r,sum;
@@ -680,7 +686,7 @@ namespace OpenBabel
 
   void qtrfit (double *r,double *f,int size, double u[3][3])
   {
-    register int i;
+    int i;
     double xxyx, xxyy, xxyz;
     double xyyx, xyyy, xyyz;
     double xzyx, xzyy, xzyz;
@@ -793,7 +799,7 @@ namespace OpenBabel
    */
   int SolveQuadratic(double A,double B,double C)
   {
-    register double Descr, Temp, TwoA;
+    double Descr, Temp, TwoA;
 
     if( IsZero(A) )
       return( SolveLinear(B,C) );
@@ -838,9 +844,9 @@ namespace OpenBabel
 
   int SolveCubic(double A,double B,double C,double D)
   {
-    register double TwoA, ThreeA, BOver3A;
-    register double Temp, POver3, QOver2;
-    register double Desc, Rho, Psi;
+    double TwoA, ThreeA, BOver3A;
+    double Temp, POver3, QOver2;
+    double Desc, Rho, Psi;
 
 
     if( IsZero(A) )

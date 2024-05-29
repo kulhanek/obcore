@@ -16,6 +16,12 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
+
 
 using namespace std;
 namespace OpenBabel
@@ -64,7 +70,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -83,7 +89,7 @@ namespace OpenBabel
 
     while (ifs.getline(buffer,BUFF_SIZE))
       {
-        if(strstr(buffer,"end") != NULL)
+        if(strstr(buffer, "end") != nullptr)
           {
             if (mol.NumAtoms() > 0) // we've already read in a molecule, so exit
               break;
@@ -98,9 +104,9 @@ namespace OpenBabel
             continue;
           }
 
-        if(strstr(buffer,"PBC") != NULL)
+        if (strstr(buffer, "PBC") != nullptr)
           {
-            if(strstr(buffer,"ON") != NULL)
+            if (strstr(buffer, "ON") != nullptr)
               {
                 ifs.getline(buffer,BUFF_SIZE); // title
                 ifs.getline(buffer,BUFF_SIZE); // DATE
@@ -158,7 +164,7 @@ namespace OpenBabel
 
         atom = mol.NewAtom();
 
-        atom->SetAtomicNum(etab.GetAtomicNum(vs[7].c_str()));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(vs[7].c_str()));
         x = atof((char*)vs[1].c_str());
         y = atof((char*)vs[2].c_str());
         z = atof((char*)vs[3].c_str());

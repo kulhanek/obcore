@@ -27,8 +27,8 @@ obtained in part or whole from RasMol2 by Roger Sayle.
 
 #include <openbabel/babelconfig.h>
 
-#ifndef EXTERN
-#  define EXTERN extern
+#ifndef OB_EXTERN
+#  define OB_EXTERN extern
 #endif
 
 #include <vector>
@@ -103,7 +103,7 @@ namespace OpenBabel {
     //! \return The residue name
     std::string    GetName(void)                  const;
     //! \return The residue number (in the sequence)
-    unsigned int    GetNum(void);
+    int    GetNum(void);
     std::string     GetNumString(void);
     //! \return The number of atoms in this residue
     unsigned int   GetNumAtoms()                  const;
@@ -179,18 +179,14 @@ namespace OpenBabel {
     //    std::vector<OBGenericData*> _vdata; //!< Custom data
   }; // OBResidue
 
-  //! A standard iterator over a vector of residues
-  typedef std::vector<OBResidue*>::iterator OBResidueIterator;
 
   ///////////////////////////////////////////////////////////////////////////////
   // Global Definitions
   ///////////////////////////////////////////////////////////////////////////////
 
 #define MAXSETNO 40
-#define MAXELEM  1024
-#define MINELEM  29
-#define MAXRES   100
-#define MINRES   54
+#define MAXELEM  29
+#define MAXRES   54
 
   ///////////////////////////////////////////////////////////////////////////////
   // Amino Acid Definitions
@@ -306,6 +302,7 @@ namespace OpenBabel {
   // (otherwise ignore them for C++ use)
   namespace OBResidueIndex
   {
+    
     enum
     {
       ALA   =  0,
@@ -385,14 +382,6 @@ namespace OpenBabel {
     };
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
-  // Global Variables
-  ////////////////////////////////////////////////////////////////////////////////
-
-  EXTERN char Residue[MAXRES][4];
-  EXTERN char ElemDesc[MAXELEM][4];
-  EXTERN unsigned int ResNo;
-  EXTERN unsigned int ElemNo;
 } // end namespace OpenBabel
 
 #endif

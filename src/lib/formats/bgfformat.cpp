@@ -15,6 +15,14 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/elements.h>
+#include <openbabel/data.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
+
 
 using namespace std;
 namespace OpenBabel
@@ -62,7 +70,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -118,7 +126,7 @@ namespace OpenBabel
         atom->SetType(tmp);
 
         CleanAtomType(tmptyp);
-        atom->SetAtomicNum(etab.GetAtomicNum(tmptyp));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(tmptyp));
 
         atom->SetVector(x,y,z);
       }
@@ -187,7 +195,7 @@ namespace OpenBabel
   bool BGFFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -199,8 +207,6 @@ namespace OpenBabel
     OBAtom *atom;
     char buffer[BUFF_SIZE];
     char elmnt_typ[8], dreid_typ[8], atm_sym[16], max_val_str[8];
-
-    mol.Kekulize();
 
     ofs << "BIOGRF 200\n";
     snprintf(buffer, BUFF_SIZE, "DESCRP %s\n",mol.GetTitle());
@@ -226,7 +232,7 @@ namespace OpenBabel
 
     for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
       {
-        strncpy(elmnt_typ,etab.GetSymbol(atom->GetAtomicNum()), 7); // make sure to null-terminate
+        strncpy(elmnt_typ,OBElements::GetSymbol(atom->GetAtomicNum()), 7); // make sure to null-terminate
         elmnt_typ[sizeof(elmnt_typ) - 1] = '0';
         ToUpper(elmnt_typ);
 
@@ -259,7 +265,7 @@ namespace OpenBabel
     OBAtom *nbr;
     vector<OBBond*>::iterator j;
     for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
-      if (atom->GetValence())
+      if (atom->GetExplicitDegree())
         {
           snprintf(buffer,BUFF_SIZE,"CONECT%6d",atom->GetIdx());
           ofs << buffer;
@@ -274,7 +280,7 @@ namespace OpenBabel
           ofs << buffer;
           for (nbr = atom->BeginNbrAtom(j);nbr;nbr = atom->NextNbrAtom(j))
             {
-              snprintf(buffer,BUFF_SIZE,"%6d",(*j)->GetBO());
+              snprintf(buffer,BUFF_SIZE,"%6d",(*j)->GetBondOrder());
               ofs << buffer;
             }
           ofs << endl;

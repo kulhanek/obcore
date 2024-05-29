@@ -92,6 +92,8 @@ namespace OpenBabel
       bool SetupCalculations();
       //! Setup pointers in OBFFXXXCalculation vectors
       bool SetupPointers();
+      //! Calculate Gasteiger charges 'out of order' before atom typing
+      bool SetPartialChargesBeforeAtomTyping();
       // GetParameterOOP for improper-dihedrals
       // This specialization is needed because improper-dihedral have different symmetry as dihedrals
       OBFFParameter* GetParameterOOP(const char* a, const char* b, const char* c, const char* d,
@@ -124,6 +126,7 @@ namespace OpenBabel
         _init = false;
         _rvdw = 7.0;
         _rele = 15.0;
+        _epsilon = 1.0;
         _pairfreq = 10;
         _cutoff = false;
         _linesearch = LineSearchType::Newton2Num;
@@ -207,4 +210,3 @@ namespace OpenBabel
 
 //! \file forcefieldgaff.h
 //! \brief Gaff force field
-

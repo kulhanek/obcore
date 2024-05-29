@@ -57,13 +57,13 @@ basic_zip_streambuf<charT, traits>::basic_zip_streambuf(ostream_reference ostrea
       _buffer(buffer_size, 0),
       _crc(0)
 {
-    _zip_stream.zalloc = (alloc_func) 0;
-    _zip_stream.zfree = (free_func) 0;
+    _zip_stream.zalloc = (alloc_func) nullptr;
+    _zip_stream.zfree = (free_func) nullptr;
 
-    _zip_stream.next_in = NULL;
+    _zip_stream.next_in = nullptr;
     _zip_stream.avail_in = 0;
     _zip_stream.avail_out = 0;
-    _zip_stream.next_out = NULL;
+    _zip_stream.next_out = nullptr;
 
     if(level > 9)
         level = 9;
@@ -319,13 +319,13 @@ void
   basic_unzip_streambuf<charT, traits>::initialize(int window_size)
 {
   // setting zalloc, zfree and opaque
-  _zip_stream.zalloc = (alloc_func) 0;
-  _zip_stream.zfree = (free_func) 0;
+  _zip_stream.zalloc = (alloc_func) nullptr;
+  _zip_stream.zfree = (free_func) nullptr;
 
-  _zip_stream.next_in = NULL;
+  _zip_stream.next_in = nullptr;
   _zip_stream.avail_in = 0;
   _zip_stream.avail_out = 0;
-  _zip_stream.next_out = NULL;
+  _zip_stream.next_out = nullptr;
 
   _err = inflateInit2(&_zip_stream, window_size);
 
@@ -398,7 +398,6 @@ std::streampos
   // We can't really randomly skip around, so we go to the beginning and read until we hit the right spot
   // So the first step is to calculate the final positioning
   std::streampos finalpos;
-  char ch;
   switch ( way )
     {
     case std::ios_base::beg :
@@ -408,7 +407,7 @@ std::streampos
     case std::ios_base::end:
       // find the end of the file -- might be enough if off = 0
       while(this->sgetc() != EOF) {
-        ch = this->sbumpc();
+        this->sbumpc();
       }
       finalpos = this->currentpos() + off;
       if (off == 0)
@@ -433,7 +432,7 @@ std::streampos
 
   // Now we keep going, throwing away the data until we get to the right place
   while(this->sgetc() != EOF && this->currentpos() != finalpos) {
-    ch = this->sbumpc();
+    this->sbumpc();
   }
 
   return this->currentpos();
@@ -453,9 +452,8 @@ std::streampos
   this->check_header();
 
   // Now we keep going, throwing away the data until we get to the right place
-  char ch;
   while(this->sgetc() != EOF && this->currentpos() != sp) {
-    ch = this->sbumpc();
+    this->sbumpc();
   }
 
   return this->currentpos();

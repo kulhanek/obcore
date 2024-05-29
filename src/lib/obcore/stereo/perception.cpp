@@ -22,12 +22,21 @@
   02110-1301, USA.
  **********************************************************************/
 
+
 #include <openbabel/stereo/tetrahedral.h>
 #include <openbabel/stereo/cistrans.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/ring.h>
+#include <openbabel/obutil.h>
+#include <openbabel/obiter.h>
+#include <openbabel/generic.h>
 #include <openbabel/graphsym.h>
+#include <openbabel/math/matrix3x3.h>
 #include <openbabel/canon.h>
 #include <openbabel/oberror.h>
+#include <openbabel/elements.h>
 #include <cassert>
 
 #include "stereoutil.h"
@@ -74,14 +83,14 @@ namespace OpenBabel {
         StereoFrom3D(mol, force);
         break;
       case 2:
-        StereoFrom2D(mol, 0, force);
+        StereoFrom2D(mol, nullptr, force);
         break;
       default:
         StereoFrom0D(mol);
         break;
     }
-
-    obErrorLog.ThrowError(__FUNCTION__, "Ran OpenBabel::PerceiveStereo", obAuditMsg);
+    if (obErrorLog.GetOutputLevel() >= obAuditMsg)
+      obErrorLog.ThrowError(__FUNCTION__, "Ran OpenBabel::PerceiveStereo", obAuditMsg);
   }
 
   /**
@@ -92,7 +101,7 @@ namespace OpenBabel {
   {
     std::vector<OBAtom*>::iterator ia;
     for (OBAtom *atom = mol->BeginAtom(ia); atom; atom = mol->NextAtom(ia))
-      if (atom->GetHyb() == 3 && atom->GetHvyValence() >= 3) {
+      if (atom->GetHyb() == 3 && atom->GetHvyDegree() >= 3) {
         return true;
       }
     return false;
@@ -106,7 +115,7 @@ namespace OpenBabel {
   {
     std::vector<OBBond*>::iterator ib;
     for (OBBond *bond = mol->BeginBond(ib); bond; bond = mol->NextBond(ib))
-      if (bond->GetBO() == 2) {
+      if (bond->GetBondOrder() == 2) {
         return true;
       }
     return false;
@@ -128,11 +137,11 @@ namespace OpenBabel {
   bool isPotentialTetrahedral(OBAtom *atom)
   {
     // consider only potential steroecenters
-    if ((atom->GetHyb() != 3 && !(atom->GetHyb() == 5 && atom->IsPhosphorus()))
-        || atom->GetImplicitValence() > 4 || atom->GetHvyValence() < 3 || atom->GetHvyValence() > 4)
+    if ((atom->GetHyb() != 3 && !(atom->GetHyb() == 5 && atom->GetAtomicNum() == OBElements::Phosphorus))
+        || atom->GetTotalDegree() > 4 || atom->GetHvyDegree() < 3 || atom->GetHvyDegree() > 4)
       return false;
     // skip non-chiral N
-    if (atom->IsNitrogen() && atom->GetFormalCharge()==0) {
+    if (atom->GetAtomicNum() == OBElements::Nitrogen && atom->GetFormalCharge()==0) {
       int nbrRingAtomCount = 0;
       FOR_NBORS_OF_ATOM (nbr, atom) {
         if (nbr->IsInRing())
@@ -141,11 +150,11 @@ namespace OpenBabel {
       if (nbrRingAtomCount < 3)
         return false;
     }
-    if (atom->IsCarbon()) {
+    if (atom->GetAtomicNum() == OBElements::Carbon) {
       if (atom->GetFormalCharge())
         return false;
       FOR_NBORS_OF_ATOM (nbr, atom) {
-        if (nbr->GetAtomicNum() == 26 && nbr->GetValence() > 7)
+        if (nbr->GetAtomicNum() == 26 && nbr->GetExplicitDegree() > 7)
           return false;
       }
     }
@@ -169,9 +178,9 @@ namespace OpenBabel {
       return false;
     if (!bond->GetBeginAtom()->HasSingleBond() || !bond->GetEndAtom()->HasSingleBond())
       return false;
-    if (bond->GetBeginAtom()->GetHvyValence() == 1 || bond->GetEndAtom()->GetHvyValence() == 1)
+    if (bond->GetBeginAtom()->GetHvyDegree() == 1 || bond->GetEndAtom()->GetHvyDegree() == 1)
       return false;
-    if (bond->GetBeginAtom()->GetHvyValence() > 3 || bond->GetEndAtom()->GetHvyValence() > 3)
+    if (bond->GetBeginAtom()->GetHvyDegree() > 3 || bond->GetEndAtom()->GetHvyDegree() > 3)
       return false;
     return true;
   }
@@ -194,13 +203,13 @@ namespace OpenBabel {
   bool isUnitInFragment(OBMol *mol, const OBStereoUnit &unit, const OBBitVec &fragment)
   {
     if (unit.type == OBStereo::Tetrahedral) {
-      if (fragment.BitIsOn(unit.id))
+      if (fragment.BitIsSet(unit.id))
         return true;
     } else if(unit.type == OBStereo::CisTrans) {
       OBBond *bond = mol->GetBondById(unit.id);
       OBAtom *begin = bond->GetBeginAtom();
       OBAtom *end = bond->GetEndAtom();
-      if (fragment.BitIsOn(begin->GetId()) || fragment.BitIsOn(end->GetId()))
+      if (fragment.BitIsSet(begin->GetId()) || fragment.BitIsSet(end->GetId()))
         return true;
     }
     return false;
@@ -685,7 +694,6 @@ namespace OpenBabel {
 
   }
 
-
   /**
    * Find the stereogenic units in a molecule using a set of rules.
    *
@@ -758,13 +766,13 @@ namespace OpenBabel {
       if (bond->IsInRing() && bond->IsAromatic())
         continue; // Exclude C=C in phenyl rings for example
 
-      if (bond->GetBO() == 2) {
+      if (bond->GetBondOrder() == 2) {
         OBAtom *begin = bond->GetBeginAtom();
         OBAtom *end = bond->GetEndAtom();
         if (!begin || !end)
           continue;
 
-        if (begin->GetImplicitValence() > 3 || end->GetImplicitValence() > 3)
+        if (begin->GetTotalDegree() > 3 || end->GetTotalDegree() > 3)
           continue; // e.g. C=Ru where the Ru has four substituents
 
         // Needs to have at least one explicit single bond at either end
@@ -775,14 +783,14 @@ namespace OpenBabel {
         isCisTransBond = true;
         std::vector<OBBond*>::iterator j;
 
-        if (begin->GetValence() == 2) {
+        if (begin->GetExplicitDegree() == 2) {
           // Begin atom has two explicit neighbors. One is the end atom. The other should
           // be a heavy atom - this is what we test here.
           // (There is a third, implicit, neighbor which is either a hydrogen
           // or a lone pair.)
           if (begin->ExplicitHydrogenCount() == 1)
             isCisTransBond = false;
-        } else if (begin->GetValence() == 3) {
+        } else if (begin->GetExplicitDegree() == 3) {
           std::vector<unsigned int> tlist;
 
           for (OBAtom *nbr = begin->BeginNbrAtom(j); nbr; nbr = begin->NextNbrAtom(j)) {
@@ -811,11 +819,11 @@ namespace OpenBabel {
         if (!isCisTransBond)
           continue;
 
-        if (end->GetValence() == 2) {
+        if (end->GetExplicitDegree() == 2) {
           // see comment above for begin atom
           if (end->ExplicitHydrogenCount() == 1)
             isCisTransBond = false;
-        } else if (end->GetValence() == 3) {
+        } else if (end->GetExplicitDegree() == 3) {
           std::vector<unsigned int> tlist;
 
           for (OBAtom *nbr = end->BeginNbrAtom(j); nbr; nbr = end->NextNbrAtom(j)) {
@@ -1068,7 +1076,7 @@ namespace OpenBabel {
         case C11:
           {
             // find the ligand
-            OBAtom *ligandAtom = 0;
+            OBAtom *ligandAtom = nullptr;
             FOR_NBORS_OF_ATOM (nbr, begin) {
               if ((nbr->GetIdx() != bond->GetBeginAtomIdx()) && (nbr->GetIdx() != bond->GetEndAtomIdx())) {
                 ligandAtom = &*nbr;
@@ -1079,13 +1087,13 @@ namespace OpenBabel {
             OBBitVec ligand = getFragment(ligandAtom, begin);
             for (OBStereoUnitSet::iterator u2 = units.begin(); u2 != units.end(); ++u2) {
               if ((*u2).type == OBStereo::Tetrahedral) {
-                if (ligand.BitIsOn((*u2).id))
+                if (ligand.BitIsSet((*u2).id))
                   beginValid = true;
               } else if((*u2).type == OBStereo::CisTrans) {
                 OBBond *bond = mol->GetBondById((*u2).id);
                 OBAtom *begin = bond->GetBeginAtom();
                 OBAtom *end = bond->GetEndAtom();
-                if (ligand.BitIsOn(begin->GetId()) || ligand.BitIsOn(end->GetId()))
+                if (ligand.BitIsSet(begin->GetId()) || ligand.BitIsSet(end->GetId()))
                   beginValid = true;
               }
             }
@@ -1105,7 +1113,7 @@ namespace OpenBabel {
         case C11:
           {
             // find the ligand
-            OBAtom *ligandAtom = 0;
+            OBAtom *ligandAtom = nullptr;
             FOR_NBORS_OF_ATOM (nbr, end) {
               if ((nbr->GetIdx() != bond->GetBeginAtomIdx()) && (nbr->GetIdx() != bond->GetEndAtomIdx())) {
                 ligandAtom = &*nbr;
@@ -1116,13 +1124,13 @@ namespace OpenBabel {
             OBBitVec ligand = getFragment(ligandAtom, end);
             for (OBStereoUnitSet::iterator u2 = units.begin(); u2 != units.end(); ++u2) {
               if ((*u2).type == OBStereo::Tetrahedral) {
-                if (ligand.BitIsOn((*u2).id))
+                if (ligand.BitIsSet((*u2).id))
                   endValid = true;
               } else if((*u2).type == OBStereo::CisTrans) {
                 OBBond *bond = mol->GetBondById((*u2).id);
                 OBAtom *begin = bond->GetBeginAtom();
                 OBAtom *end = bond->GetEndAtom();
-                if (ligand.BitIsOn(begin->GetId()) || ligand.BitIsOn(end->GetId()))
+                if (ligand.BitIsSet(begin->GetId()) || ligand.BitIsSet(end->GetId()))
                   endValid = true;
               }
             }
@@ -1474,7 +1482,7 @@ namespace OpenBabel {
    */
   OBAtom* findAtomWithSymmetryClass(OBAtom *atom, unsigned int symClass, const std::vector<unsigned int> &symClasses)
   {
-    OBAtom *ligandAtom = 0;
+    OBAtom *ligandAtom = nullptr;
     FOR_NBORS_OF_ATOM (nbr, atom)
       if (symClasses.at(nbr->GetIndex()) == symClass)
         ligandAtom = &*nbr;
@@ -1554,11 +1562,11 @@ namespace OpenBabel {
     std::vector<unsigned int> ringIndices;
     for (OBStereoUnitSet::const_iterator u2 = units.begin(); u2 != units.end(); ++u2) {
       if ((*u2).type == OBStereo::Tetrahedral) {
-        if (ligand.BitIsOn((*u2).id)) {
+        if (ligand.BitIsSet((*u2).id)) {
           if ((*u2).para) {
             OBAtom *paraAtom = mol->GetAtomById((*u2).id);
             for (std::size_t ringIdx = 0; ringIdx < mergedRings.size(); ++ringIdx) {
-              if (mergedRings.at(ringIdx).BitIsOn(paraAtom->GetIdx()))
+              if (mergedRings.at(ringIdx).BitIsSet(paraAtom->GetIdx()))
                 if (std::find(ringIndices.begin(), ringIndices.end(), ringIdx) == ringIndices.end())
                   ringIndices.push_back(ringIdx);
             }
@@ -1569,10 +1577,10 @@ namespace OpenBabel {
         OBBond *bond = mol->GetBondById((*u2).id);
         OBAtom *begin = bond->GetBeginAtom();
         OBAtom *end = bond->GetEndAtom();
-        if (ligand.BitIsOn(begin->GetId()) || ligand.BitIsOn(end->GetId())) {
+        if (ligand.BitIsSet(begin->GetId()) || ligand.BitIsSet(end->GetId())) {
           if ((*u2).para) {
             for (std::size_t ringIdx = 0; ringIdx < mergedRings.size(); ++ringIdx) {
-              if (mergedRings.at(ringIdx).BitIsOn(begin->GetIdx()) || mergedRings.at(ringIdx).BitIsOn(end->GetIdx())) {
+              if (mergedRings.at(ringIdx).BitIsSet(begin->GetIdx()) || mergedRings.at(ringIdx).BitIsSet(end->GetIdx())) {
                 if (std::find(ringIndices.begin(), ringIndices.end(), ringIdx) == ringIndices.end()) {
                   ringIndices.push_back(ringIdx);
                 }
@@ -1750,7 +1758,7 @@ namespace OpenBabel {
             case C11:
               {
                 // find the ligand
-                OBAtom *ligandAtom = 0;
+                OBAtom *ligandAtom = nullptr;
                 FOR_NBORS_OF_ATOM (nbr, bond->GetBeginAtom()) {
                   if ((nbr->GetIdx() != bond->GetBeginAtomIdx()) && (nbr->GetIdx() != bond->GetEndAtomIdx())) {
                     ligandAtom = &*nbr;
@@ -1774,7 +1782,7 @@ namespace OpenBabel {
             case C11:
               {
                 // find the ligand
-                OBAtom *ligandAtom = 0;
+                OBAtom *ligandAtom = nullptr;
                 FOR_NBORS_OF_ATOM (nbr, bond->GetEndAtom()) {
                   if ((nbr->GetIdx() != bond->GetBeginAtomIdx()) && (nbr->GetIdx() != bond->GetEndAtomIdx())) {
                     ligandAtom = &*nbr;
@@ -2091,6 +2099,7 @@ namespace OpenBabel {
       const OBStereoUnitSet &stereoUnits, bool addToMol)
   {
     std::vector<OBTetrahedralStereo*> configs;
+    OBUnitCell *uc = (OBUnitCell*)mol->GetData(OBGenericDataType::UnitCell);
     obErrorLog.ThrowError(__FUNCTION__, "Ran OpenBabel::TetrahedralFrom3D", obAuditMsg);
 
     // find all tetrahedral centers
@@ -2105,10 +2114,10 @@ namespace OpenBabel {
 
       // make sure we have at least 3 heavy atom neighbors
       // timvdm 28 Jun 2009: This is already checked in FindStereogenicUnits
-      if (center->GetHvyValence() < 3) {
+      if (center->GetHvyDegree() < 3) {
         std::stringstream errorMsg;
         errorMsg << "Cannot calculate a signed volume for an atom with a heavy atom valence of "
-                 << center->GetHvyValence() << std::endl;
+                 << center->GetHvyDegree() << std::endl;
         obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obInfo);
         continue;
       }
@@ -2132,10 +2141,18 @@ namespace OpenBabel {
       if (bond->IsWedgeOrHash() && bond->GetBeginAtom()==center)
         config.specified = false;
 
-      nbrCoords.push_back(from->GetVector());
+      vector3 center_coord = center->GetVector();
+
+      if (uc)
+        nbrCoords.push_back(uc->UnwrapCartesianNear(from->GetVector(), center_coord));
+      else
+        nbrCoords.push_back(from->GetVector());
       for (OBStereo::RefIter id = config.refs.begin(); id != config.refs.end(); ++id) {
         OBAtom *nbr = mol->GetAtomById(*id);
-        nbrCoords.push_back(nbr->GetVector());
+        if (uc)
+          nbrCoords.push_back(uc->UnwrapCartesianNear(nbr->GetVector(), center_coord));
+        else
+          nbrCoords.push_back(nbr->GetVector());
         OBBond *bond = mol->GetBond(nbr, center);
         if (bond->IsWedgeOrHash() && bond->GetBeginAtom()==center)
           config.specified = false;
@@ -2160,7 +2177,7 @@ namespace OpenBabel {
       // If we have three heavy atoms we can use the chiral center atom itself for the fourth
       // will always give same sign (for tetrahedron), magnitude will be smaller.
       if ((config.refs.size() == 2) || use_central_atom) {
-        nbrCoords.push_back(center->GetVector());
+        nbrCoords.push_back(center_coord);
         config.refs.push_back(OBStereo::ImplicitRef); // need to add largest number on end to work
       }
 
@@ -2184,6 +2201,7 @@ namespace OpenBabel {
       const OBStereoUnitSet &stereoUnits, bool addToMol)
   {
     std::vector<OBCisTransStereo*> configs;
+    OBUnitCell *uc = (OBUnitCell*)mol->GetData(OBGenericDataType::UnitCell);
     obErrorLog.ThrowError(__FUNCTION__, "Ran OpenBabel::CisTransFrom3D", obAuditMsg);
 
     // find all cis/trans bonds
@@ -2207,46 +2225,104 @@ namespace OpenBabel {
         if (nbr->GetId() == end->GetId())
           continue;
         config.refs.push_back(nbr->GetId());
-        bondVecs.push_back(nbr->GetVector() - begin->GetVector());
+        if (uc)
+          bondVecs.push_back(uc->MinimumImageCartesian(nbr->GetVector() - begin->GetVector()));
+        else
+          bondVecs.push_back(nbr->GetVector() - begin->GetVector());
       }
       if (config.refs.size() == 1) {
         config.refs.push_back(OBStereo::ImplicitRef);
         vector3 pos;
-        mol->GetAtomById(config.refs.at(0))->GetNewBondVector(pos, 1.0);
-        bondVecs.push_back(pos - begin->GetVector());
+        begin->GetNewBondVector(pos, 1.0);
+        // WARNING: GetNewBondVector code has not yet been checked, since it's part of builder.cpp
+        if (uc)
+          bondVecs.push_back(uc->MinimumImageCartesian(pos - begin->GetVector()));
+        else
+          bondVecs.push_back(pos - begin->GetVector());
       }
       // end
       config.end = end->GetId();
+      vector3 end_vec = end->GetVector();
+      if (uc)
+        end_vec = uc->UnwrapCartesianNear(end_vec, begin->GetVector());
       FOR_NBORS_OF_ATOM (nbr, end) {
         if (nbr->GetId() == begin->GetId())
           continue;
         config.refs.push_back(nbr->GetId());
-        bondVecs.push_back(nbr->GetVector() - end->GetVector());
+        if (uc)
+          bondVecs.push_back(uc->MinimumImageCartesian(nbr->GetVector() - end_vec));
+        else
+          bondVecs.push_back(nbr->GetVector() - end_vec);
       }
       if (config.refs.size() == 3) {
         config.refs.push_back(OBStereo::ImplicitRef);
         vector3 pos;
-        mol->GetAtomById(config.refs.at(2))->GetNewBondVector(pos, 1.0);
-        bondVecs.push_back(pos - end->GetVector());
+        end->GetNewBondVector(pos, 1.0);
+        if (uc)
+          bondVecs.push_back(uc->MinimumImageCartesian(pos - end_vec));
+        else
+          bondVecs.push_back(pos - end_vec);
       }
 
-      // 0      3     Get signed distance of 0 and 2 to the plane
-      //  \    /      that goes through the double bond and is at
-      //   C==C       right angles to the stereo bonds.
-      //  /    \      If the two signed distances have the same sign
-      // 1      2     then they are cis; if not, then trans.
+      double tor02, tor03, tor12, tor13;
+      if (uc) {
+        vector3 v0 = begin->GetVector() + bondVecs[0];
+        vector3 v1 = begin->GetVector() + bondVecs[1];
+        vector3 v2 = end->GetVector() + bondVecs[2];
+        vector3 v3 = end->GetVector() + bondVecs[3];
 
-      vector3 dbl_bond = end->GetVector() - begin->GetVector();
-      vector3 above_plane = cross(dbl_bond, bondVecs[0]);
-      double d0 = Point2PlaneSigned( mol->GetAtomById(config.refs[0])->GetVector(),
-                               begin->GetVector(), end->GetVector(), above_plane);
-      double d2 = Point2PlaneSigned( mol->GetAtomById(config.refs[2])->GetVector(),
-                               begin->GetVector(), end->GetVector(), above_plane);
+        vector3 b, c, d;
+        b = uc->UnwrapCartesianNear(begin->GetVector(), v0);
+        c = uc->UnwrapCartesianNear(end->GetVector(), b);
+        d = uc->UnwrapCartesianNear(v2, c);
+        tor02 = CalcTorsionAngle(v0, b, c, d);
 
-      if ((d0 > 0 && d2 > 0) || (d0 < 0 && d2 < 0))
+        d = uc->UnwrapCartesianNear(v3, c);
+        tor03 = CalcTorsionAngle(v0, b, c, d);
+
+        b = uc->UnwrapCartesianNear(begin->GetVector(), v1);
+        c = uc->UnwrapCartesianNear(end->GetVector(), b);
+        d = uc->UnwrapCartesianNear(v2, c);
+        tor12 = CalcTorsionAngle(v1, b, c, d);
+
+        d = uc->UnwrapCartesianNear(v3, c);
+        tor13 = CalcTorsionAngle(v1, b, c, d);
+      } else {
+        tor02 = CalcTorsionAngle(begin->GetVector() + bondVecs[0], begin->GetVector(), end->GetVector(), end->GetVector() + bondVecs[2]);
+        tor03 = CalcTorsionAngle(begin->GetVector() + bondVecs[0], begin->GetVector(), end->GetVector(), end->GetVector() + bondVecs[3]);
+        tor12 = CalcTorsionAngle(begin->GetVector() + bondVecs[1], begin->GetVector(), end->GetVector(), end->GetVector() + bondVecs[2]);
+        tor13 = CalcTorsionAngle(begin->GetVector() + bondVecs[1], begin->GetVector(), end->GetVector(), end->GetVector() + bondVecs[3]);
+      }
+
+      if (std::abs(tor02) < 90.0 && std::abs(tor03) > 90.0) {
+        // 0      2 //
+        //  \    /  //
+        //   C==C   //
+        //  /    \  //
+        // 1      3 //
         config.shape = OBStereo::ShapeZ;
-      else
+
+        if (std::abs(tor12) < 90.0 || std::abs(tor13) > 90.0) {
+          obErrorLog.ThrowError(__FUNCTION__, "Could not determine cis/trans from 3D coordinates, using unspecified", obInfo);
+          config.specified = false;
+        }
+      } else if (std::abs(tor02) > 90.0 && std::abs(tor03) < 90.0) {
+        // 0      3 //
+        //  \    /  //
+        //   C==C   //
+        //  /    \  //
+        // 1      2 //
         config.shape = OBStereo::ShapeU;
+
+        if (std::abs(tor12) > 90.0 || std::abs(tor13) < 90.0) {
+          obErrorLog.ThrowError(__FUNCTION__, "Could not determine cis/trans from 3D coordinates, using unspecified", obInfo);
+          config.specified = false;
+        }
+      } else {
+        obErrorLog.ThrowError(__FUNCTION__, "Could not determine cis/trans from 3D coordinates, using unspecified", obInfo);
+        config.shape = OBStereo::ShapeU;
+        config.specified = false;
+      }
 
       OBCisTransStereo *ct = new OBCisTransStereo(mol);
       ct->SetConfig(config);
@@ -2316,6 +2392,12 @@ namespace OpenBabel {
 
     v1 = a->GetVector() - b->GetVector();
     v2 = c->GetVector() - b->GetVector();
+    if (a->IsPeriodic()) {  // Adapted from OBAtom.GetAngle
+      OBMol *mol = (OBMol*)a->GetParent();
+      OBUnitCell *box = (OBUnitCell*)mol->GetData(OBGenericDataType::UnitCell);
+      v1 = box->MinimumImageCartesian(v1);
+      v2 = box->MinimumImageCartesian(v2);
+    }
     if (IsNearZero(v1.length(), 1.0e-3)
       || IsNearZero(v2.length(), 1.0e-3)) {
         return(0.0);
@@ -2344,10 +2426,10 @@ namespace OpenBabel {
       OBAtom *center = mol->GetAtomById(*i);
 
       // make sure we have at least 3 heavy atom neighbors
-      if (center->GetHvyValence() < 3) {
+      if (center->GetHvyDegree() < 3) {
         std::stringstream errorMsg;
         errorMsg << "Cannot calculate a signed volume for an atom with a heavy atom valence of "
-                 << center->GetHvyValence() << std::endl;
+                 << center->GetHvyDegree() << std::endl;
         obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obInfo);
         continue;
       }
@@ -2405,7 +2487,7 @@ namespace OpenBabel {
 
       // Handle the case of a tet center with four plane atoms or
       //        3 plane atoms with the fourth bond implicit
-      if (planeAtoms.size() == 4 || (planeAtoms.size() == 3 && center->GetValence()==3))
+      if (planeAtoms.size() == 4 || (planeAtoms.size() == 3 && center->GetExplicitDegree()==3))
         config.specified = false;
 
       bool success = true;
@@ -2709,14 +2791,16 @@ namespace OpenBabel {
 
     // This loop sets one bond of each tet stereo to up or to down (2D only)
     std::set <OBBond *> alreadyset;
+    OBUnitCell *uc = (OBUnitCell*)mol.GetData(OBGenericDataType::UnitCell);
     for (std::vector<OBGenericData*>::iterator data = vdata.begin(); data != vdata.end(); ++data)
       if (((OBStereoBase*)*data)->GetType() == OBStereo::Tetrahedral) {
         OBTetrahedralStereo *ts = dynamic_cast<OBTetrahedralStereo*>(*data);
         OBTetrahedralStereo::Config cfg = ts->GetConfig();
 
         if (cfg.specified) {
-          OBBond* chosen = (OBBond*) NULL;
+          OBBond* chosen = nullptr;
           OBAtom* center = mol.GetAtomById(cfg.center);
+          vector3 center_coord = center->GetVector();
 
           // Find the two bonds closest in angle and remember them if
           // they are closer than DELTA_ANGLE_FOR_OVERLAPPING_BONDS
@@ -2724,8 +2808,8 @@ namespace OpenBabel {
           FOR_NBORS_OF_ATOM(a, center)
             nbrs.push_back(&*a);
           double min_angle = 359.0;
-          OBBond *close_bond_a = (OBBond*) NULL;
-          OBBond *close_bond_b = (OBBond*) NULL;
+          OBBond *close_bond_a = nullptr;
+          OBBond *close_bond_b = nullptr;
           for (unsigned int i=0; i<nbrs.size() - 1; ++i)
             for (unsigned int j=i+1; j<nbrs.size(); ++j) {
               double angle = abs(nbrs[i]->GetAngle(center, nbrs[j]));
@@ -2737,8 +2821,8 @@ namespace OpenBabel {
             }
 
           if (min_angle > DELTA_ANGLE_FOR_OVERLAPPING_BONDS) {
-            close_bond_a = (OBBond*) NULL;
-            close_bond_b = (OBBond*) NULL;
+            close_bond_a = nullptr;
+            close_bond_b = nullptr;
           }
 
           // Find the best candidate bond to set to up/down
@@ -2751,12 +2835,14 @@ namespace OpenBabel {
           // 6. If two bonds are overlapping, choose one of these
           //    (otherwise the InChI code will mark it as ambiguous)
 
-          unsigned int max_bond_score = 0;
+          int max_bond_score = 0;   // The test below (score > max_bond_score)
+          // gave incorrect results when score < 0 and max_bond_score was an unsigned int
+          // see https://stackoverflow.com/questions/5416414/signed-unsigned-comparisons#5416498
           FOR_BONDS_OF_ATOM(b, center) {
             if (alreadyset.find(&*b) != alreadyset.end()) continue;
 
             OBAtom* nbr = b->GetNbrAtom(center);
-	    int nbr_nbonds = nbr->GetValence();
+	    int nbr_nbonds = nbr->GetExplicitDegree();
             int score = 0;
             if (!b->IsInRing()) {
 	      if (!nbr->IsInRing())
@@ -2770,9 +2856,9 @@ namespace OpenBabel {
 		score += 8;		// strongly prefer terminal atoms
 	    else
 	      score -= nbr_nbonds - 2;	// bond to atom with many bonds is penalized
-	    if (nbr->IsHydrogen())
+	    if (nbr->GetAtomicNum() == OBElements::Hydrogen)
 	      score += 2;		// prefer H
-	    else if (nbr->IsCarbon())
+	    else if (nbr->GetAtomicNum() == OBElements::Carbon)
 	      score += 1;		// then C
             if (&*b==close_bond_a || &*b==close_bond_b)
               score += 16;
@@ -2783,7 +2869,7 @@ namespace OpenBabel {
             }
           }
 
-          if (chosen==NULL) { // There is a remote possibility of this but let's worry about 99.9% of cases first
+          if (chosen == nullptr) { // There is a remote possibility of this but let's worry about 99.9% of cases first
             obErrorLog.ThrowError(__FUNCTION__,
               "Failed to set stereochemistry as unable to find an available bond", obError);
             return false;
@@ -2815,9 +2901,17 @@ namespace OpenBabel {
               // Put the ref for the stereo bond second
               while (test_cfg.refs[1] != chosen->GetNbrAtom(center)->GetId())
                 std::rotate(test_cfg.refs.begin(), test_cfg.refs.begin() + 2, test_cfg.refs.end());
-              anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
-                mol.GetAtomById(test_cfg.refs[1])->GetVector(), mol.GetAtomById(test_cfg.refs[2])->GetVector(),
-                center->GetVector());
+              if (uc)
+                anticlockwise_order = AngleOrder(
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[0])->GetVector(), center_coord),
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[1])->GetVector(), center_coord),
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[2])->GetVector(), center_coord),
+                  center_coord
+                  );
+              else
+                anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
+                  mol.GetAtomById(test_cfg.refs[1])->GetVector(), mol.GetAtomById(test_cfg.refs[2])->GetVector(),
+                  center->GetVector());
               // Get the angle between the plane bonds
               double angle = GetAngle(mol.GetAtomById(test_cfg.refs[0]), center, mol.GetAtomById(test_cfg.refs[2]));
               if ((angle<0 && anticlockwise_order) || (angle>0 && !anticlockwise_order)) // Is the stereobond in the bigger angle?
@@ -2829,9 +2923,17 @@ namespace OpenBabel {
               }
             else {
               test_cfg = OBTetrahedralStereo::ToConfig(test_cfg, chosen->GetNbrAtom(center)->GetId());
-              anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
-                mol.GetAtomById(test_cfg.refs[1])->GetVector(), mol.GetAtomById(test_cfg.refs[2])->GetVector(),
-                center->GetVector());
+              if (uc)
+                anticlockwise_order = AngleOrder(
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[0])->GetVector(), center_coord),
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[1])->GetVector(), center_coord),
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[2])->GetVector(), center_coord),
+                  center_coord
+                  );
+              else
+                anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
+                  mol.GetAtomById(test_cfg.refs[1])->GetVector(), mol.GetAtomById(test_cfg.refs[2])->GetVector(),
+                  center->GetVector());
               if (anticlockwise_order)
                 useup = false;
               else
@@ -2939,4 +3041,3 @@ namespace OpenBabel {
   }
 
 }
-

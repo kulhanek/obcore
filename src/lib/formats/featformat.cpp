@@ -15,6 +15,10 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/obutil.h>
 
 using namespace std;
 namespace OpenBabel
@@ -64,7 +68,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -100,13 +104,18 @@ namespace OpenBabel
         CleanAtomType(type);
         atom = mol.NewAtom();
         atom->SetVector(x,y,z);
-        atom->SetAtomicNum(etab.GetAtomicNum(type));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(type));
       }
 
     // clean out remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     if (!pConv->IsOption("b",OBConversion::INOPTIONS))
       mol.ConnectTheDots();
@@ -122,7 +131,7 @@ namespace OpenBabel
   bool FEATFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -139,7 +148,7 @@ namespace OpenBabel
     for(atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
       {
         snprintf(buffer, BUFF_SIZE, "%-3s %8.5f  %8.5f  %8.5f ",
-                 etab.GetSymbol(atom->GetAtomicNum()),
+                 OBElements::GetSymbol(atom->GetAtomicNum()),
                  atom->x(),
                  atom->y(),
                  atom->z());

@@ -15,11 +15,20 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/kekulize.h>
+#include <openbabel/obfunctions.h>
+#include <openbabel/data.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
 {
-
   //The routine WriteSmiOrderedMol2() in the original mol2.cpp is presumably
   //another output format, but was not made available in version 100.1.2, nor
   //is it here.
@@ -33,9 +42,10 @@ namespace OpenBabel
       OBConversion::RegisterFormat("mol2",this, "chemical/x-mol2");
       OBConversion::RegisterFormat("ml2",this);
       OBConversion::RegisterFormat("sy2",this);
-      OBConversion::RegisterOptionParam("c", NULL, 0, OBConversion::INOPTIONS);
-      OBConversion::RegisterOptionParam("c", NULL, 0, OBConversion::OUTOPTIONS);
-      OBConversion::RegisterOptionParam("l", NULL, 0, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("c", this, 0, OBConversion::INOPTIONS);
+      OBConversion::RegisterOptionParam("c", this, 0, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("l", this, 0, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("u", this, 0, OBConversion::OUTOPTIONS);
     }
 
     virtual const char* Description() //required
@@ -43,10 +53,11 @@ namespace OpenBabel
       return
         "Sybyl Mol2 format\n"
         "Read Options e.g. -ac\n"
-        "  c               Read UCSF Dock scores saved in comments preceeding molecules\n\n"
+        "  c               Read UCSF Dock scores saved in comments preceding molecules\n\n"
         "Write Options e.g. -xl\n"
-        "  l               Output ignores residue information (only ligands)\n\n";
-        "  c               Write UCSF Dock scores saved in comments preceeding molecules\n\n";
+        "  l               Output ignores residue information (only ligands)\n"
+        "  c               Write UCSF Dock scores saved in comments preceding molecules\n"
+        "  u               Do not write formal charge information in UNITY records\n\n";
     };
 
     virtual const char* SpecificationURL()
@@ -74,17 +85,17 @@ namespace OpenBabel
   // \return Is this atom a sulfur in a (di)thiocarboxyl (-CS2, -COS, CS2H or COSH) group?
   static bool IsThiocarboxylSulfur(OBAtom* queryatom)
   {
-    if (!queryatom->IsSulfur())
+    if (queryatom->GetAtomicNum() != OBElements::Sulfur)
       return(false);
-    if (queryatom->GetHvyValence() != 1)
+    if (queryatom->GetHvyDegree() != 1)
       return(false);
 
-    OBAtom *atom = NULL;
+    OBAtom *atom = nullptr;
     OBBond *bond;
     OBBondIterator i;
 
     for (bond = queryatom->BeginBond(i); bond; bond = queryatom->NextBond(i))
-      if ((bond->GetNbrAtom(queryatom))->IsCarbon())
+      if ((bond->GetNbrAtom(queryatom))->GetAtomicNum() == OBElements::Carbon)
       {
         atom = bond->GetNbrAtom(queryatom);
         break;
@@ -100,13 +111,52 @@ namespace OpenBabel
     return(true);
   }
 
+  static bool IsOxygenOrSulfur(OBAtom *atom)
+  {
+    switch (atom->GetAtomicNum()) {
+    case 8: case 16: return true;
+    default: return false;
+    }
+  }
 
+  static unsigned int GetAtomicNumAndIsotope(const char* symbol, int *isotope)
+  {
+    const char* p = symbol;
+    switch (p[0]) {
+    case 'D':
+      if (p[1] == '\0') {
+        *isotope = 2;
+        return 1;
+      }
+      break;
+    case 'T':
+      if (p[1] == '\0') {
+        *isotope = 3;
+        return 1;
+      }
+      break;
+    }
+    return OBElements::GetAtomicNum(symbol);
+  }
+
+  //read from ifs until next rti is found and return it
+  static string read_until_rti(istream & ifs) 
+  {
+      char buffer[BUFF_SIZE];
+      for (;;)
+      {
+        if (!ifs.getline(buffer,BUFF_SIZE))
+          return "";
+        if (!strncmp(buffer,"@<TRIPOS>",9))
+          return string(buffer);
+      }      
+  }
   /////////////////////////////////////////////////////////////////
   bool MOL2Format::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -116,11 +166,13 @@ namespace OpenBabel
     //Old code follows...
     bool foundAtomLine = false;
     char buffer[BUFF_SIZE];
-    char *comment = NULL;
+    char *comment = nullptr;
     string str,str1;
     vector<string> vstr;
     int len;
 
+    // Prevent reperception
+    mol.SetChainsPerceived();
 
     mol.BeginModify();
 
@@ -128,7 +180,7 @@ namespace OpenBabel
       {
         if (!ifs.getline(buffer,BUFF_SIZE))
           return(false);
-        if (pConv->IsOption("c", OBConversion::INOPTIONS)!=NULL && EQn(buffer,"###########",10))
+        if (pConv->IsOption("c", OBConversion::INOPTIONS) != nullptr && EQn(buffer, "###########", 10))
           {
             char attr[32], val[32];
             sscanf(buffer, "########## %[^:]:%s", attr, val);
@@ -191,7 +243,7 @@ namespace OpenBabel
                 //! @todo allow better multi-line comments
                 // which don't allow ill-formed data to consume memory
                 // Thanks to Andrew Dalke for the pointer
-                if (comment != NULL)
+                if (comment != nullptr)
                   delete [] comment;
                 comment = new char [len];
                 memcpy(comment,buffer,len);
@@ -216,6 +268,8 @@ namespace OpenBabel
     char temp_type[BUFF_SIZE], resname[BUFF_SIZE], atmid[BUFF_SIZE];
     int elemno, resnum = -1;
     int isotope = 0;
+    bool has_explicit_hydrogen = false;
+    bool has_residue_information = false;
 
     ttab.SetFromType("SYB");
     for (i = 0;i < natoms;i++)
@@ -295,13 +349,15 @@ namespace OpenBabel
 
           string::size_type dotPos = str.find('.');
           if (dotPos == string::npos) {
-            elemno = etab.GetAtomicNum(str.c_str(), isotope);
+            elemno = GetAtomicNumAndIsotope(str.c_str(), &isotope);
           }
         }
 
         atom.SetAtomicNum(elemno);
         if (isotope)
           atom.SetIsotope(isotope);
+        else if (elemno == 1)
+          has_explicit_hydrogen = true;
         ttab.SetToType("INT");
         ttab.Translate(str1,str);
         atom.SetType(str1);
@@ -320,18 +376,19 @@ namespace OpenBabel
         if (resnum != -1 && resnum != 0 &&
             strlen(resname) != 0 && strncmp(resname,"<1>", 3) != 0)
           {
+            has_residue_information = true;
             OBResidue *res  = (mol.NumResidues() > 0) ?
-              mol.GetResidue(mol.NumResidues()-1) : NULL;
-            if (res == NULL || res->GetName() != resname ||
-                static_cast<int>(res->GetNum()) != resnum)
+              mol.GetResidue(mol.NumResidues()-1) : nullptr;
+            if (res == nullptr || res->GetName() != resname ||
+                res->GetNum() != resnum)
               {
                 vector<OBResidue*>::iterator ri;
                 for (res = mol.BeginResidue(ri) ; res ; res = mol.NextResidue(ri))
                   if (res->GetName() == resname &&
-                      static_cast<int>(res->GetNum()) == resnum)
+                      res->GetNum() == resnum)
                     break;
 
-                if (res == NULL)
+                if (res == nullptr)
                   {
                     res = mol.NewResidue();
                     res->SetName(resname);
@@ -344,16 +401,42 @@ namespace OpenBabel
           } // end adding residue info
       }
 
-    for (;;)
-      {
-        if (!ifs.getline(buffer,BUFF_SIZE))
-          return(false);
-        str = buffer;
-        if (!strncmp(buffer,"@<TRIPOS>BOND",13))
-          break;
-      }
+    string nextrti;
+    do { nextrti = read_until_rti(ifs); } 
+    while(nextrti != "@<TRIPOS>UNITY_ATOM_ATTR" && nextrti != "@<TRIPOS>BOND" && nextrti.length() > 0);
 
-    int start,end,order;
+    if(nextrti == "@<TRIPOS>UNITY_ATOM_ATTR")
+    { //read in formal charge information, must be done before Kekulization
+        int aid = 0, num = 0;
+        while (ifs.peek() != '@' && ifs.getline(buffer,BUFF_SIZE))
+        {
+          sscanf(buffer,"%d %d",&aid, &num);
+          for(int i = 0; i < num; i++) 
+          {
+            if (!ifs.getline(buffer,BUFF_SIZE))
+              return(false);
+            if(strncmp(buffer, "charge", 6) == 0)
+            {
+              int charge = 0;
+              sscanf(buffer,"%*s %d",&charge);
+              if(aid <= mol.NumAtoms()) 
+              {
+                OBAtom *atom = mol.GetAtom(aid);
+                atom->SetFormalCharge(charge);
+              }
+            }
+          }
+        }
+    }
+
+    while(nextrti != "@<TRIPOS>BOND" && nextrti.length() > 0)
+      nextrti = read_until_rti(ifs);
+
+    if(nextrti != "@<TRIPOS>BOND")
+      return false;
+
+    int start, end;
+    bool needs_kekulization = false;
     for (i = 0; i < nbonds; i++)
       {
         if (!ifs.getline(buffer,BUFF_SIZE))
@@ -361,170 +444,128 @@ namespace OpenBabel
 
         sscanf(buffer,"%*d %d %d %1024s",&start,&end,temp_type);
         str = temp_type;
-        order = 1;
-        if (str == "ar" || str == "AR" || str == "Ar")
-          order = 5;
+        unsigned int flags = 0;
+        int order;
+        if (str == "ar" || str == "AR" || str == "Ar") {
+          order = 1;
+          flags = OB_AROMATIC_BOND;
+          needs_kekulization = true;
+        }
         else if (str == "AM" || str == "am" || str == "Am")
           order = 1;
         else
           order = atoi(str.c_str());
 
-        mol.AddBond(start,end,order);
+        mol.AddBond(start, end, order, flags);
       }
 
-    // Make a pass to ensure that there are no double bonds
-    // between atoms which are also involved in aromatic bonds
-    // as that may ill-condition kekulization (fixes potential
-    // issues with molecules like CEWYIM30 (MMFF94 validation suite)
-    // Patch by Paolo Tosco 2012-06-07
-    int idx1, idx2;
-    bool idx1arom, idx2arom;
-    FOR_BONDS_OF_MOL(bond, mol) {
-      if (bond->GetBO() != 2)
-          continue;
-      idx1 = bond->GetBeginAtom()->GetIdx();
-      idx2 = bond->GetEndAtom()->GetIdx();
-      idx1arom = idx2arom = false;
-      FOR_BONDS_OF_MOL(bond2, mol) {
-        if (&*bond == &*bond2)
-          continue;
-        if ((bond2->GetBeginAtom()->GetIdx() == idx1 || bond2->GetEndAtom()->GetIdx() == idx1)
-          && bond2->GetBO() == 5)
-          idx1arom = true;
-        else if ((bond2->GetBeginAtom()->GetIdx() == idx2 || bond2->GetEndAtom()->GetIdx() == idx2)
-          && bond2->GetBO() == 5)
-          idx2arom = true;
-        if (idx1arom && idx2arom) {
-          bond->SetBO(1);
+    // TODO: Add a test case for the statement below of Paolo Tosco
+    //       - I am currently assuming that is not a problem for the
+    //         the current kekulization code, but it needs to be
+    //         checked
+    //   "Make a pass to ensure that there are no double bonds
+    //    between atoms which are also involved in aromatic bonds
+    //    as that may ill-condition kekulization (fixes potential
+    //    issues with molecules like CEWYIM30 (MMFF94 validation suite)"
+
+    mol.SetAromaticPerceived(); // don't trigger reperception
+
+    if (has_explicit_hydrogen) {
+      FOR_ATOMS_OF_MOL(atom, mol) {
+        unsigned int total_valence = atom->GetTotalDegree();
+        switch (atom->GetAtomicNum()) {
+        case 8:
+          if (total_valence != 1) continue;
+          if (strcmp(atom->GetType(), "O2") != 0) continue; // TODO: the O.co2 type is lost by this point
+          {
+            OBAtomBondIter bit(&*atom);
+            if (!bit->IsAromatic() && bit->GetBondOrder() == 1)
+              atom->SetFormalCharge(-1); // set -1 charge on dangling O.co2
+          }
+          break;
+        case 17: // Cl
+          if (total_valence == 0)
+            atom->SetFormalCharge(-1);
           break;
         }
       }
     }
 
-    // Now that bonds are added, make a pass to "de-aromatize" carboxylates
-    // and (di)thiocarboxylates
-    // Fixes PR#3092368
-    OBAtom *carboxylCarbon, *oxysulf;
-    FOR_BONDS_OF_MOL(bond, mol)
-      {
-        if (bond->GetBO() != 5)
-          continue;
-
-        if (bond->GetBeginAtom()->IsCarboxylOxygen() || IsThiocarboxylSulfur(bond->GetBeginAtom())) {
-          carboxylCarbon = bond->GetEndAtom();
-          oxysulf = bond->GetBeginAtom();
+    // Kekulization is necessary if an aromatic bond is present
+    if (needs_kekulization) {
+      // "de-aromatize" carboxylates and (di)thiocarboxylates
+      // The typical case (in our test suite anyway) is a carboxylate binding to
+      // a metal ion. The two O's have charges of -0.5 and the bond orders are aromatic
+      FOR_ATOMS_OF_MOL(atom, mol) {
+        OBAtom* oxygenOrSulfur = &*atom;
+        // Look first for a terminal O/S
+        if (!IsOxygenOrSulfur(oxygenOrSulfur) || oxygenOrSulfur->GetTotalDegree() != 1) continue;
+        OBAtomBondIter bitA(oxygenOrSulfur);
+        OBBond *bondA = &*bitA;
+        if (!bondA->IsAromatic()) continue;
+        // Look for the carbon
+        OBAtom *carbon = bondA->GetNbrAtom(oxygenOrSulfur);
+        if (carbon->GetAtomicNum() != 6) continue;
+        // Look for the other oxygen or sulfur
+        OBAtom* otherOxygenOrSulfur = nullptr;
+        OBBond* bondB = nullptr;
+        FOR_BONDS_OF_ATOM(bitB, carbon) {
+          if (&*bitB == bondA || !bitB->IsAromatic()) continue;
+          OBAtom* nbr = bitB->GetNbrAtom(carbon);
+          if (IsOxygenOrSulfur(nbr) && nbr->GetTotalDegree() == 1) {
+            otherOxygenOrSulfur = nbr;
+            bondB = &*bitB;
+          }
         }
-        else if (bond->GetEndAtom()->IsCarboxylOxygen() || IsThiocarboxylSulfur(bond->GetEndAtom())) {
-          carboxylCarbon = bond->GetBeginAtom();
-          oxysulf = bond->GetEndAtom();
-        } else // not a carboxylate
-          continue;
+        if (!otherOxygenOrSulfur) continue;
+        if(otherOxygenOrSulfur->GetFormalCharge() != 0) continue; //formal charge already set on one
 
-        if (carboxylCarbon->HasDoubleBond()) { // we've already picked a double bond
-          bond->SetBO(1); // this should be a single bond, not "aromatic"
-          continue;
-        }
+        // Now set as C(=O)O
+        bondA->SetAromatic(false);
+        oxygenOrSulfur->SetFormalCharge(-1);
 
-        // We need to choose a double bond
-        if (oxysulf->ExplicitHydrogenCount() == 1 || oxysulf->GetFormalCharge() == -1) { // single only
-          bond->SetBO(1);
-          continue;
-        } else
-          bond->SetBO(2); // we have to pick one, let's use this one
+        bondB->SetAromatic(false);
+        bondB->SetBondOrder(2);
       }
 
-    // Make a pass to fix aromatic bond orders and formal charges
-    // involving nitrogen and oxygen atoms - before this patch
-    // the aromaticity of a molecule as simple as pyridinium
-    // cation could not be correctly perceived
-    // Patch by Paolo Tosco 2012-06-07
-    OBAtom *carbon, *partner, *boundToNitrogen;
-    OBBitVec bv;
-
-    bv.SetBitOn(nbonds);
-    bv.Clear();
-    FOR_BONDS_OF_MOL(bond, mol)
-    {
-      if (bv[bond->GetIdx()] || (bond->GetBO() != 5))
-        continue;
-
-      // only bother for 6 membered rings (e.g., pyridinium)
-      // 5-membered rings like pyrrole, imidazole, or triazole are OK with nH
-      OBRing *ring = bond->FindSmallestRing();
-      if ( !ring || ring->Size() != 6 )
-        continue;
-
-      if ((bond->GetBeginAtom()->IsCarbon() && bond->GetEndAtom()->IsNitrogen())
-        || (bond->GetBeginAtom()->IsNitrogen() && bond->GetEndAtom()->IsCarbon())) {
-        carbon = (bond->GetBeginAtom()->IsCarbon() ? bond->GetBeginAtom() : bond->GetEndAtom());
-        int min_n_h_bonded = 100;
-        int min_idx = mol.NumAtoms() + 1;
-        FOR_BONDS_OF_ATOM(bond2, carbon) {
-          if (bond2->GetBO() != 5)
-            continue;
-          partner = (bond2->GetBeginAtom() == carbon ? bond2->GetEndAtom() : bond2->GetBeginAtom());
-          if (!ring->IsMember(partner))
-            continue; // not in the same 6-membered ring
-
-          if (partner->IsNitrogen() && partner->GetValence() == 3 && partner->GetFormalCharge() == 0) {
-            int n_h_bonded = 0;
-            FOR_BONDS_OF_ATOM(bond3, partner) {
-              boundToNitrogen = (bond3->GetBeginAtom() == partner ? bond3->GetEndAtom() : bond3->GetBeginAtom());
-              if (boundToNitrogen->IsHydrogen())
-                n_h_bonded++;
-            }
-            if (n_h_bonded < min_n_h_bonded || (n_h_bonded == min_n_h_bonded && partner->GetIdx() < min_idx)) {
-              min_n_h_bonded = n_h_bonded;
-              min_idx = partner->GetIdx();
-            }
-          }
+      // First of all, set the atoms at the ends of the aromatic bonds to also
+      // be aromatic. This information is required for OBKekulize.
+      FOR_BONDS_OF_MOL(bond, mol) {
+        if (bond->IsAromatic()) {
+          bond->GetBeginAtom()->SetAromatic();
+          bond->GetEndAtom()->SetAromatic();
         }
-        FOR_BONDS_OF_ATOM(bond2, carbon) {
-          if (bond2->GetBO() != 5)
-            continue;
-          partner = (bond2->GetBeginAtom() == carbon ? bond2->GetEndAtom() : bond2->GetBeginAtom());
-          if (partner->IsNitrogen() && partner->GetValence() == 3 && partner->GetFormalCharge() == 0) {
-            int n_ar_bond = 0;
-            FOR_BONDS_OF_ATOM(bond3, partner) {
-              boundToNitrogen = (bond3->GetBeginAtom() == partner ? bond3->GetEndAtom() : bond3->GetBeginAtom());
-              if (boundToNitrogen->IsOxygen() && boundToNitrogen->GetValence() == 1) {
-                n_ar_bond = -1;
-                break;
-              }
-              if (bond3->GetBO() == 5)
-                ++n_ar_bond;
-            }
-            if (n_ar_bond == -1)
-              continue;
-            if (partner->GetIdx() == min_idx) {
-              partner->SetFormalCharge(1);
-              if (n_ar_bond == 1) {
-                bond2->SetBO(2);
-              }
-            }
-            else if (n_ar_bond == 1) {
-              bond2->SetBO(1);
-            }
-          }
-          bv.SetBitOn(bond2->GetIdx());
-        }
-      } else if ((bond->GetBeginAtom()->IsCarbon() && bond->GetEndAtom()->IsOxygen())
-        || (bond->GetBeginAtom()->IsOxygen() && bond->GetEndAtom()->IsCarbon())) {
-        OBAtom *atom1, *atom2;
-        atom1 = bond->GetBeginAtom();
-        atom2 = bond->GetEndAtom();
-        // set formal charges for pyrilium
-        // (i.e., this bond is a 6-membered ring, aromatic, and C-O)
-        if (atom1->IsOxygen() && atom1->IsInRingSize(6))
-          atom1->SetFormalCharge(1);
-        else if (atom2->IsOxygen() && atom2->IsInRingSize(6))
-          atom2->SetFormalCharge(1);
+      }
+      bool ok = OBKekulize(&mol);
+      if (!ok) {
+        stringstream errorMsg;
+        errorMsg << "Failed to kekulize aromatic bonds in MOL2 file";
+        std::string title = mol.GetTitle();
+        if (!title.empty())
+          errorMsg << " (title is " << title << ")";
+        errorMsg << endl;
+        obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obWarning);
+        // return false; Should we return false for a kekulization failure?
       }
     }
+
+    mol.EndModify();
+
     // Suggestion by Liu Zhiguo 2008-01-26
     // Mol2 files define atom types -- there is no need to re-perceive
     mol.SetAtomTypesPerceived();
-    mol.EndModify();
+
+    if (has_residue_information)
+      mol.SetChainsPerceived();
+
+    if (!has_explicit_hydrogen) {
+      // Guess how many hydrogens are present on each atom based on typical valencies
+      // TODO: implement the MOL2 valence model (if it exists)
+      FOR_ATOMS_OF_MOL(matom, mol) {
+        if (matom->GetImplicitHCount() == 0)
+          OBAtomAssignTypicalImplicitHydrogens(&*matom);
+      }
+    }
 
     //must add generic data after end modify - otherwise it will be blown away
     if (comment)
@@ -534,7 +575,7 @@ namespace OpenBabel
         cd->SetOrigin(fileformatInput);
         mol.SetData(cd);
         delete [] comment;
-        comment = NULL;
+        comment = nullptr;
       }
     if (hasPartialCharges)
       mol.SetPartialChargesPerceived();
@@ -562,13 +603,14 @@ namespace OpenBabel
   bool MOL2Format::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
     ostream &ofs = *pConv->GetOutStream();
     OBMol &mol = *pmol;
-    bool ligandsOnly = pConv->IsOption("l", OBConversion::OUTOPTIONS)!=NULL;
+    bool ligandsOnly = pConv->IsOption("l", OBConversion::OUTOPTIONS) != nullptr;
+    bool skipFormalCharge = pConv->IsOption("u", OBConversion::OUTOPTIONS) != nullptr;
 
     //The old code follows....
     string str,str1;
@@ -576,7 +618,7 @@ namespace OpenBabel
     char rnum[BUFF_SIZE],rlabel[BUFF_SIZE];
 
     //Check if UCSF Dock style coments are on
-    if(pConv->IsOption("c", OBConversion::OUTOPTIONS)!=NULL) {
+    if (pConv->IsOption("c", OBConversion::OUTOPTIONS) != nullptr) {
         vector<OBGenericData*>::iterator k;
         vector<OBGenericData*> vdata = mol.GetData();
         ofs << endl;
@@ -603,7 +645,7 @@ namespace OpenBabel
     ofs << "SMALL" << endl; // TODO: detect if we have protein, biopolymer, etc.
 
     OBPairData *dp = (OBPairData*)mol.GetData("PartialCharges");
-    if (dp != NULL) {
+    if (dp != nullptr) {
         // Tripos spec says:
         // NO_CHARGES, DEL_RE, GASTEIGER, GAST_HUCK, HUCKEL, PULLMAN,
         // GAUSS80_CHARGES, AMPAC_CHARGES, MULLIKEN_CHARGES, DICT_ CHARGES,
@@ -639,12 +681,12 @@ namespace OpenBabel
     OBResidue *res;
 
     vector<OBAtom*>::iterator i;
-    vector<int> labelcount;
-    labelcount.resize( etab.GetNumberOfElements() );
+    std::map<int, int> labelcount;
 
     ttab.SetFromType("INT");
     ttab.SetToType("SYB");
 
+    bool hasFormalCharges = false;
     for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
       {
 
@@ -653,7 +695,7 @@ namespace OpenBabel
         //
 
         snprintf(label,BUFF_SIZE, "%s%d",
-                 etab.GetSymbol(atom->GetAtomicNum()),
+                 OBElements::GetSymbol(atom->GetAtomicNum()),
                  ++labelcount[atom->GetAtomicNum()]);
         strcpy(rlabel,"<1>");
         strcpy(rnum,"1");
@@ -661,6 +703,7 @@ namespace OpenBabel
         str = atom->GetType();
         ttab.Translate(str1,str);
 
+        if (atom->GetFormalCharge() != 0) hasFormalCharges = true;
         //
         //  Use original atom names if there are residues
         //
@@ -683,10 +726,25 @@ namespace OpenBabel
         ofs << buffer << endl;
       }
 
+    //store formal charge info; put before bonds so we don't have
+    //to read past the end of the molecule to realize it is there
+    if(hasFormalCharges && !skipFormalCharge) {
+      //dkoes - to enable roundtriping of charges
+      ofs << "@<TRIPOS>UNITY_ATOM_ATTR\n";
+      for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
+      {
+        int charge = atom->GetFormalCharge();
+        if (charge != 0) 
+        {
+          ofs << atom->GetIdx() << " 1\n"; //one attribute
+          ofs << "charge " << charge << "\n"; //namely charge
+        }
+      }
+    }
+
     ofs << "@<TRIPOS>BOND" << endl;
     OBBond *bond;
     vector<OBBond*>::iterator j;
-    OBSmartsPattern pat;
     string s1, s2;
     for (bond = mol.BeginBond(j);bond;bond = mol.NextBond(j))
       {
@@ -697,7 +755,7 @@ namespace OpenBabel
         else if (bond->IsAmide())
           strcpy(label,"am");
         else
-          snprintf(label,BUFF_SIZE,"%d",bond->GetBO());
+          snprintf(label,BUFF_SIZE,"%d",bond->GetBondOrder());
 
         snprintf(buffer, BUFF_SIZE,"%6d %5d %5d   %2s",
                  bond->GetIdx()+1,bond->GetBeginAtomIdx(),bond->GetEndAtomIdx(),

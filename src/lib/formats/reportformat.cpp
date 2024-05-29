@@ -21,6 +21,12 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
 
 using namespace std;
 namespace OpenBabel
@@ -186,10 +192,23 @@ namespace OpenBabel
 
   ////////////////////////////////////////////////////////////////
 
+  static bool OldIsChiral(OBMol &mol)
+  {
+    FOR_ATOMS_OF_MOL(atom, mol) {
+      if ((atom->GetAtomicNum() == OBElements::Carbon || atom->GetAtomicNum() == OBElements::Nitrogen)
+        && atom->GetHvyDegree() > 2
+        && atom->IsChiral())
+        return true;
+    }
+
+    return false;
+  }
+
+
   bool ReportFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -225,7 +244,7 @@ namespace OpenBabel
     WriteAngles(ofs, mol);
     ofs << "\n" << "\n" << "TORSION ANGLES" << "\n";
     WriteTorsions(ofs, mol);
-    if (mol.IsChiral())
+    if (OldIsChiral(mol)) // TODO: Replace with this current stereo approach
       {
         ofs << "\n" << "\n" << "CHIRAL ATOMS" << "\n";
         WriteChiral(ofs, mol);
@@ -251,7 +270,7 @@ namespace OpenBabel
       {
         atom = mol.GetAtom(i);
         snprintf(buffer, BUFF_SIZE, "%4s%4d   % 2.10f",
-                etab.GetSymbol(atom->GetAtomicNum()),
+                OBElements::GetSymbol(atom->GetAtomicNum()),
                 i,
                 atom->GetPartialCharge());
 
@@ -278,7 +297,7 @@ namespace OpenBabel
         atom = mol.GetAtom(min);
 
         snprintf(buffer,BUFF_SIZE,"%15s%4d",
-                etab.GetSymbol(atom->GetAtomicNum()),
+                OBElements::GetSymbol(atom->GetAtomicNum()),
                 min);
         ofs << buffer;
 
@@ -287,7 +306,7 @@ namespace OpenBabel
             {
               atom = mol.GetAtom(i);
               snprintf(buffer,BUFF_SIZE, "%7s%4d",
-                      etab.GetSymbol(atom->GetAtomicNum()),
+                      OBElements::GetSymbol(atom->GetAtomicNum()),
                       i);
               ofs << buffer;
             }
@@ -306,7 +325,7 @@ namespace OpenBabel
           {
             atom = mol.GetAtom(i);
             snprintf(buffer, BUFF_SIZE, "%4s%4d",
-                    etab.GetSymbol(atom->GetAtomicNum()),
+                    OBElements::GetSymbol(atom->GetAtomicNum()),
                     i);
             ofs << buffer;
             for (j = min; j < max; j++)
@@ -353,8 +372,7 @@ namespace OpenBabel
 
                 snprintf(buffer, BUFF_SIZE, "%4d %4d %4d %4d %10.3f",
                         a->GetIdx(), b->GetIdx(),c->GetIdx(),d->GetIdx(),
-                        CalcTorsionAngle(a->GetVector(), b->GetVector(),
-                                         c->GetVector(), d->GetVector()));
+                        mol.GetTorsion(&*a, &*b, &*c, &*d));
                 ofs << buffer << "\n";
               }
           }
@@ -394,7 +412,7 @@ namespace OpenBabel
           {
             /* @todo
             snprintf(buffer, BUFF_SIZE, "%4s %5d is chiral: %s",
-                    etab.GetSymbol(atom->GetAtomicNum()),
+                    OBElements::GetSymbol(atom->GetAtomicNum()),
                     atom->GetIdx(),
                     (atom->IsClockwise() ? "clockwise" : "counterclockwise"));
                     */

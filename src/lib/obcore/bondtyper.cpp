@@ -16,9 +16,13 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
-
+#include <cstdlib>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/oberror.h>
 #include <openbabel/bondtyper.h>
+#include <openbabel/elements.h>
 
 // data header with default parameters
 #include "bondtyp.h"
@@ -27,9 +31,14 @@ using namespace std;
 
 namespace OpenBabel
 {
+  extern OBMessageHandler obErrorLog;
+
 
   //! Global OBBondTyper for perception of bond order assignment.
-  OBBondTyper  bondtyper;
+#if __cplusplus >= 201103L
+  thread_local //this is required for correct multi-threading
+#endif
+	OBBondTyper  bondtyper;
 
   /*! \class OBBondTyper bondtyper.h <openbabel/bondtyper.cpp>
     \brief Assigns bond types for file formats without bond information
@@ -84,7 +93,7 @@ namespace OpenBabel
         else
           {
             delete sp;
-            sp = NULL;
+            sp = nullptr;
           }
       }
   }
@@ -95,7 +104,7 @@ namespace OpenBabel
     for (i = _fgbonds.begin();i != _fgbonds.end();++i)
       {
         delete i->first;
-        i->first = NULL;
+        i->first = nullptr;
       }
   }
 
@@ -136,7 +145,7 @@ namespace OpenBabel
                     b1 = a1->GetBond(a2);
 
                     if (!b1) continue;
-                    b1->SetBO(assignments[j+2]);
+                    b1->SetBondOrder(assignments[j+2]);
                   } // bond order assignments
               } // each match
           } // current pattern matches
@@ -144,8 +153,8 @@ namespace OpenBabel
       } // for(functional groups)
 
     // FG with distance and/or bond criteria
-    // Carbonyl oxygen C=O
-    OBSmartsPattern carbo; carbo.Init("[#8D1][#6](*)(*)");
+    // Carbonyl oxygen C=O (O must be neutral)
+    OBSmartsPattern carbo; carbo.Init("[#8D1;!-][#6](*)(*)");
 
     if (carbo.Match(mol))
       {
@@ -165,7 +174,7 @@ namespace OpenBabel
                 b1 = a1->GetBond(a2);
 
                 if (!b1 ) continue;
-                b1->SetBO(2);
+                b1->SetBondOrder(2);
               }
             }
           }
@@ -192,7 +201,7 @@ namespace OpenBabel
                 b1 = a1->GetBond(a2);
 
                 if (!b1 ) continue;
-                b1->SetBO(2);
+                b1->SetBondOrder(2);
               }
             }
           }
@@ -215,7 +224,7 @@ namespace OpenBabel
             dist2 = a2->GetDistance(a3);
 
             // isocyanate geometry or Isothiocyanate geometry ?
-            if (a1->IsOxygen())
+            if (a1->GetAtomicNum() == OBElements::Oxygen)
               dist1OK =  dist1 < 1.28;
             else
               dist1OK =  dist1 < 1.72;
@@ -225,8 +234,8 @@ namespace OpenBabel
               b1 = a1->GetBond(a2);
               b2 = a2->GetBond(a3);
               if (!b1 || !b2) continue;
-              b1->SetBO(2);
-              b2->SetBO(2);
+              b1->SetBondOrder(2);
+              b2->SetBondOrder(2);
 
             }
 
@@ -254,7 +263,7 @@ namespace OpenBabel
                 b1 = a1->GetBond(a2);
 
                 if (!b1 ) continue;
-                b1->SetBO(2);
+                b1->SetBondOrder(2);
               }
             }
           }

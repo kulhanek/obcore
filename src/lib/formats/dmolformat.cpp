@@ -14,6 +14,13 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -68,7 +75,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -84,15 +91,15 @@ namespace OpenBabel
     vector<string> vs;
 
     ifs.getline(buffer,BUFF_SIZE);
-    while (strstr(buffer,"$coordinates") == NULL &&
-           strstr(buffer,"$cell vectors") == NULL)
+    while (strstr(buffer, "$coordinates") == nullptr &&
+           strstr(buffer, "$cell vectors") == nullptr)
       {
         if (ifs.peek() == EOF || !ifs.good())
           return false;
         ifs.getline(buffer,BUFF_SIZE);
       }
 
-    if (strstr(buffer,"$cell vectors") != NULL)
+    if (strstr(buffer, "$cell vectors") != nullptr)
       {
         ifs.getline(buffer,BUFF_SIZE);
         tokenize(vs,buffer); // we really need to check that it's 3 entries only
@@ -126,7 +133,7 @@ namespace OpenBabel
 
     mol.BeginModify();
 
-    while (strstr(buffer,"$end") == NULL)
+    while (strstr(buffer, "$end") == nullptr)
       {
         if (!ifs.getline(buffer,BUFF_SIZE))
           break;
@@ -135,7 +142,7 @@ namespace OpenBabel
           break;
         atom = mol.NewAtom();
         //set atomic number
-        atom->SetAtomicNum(etab.GetAtomicNum(vs[0].c_str()));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(vs[0].c_str()));
         x = atof((char*)vs[1].c_str()) * BOHR_TO_ANGSTROM;
         y = atof((char*)vs[2].c_str()) * BOHR_TO_ANGSTROM;
         z = atof((char*)vs[3].c_str()) * BOHR_TO_ANGSTROM;
@@ -148,9 +155,14 @@ namespace OpenBabel
       mol.PerceiveBondOrders();
 
     // clean out any remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     mol.EndModify();
     mol.SetTitle(title);
@@ -162,7 +174,7 @@ namespace OpenBabel
   bool DMolFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -200,7 +212,7 @@ namespace OpenBabel
       {
         atom = mol.GetAtom(i);
         snprintf(buffer, BUFF_SIZE, "%-3s% 27.14f% 20.14f% 20.14f",
-                 etab.GetSymbol(atom->GetAtomicNum()),
+                 OBElements::GetSymbol(atom->GetAtomicNum()),
                  atom->GetX() * ANGSTROM_TO_BOHR,
                  atom->GetY() * ANGSTROM_TO_BOHR,
                  atom->GetZ() * ANGSTROM_TO_BOHR);

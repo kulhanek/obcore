@@ -19,8 +19,13 @@ GNU General Public License for more details.
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
-#include <openbabel/chiral.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/bond.h>
+
 #include <openbabel/mcdlutil.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -46,7 +51,7 @@ public:
 "            Language (MCDL): Composition, Connectivity and\n"
 "            Supplementary Modules.**\n"
 "            *J. Chem. Inf. Comput. Sci.*, **2004**, *41*, 1491-1499.\n"
-"            [`Link <http://dx.doi.org/10.1021/ci000108y>`_]\n\n"
+"            [`Link <https://doi.org/10.1021/ci000108y>`_]\n\n"
 
 "Here's an example conversion from SMILES to MCDL::\n\n"
 "  obabel -:\"CC(=O)Cl\" -omcdl\n"
@@ -526,7 +531,6 @@ private:
     std::vector <int>  bondStereoList;
     std::vector <int>  atomStereoList;
     std::vector <int>  anumStereo;
-    bool test;//, testParity;
     string as1,as2,as3,as4;
     string linestereo;
     OBAtom *atom;
@@ -549,8 +553,6 @@ private:
     radicalflag=0;
     netradical=0;
 
-  //pmol->FindChiralCenters();
-  test=pmol->IsChiral();  //Instead of above lines...
   netcharge=pmol->GetTotalCharge();
   netradical=pmol->GetTotalSpinMultiplicity()-1;
 
@@ -562,11 +564,11 @@ private:
   nbStore=pmol->NumBonds();
   for (i=1; i<=naStore; i++) {
     atom=pmol->GetAtom(i);
-    nHydr[i-1]=atom->ImplicitHydrogenCount()+atom->ExplicitHydrogenCount();
+    nHydr[i-1]=atom->GetImplicitHCount()+atom->ExplicitHydrogenCount();
     aCharge[i-1]=atom->GetFormalCharge();
     aRadical[i-1]=atom->GetSpinMultiplicity();
-    aSymb[i-1]=etab.GetSymbol(atom->GetAtomicNum());
-    nConn[i-1]=atom->GetHvyValence();
+    aSymb[i-1]=OBElements::GetSymbol(atom->GetAtomicNum());
+    nConn[i-1]=atom->GetHvyDegree();
     aNumber[i-1]=i-1;
   };
   for (i=1; i<=nbStore; i++) {
@@ -1231,8 +1233,7 @@ private:
     temp=s.substr(0,n1);
     if (n1<s.length()) sstore=s.substr(n1,s.length()); else sstore="";
     n1=nF[i];
-    int iso=0;
-    n2=etab.GetAtomicNum(temp.c_str(),iso);//Atom.positionofAtom(temp);
+    n2=OBElements::GetAtomicNum(temp.c_str());//Atom.positionofAtom(temp);
     nPrev=acount;
 
     for (j=1; j<=n1; j++) {
@@ -1334,7 +1335,7 @@ private:
   implementBondStereo(iA1,iA2,rx,ry,acount,bcount,bstereo);
 
 
-  if (pmol != NULL) {
+  if (pmol != nullptr) {
     for (i=0; i<acount; i++) {
       sa.Clear();
       sa.SetAtomicNum(aPosition[i]);
@@ -1415,11 +1416,11 @@ bool MCDLFormat::parseFormula(const string formulaString, std::vector <int>& enu
   string asym;
   string value=formulaString;
 
-  for (i=0; i<etab.GetNumberOfElements(); i++) enumber[i]=0;
+  for (i = 0; i<NELEMMCDL; i++) enumber[i] = 0;
 
-  for (i=1; i<etab.GetNumberOfElements(); i++) if (strlen(etab.GetSymbol(i))==2) {
+  for (i = 1; i<NELEMMCDL; i++) if (strlen(OBElements::GetSymbol(i)) == 2) {
       test=true;
-    asym=etab.GetSymbol(i);
+    asym=OBElements::GetSymbol(i);
       while (test) {
         test=false;
         n=indexOf(value,asym);
@@ -1440,9 +1441,9 @@ bool MCDLFormat::parseFormula(const string formulaString, std::vector <int>& enu
         };
       };
     };
-  for (i=1; i<etab.GetNumberOfElements(); i++) if (strlen(etab.GetSymbol(i))==1) {
+  for (i = 1; i<NELEMMCDL; i++) if (strlen(OBElements::GetSymbol(i)) == 1) {
       test=true;
-    asym=etab.GetSymbol(i);
+    asym=OBElements::GetSymbol(i);
       while (test) {
         test=false;
         n=indexOf(value,asym);
@@ -1491,7 +1492,7 @@ MCDLFormat theMCDLFormat;
 bool MCDLFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 {
   OBMol* pmol = pOb->CastAndClear<OBMol>();
-  if(pmol==NULL)
+  if (pmol == nullptr)
       return false;
 
   istream& ifs = *pConv->GetInStream();
@@ -1519,7 +1520,7 @@ bool MCDLFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 bool MCDLFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 {
   OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-  if(pmol==NULL) return false;
+  if (pmol == nullptr) return false;
 
   std::ostream & ofs = *pConv->GetOutStream();
 

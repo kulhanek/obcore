@@ -13,6 +13,12 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -129,7 +135,7 @@ bool LpmdFormat::ReadHeader( std::istream &ifs, OBMol &mol )
 bool LpmdFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 {
  OBMol* pmol = pOb->CastAndClear<OBMol>();
- if(pmol==NULL) return false;
+ if (pmol == nullptr) return false;
 
  N=0;
  std::istream &ifs = *pConv->GetInStream();
@@ -226,7 +232,7 @@ bool LpmdFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
    if(headers.at(i).compare("FHG")==0) from_string<double>(FCH, tokens.at(i-1), std::dec);
   }
   atom->SetVector(unitcell->FractionalToCartesian(vector3(X,Y,Z)));
-  int atomicNum = etab.GetAtomicNum(symbol.c_str());
+  int atomicNum = OBElements::GetAtomicNum(symbol.c_str());
   atom->SetAtomicNum(atomicNum);
   //Conditional or zero??
   if( CHG!=0.0e0 ) atom->SetPartialCharge(CHG);
@@ -267,12 +273,12 @@ bool LpmdFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 bool LpmdFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 {
  OBMol* pmol = dynamic_cast<OBMol*>(pOb);
- if(pmol==NULL) return false;
+ if (pmol == nullptr) return false;
 
  ostream& ofs = *pConv->GetOutStream();
  OBMol &mol = *pmol;
  OBUnitCell myUC;
- OBUnitCell *uc = NULL;
+ OBUnitCell *uc = nullptr;
 
  std::vector< std::vector< vector3 > > forceslist;
  std::vector< std::vector< vector3 > > velocilist;
@@ -377,7 +383,7 @@ bool LpmdFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
  {
   OBAtom *atom = mol.GetAtom(i + 1);
   vector3 tmp=uc->CartesianToFractional(vector3(atom->GetX(),atom->GetY(),atom->GetZ()));
-  snprintf(buffer, BUFF_SIZE, "%-3s%15.5f%15.5f%15.5f",etab.GetSymbol(atom->GetAtomicNum()),
+  snprintf(buffer, BUFF_SIZE, "%-3s%15.5f%15.5f%15.5f",OBElements::GetSymbol(atom->GetAtomicNum()),
    tmp.GetX(),
    tmp.GetY(),
    tmp.GetZ());

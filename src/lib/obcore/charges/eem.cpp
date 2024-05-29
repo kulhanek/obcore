@@ -18,11 +18,16 @@ GNU General Public License for more details.
 
 #include <string>
 #include <vector>
+#include <cstdlib>
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/chargemodel.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/obiter.h>
+#include <openbabel/oberror.h>
 #include <openbabel/molchrg.h>
+#include <openbabel/elements.h>
 
 namespace OpenBabel
 {
@@ -104,7 +109,7 @@ namespace OpenBabel
       std::string bond_order;
       struct EEMParameter parameter;
       ss >> symbol >> bond_order >> parameter.A >> parameter.B;
-      parameter.Z = symbol == "*" ? -1 : etab.GetAtomicNum(symbol.c_str());
+      parameter.Z = symbol == "*" ? -1 : OBElements::GetAtomicNum(symbol.c_str());
       parameter.bond_order = bond_order == "*" ? -1 : std::atoi(bond_order.c_str());
       _parameters.push_back(parameter);
     }
@@ -152,7 +157,7 @@ namespace OpenBabel
 
       if(!found) {
         std::stringstream ss;
-        ss << "No parameters found for: " << etab.GetSymbol(n) << " " << b
+        ss << "No parameters found for: " << OBElements::GetSymbol(n) << " " << b
            << ". EEM charges were not calculated for the molecule." << std::endl;
         obErrorLog.ThrowError(__FUNCTION__, ss.str(), obError);
         return false;
@@ -224,7 +229,7 @@ namespace OpenBabel
     unsigned int i, j, k, kMax, iMax;
     std::vector<double> vScales(dim, 0);
     double maxVal = 0, dummy = 0;
-    double * pRowi = NULL;
+    double * pRowi = nullptr;
 
     // first find the highest pivot element in each row and store it for implicit scaling
     for (i = 0; i < dim; ++i)

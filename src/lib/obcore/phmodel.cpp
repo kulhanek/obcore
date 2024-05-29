@@ -19,7 +19,14 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/typer.h>
+#include <openbabel/obiter.h>
+#include <openbabel/oberror.h>
 #include <openbabel/phmodel.h>
+
+#include <cstdlib>
 
 // private data header with default parameters
 #include "phmodeldata.h"
@@ -34,8 +41,7 @@ namespace OpenBabel
 {
 
   // Global OBPhModel for assigning formal charges and hydrogen addition rules
-  OBPhModel phmodel;
-  extern OBAtomTyper atomtyper;
+  THREAD_LOCAL OBPhModel phmodel;
 
   OBPhModel::OBPhModel()
   {
@@ -79,7 +85,7 @@ namespace OpenBabel
         if (!tsfm->Init(vs[1],vs[3]))
           {
             delete tsfm;
-            tsfm = NULL;
+            tsfm = nullptr;
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse line in phmodel table from phmodel.txt", obInfo);
             return;
           }
@@ -100,7 +106,7 @@ namespace OpenBabel
         if (!sp->Init(vs[1]) || (vs.size()-2) != sp->NumAtoms())
           {
             delete sp;
-            sp = NULL;
+            sp = nullptr;
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse line in phmodel table from phmodel.txt", obInfo);
             return;
           }
@@ -124,17 +130,18 @@ namespace OpenBabel
       return;
 
     vector<pair<OBSmartsPattern*,vector<double> > >::iterator i;
-    for (i = _vschrg.begin();i != _vschrg.end();++i)
-      if (i->first->Match(mol))
-        {
-          _mlist = i->first->GetUMapList();
-          unsigned int k;
-          vector<vector<int> >::iterator j;
+    for (i = _vschrg.begin(); i != _vschrg.end(); ++i) {
+      std::vector<std::vector<int> > mlist;
+      if (i->first->Match(mol, mlist, OBSmartsPattern::AllUnique))
+      {
+        unsigned int k;
+        vector<vector<int> >::iterator j;
 
-          for (j = _mlist.begin();j != _mlist.end();++j)
-            for (k = 0;k < j->size();++k)
-              mol.GetAtom((*j)[k])->SetPartialCharge(i->second[k]);
-        }
+        for (j = mlist.begin(); j != mlist.end(); ++j)
+          for (k = 0; k < j->size(); ++k)
+            mol.GetAtom((*j)[k])->SetPartialCharge(i->second[k]);
+      }
+    }
   }
 
   void OBPhModel::CorrectForPH(OBMol &mol, double pH)
@@ -189,7 +196,6 @@ namespace OpenBabel
       }
     }
 
-    atomtyper.CorrectAromaticNitrogens(mol);
   }
 
 
@@ -314,10 +320,15 @@ namespace OpenBabel
 
         for (i = mlist.begin();i != mlist.end();++i)
           for (j = _vchrg.begin();j != _vchrg.end();++j)
-            if (j->first < (signed)i->size()) //goof proofing
-              mol.GetAtom((*i)[j->first])->SetFormalCharge(j->second);
-
-        mol.UnsetImplicitValencePerceived();
+            if (j->first < (signed)i->size()) { //goof proofing
+              OBAtom *atom = mol.GetAtom((*i)[j->first]);
+              int old_charge = atom->GetFormalCharge();
+              atom->SetFormalCharge(j->second);
+              int new_hcount = atom->GetImplicitHCount() + (j->second - old_charge);
+              if (new_hcount < 0)
+                new_hcount = 0;
+              atom->SetImplicitHCount(new_hcount);
+            }
       }
 
     if (!_vbond.empty()) //modify bond orders
@@ -334,8 +345,15 @@ namespace OpenBabel
                   obErrorLog.ThrowError(__FUNCTION__, "unable to find bond", obDebug);
                   continue;
                 }
-
-              bond->SetBO(j->second);
+              unsigned int old_bond_order = bond->GetBondOrder();
+              bond->SetBondOrder(j->second);
+              for (int k = 0; k < 2; ++k) {
+                OBAtom* atom = k == 0 ? bond->GetBeginAtom() : bond->GetEndAtom();
+                int new_hcount = atom->GetImplicitHCount() - (j->second - old_bond_order);
+                if (new_hcount < 0)
+                  new_hcount = 0;
+                atom->SetImplicitHCount(new_hcount);
+              }
             }
       }
 

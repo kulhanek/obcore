@@ -266,7 +266,7 @@ double OBDescriptor::ParsePredicate(istream& optionText, char& ch1, char& ch2, s
   streampos spos = optionText.tellg();
   optionText >> val;
    //only a number when the param has no additional text or only a closing bracket
-  if(!optionText.eof() && isalpha(optionText.peek()))
+  if(!optionText.eof() && (optionText.fail() || isalpha(optionText.peek())))
     val = std::numeric_limits<double>::quiet_NaN();
   optionText.clear();
   optionText.seekg(spos);
@@ -342,7 +342,7 @@ double OBDescriptor::PredictAndSave(OBBase* pOb, string* param)
 
   OBPairData *dp = static_cast<OBPairData *> (pOb->GetData(attr));
   bool PreviouslySet = true;
-  if (dp == NULL)
+  if (dp == nullptr)
   {
     PreviouslySet = false;
     dp = new OBPairData;
@@ -516,7 +516,7 @@ void OBDescriptor::DeleteProperties(OBBase* pOb, const string& DescrList)
 bool OBDescriptor::Display(std::string&txt, const char* param, const char* ID)
 {
   //Use the base class version except when the parameter is a descriptor ID.
-  //For a paramater which is the matching descriptor set verbose.
+  //For a parameter which is the matching descriptor set verbose.
   //No display for other descriptors.
   //Allows babel descriptors HBA1
   if(param  && FindType(param))

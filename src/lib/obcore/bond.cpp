@@ -18,8 +18,13 @@ GNU General Public License for more details.
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
 
+#include <openbabel/elements.h>
+#include <openbabel/oberror.h>
+#include <openbabel/obutil.h>
+#include <openbabel/ring.h>
 #include <openbabel/bond.h>
 #include <openbabel/mol.h>
+#include <openbabel/generic.h>
 #include <climits>
 
 using namespace std;
@@ -33,7 +38,8 @@ namespace OpenBabel
       OBBondPrivate() {}
   };
 
-  extern OBAromaticTyper  aromtyper;
+  extern THREAD_LOCAL OBAromaticTyper  aromtyper;
+  extern OBMessageHandler obErrorLog;
 
   /** \class OBBond bond.h <openbabel/bond.h>
       \brief Bond class
@@ -59,10 +65,10 @@ namespace OpenBabel
     _idx=0;
     _order=0;
     _flags=0;
-    _bgn=NULL;
-    _end=NULL;
+    _bgn=nullptr;
+    _end=nullptr;
     _vdata.clear();
-    _parent=(OBMol*)NULL;
+    _parent=nullptr;
   }
 
   OBBond::~OBBond()
@@ -86,37 +92,12 @@ namespace OpenBabel
     SetFlag(flags);
   }
 
-  void OBBond::SetBO(int order)
-  {
-    SetBondOrder(order);
-  }
-
   void OBBond::SetBondOrder(int order)
   {
     _order = (char)order;
-    if (order == 5)
-      {
-        SetAromatic();
-        if (_bgn)
-          _bgn->SetAromatic();
-        if (_end)
-          _end->SetAromatic();
-      }
-    else
-      {
-        if (order == 1)
-          SetKSingle();
-        else if (order == 2)
-          SetKDouble();
-        else if (order == 3)
-          SetKTriple();
-        else
-          UnsetFlag(OB_KSINGLE_BOND | OB_KDOUBLE_BOND | OB_KTRIPLE_BOND);
-
-        UnsetAromatic();
-      }
   }
 
+  // TODO: Figure out how to consider periodicity, etc.
   void OBBond::SetLength(OBAtom *fixed, double length)
   {
     unsigned int i;
@@ -152,8 +133,6 @@ namespace OpenBabel
     v3 += v2;
     v4 = v3 - v1;
 
-    cerr << "v3: " << v3 << " v4: " << v4 << endl;
-
     for ( i = 0 ; i < children.size() ; i++ )
       {
         v1 = mol->GetAtom(children[i])->GetVector();
@@ -184,7 +163,7 @@ namespace OpenBabel
     // not in a ring, or in a large ring
     // and if it's a ring, not sp2
     OBRing *ring = FindSmallestRing();
-    if (ring != NULL) {
+    if (ring != nullptr) {
       if(!includeRingBonds)
         return false;
       if (ring->Size() <= 3)
@@ -199,15 +178,21 @@ namespace OpenBabel
 
     // not just an -OH or -NH2, etc.
     // maybe we want to add this as an option
-    //    rotatable = rotatable && ((_bgn->IsHeteroatom() || _bgn->GetHvyValence() > 1)
-    //                               && (_end->IsHeteroatom() || _end->GetHvyValence() > 1) );
-    return (_bgn->GetHvyValence() > 1 && _end->GetHvyValence() > 1);
+    //    rotatable = rotatable && ((_bgn->IsHeteroatom() || _bgn->GetHvyDegree() > 1)
+    //                               && (_end->IsHeteroatom() || _end->GetHvyDegree() > 1) );
+    return (_bgn->GetHvyDegree() > 1 && _end->GetHvyDegree() > 1);
+  }
+  
+  bool OBBond::IsPeriodic() const
+  {
+    OBMol *mol = (OBMol*)((OBBond*)this)->GetParent();
+    return mol->IsPeriodic();
   }
 
    bool OBBond::IsAmide()
    {
       OBAtom *c,*n;
-      c = n = NULL;
+      c = n = nullptr;
 
       // Look for C-N bond
       if (_bgn->GetAtomicNum() == 6 && _end->GetAtomicNum() == 7)
@@ -222,7 +207,7 @@ namespace OpenBabel
       }
       if (!c || !n) return(false);
       if (GetBondOrder() != 1) return(false);
-      if (n->GetImplicitValence() != 3) return(false);
+      if (n->GetTotalDegree() != 3) return false; // must be a degree 3 nitrogen
 
       // Make sure C is attached to =O
       OBBond *bond;
@@ -239,7 +224,7 @@ namespace OpenBabel
    bool OBBond::IsPrimaryAmide()
    {
       OBAtom *c,*n;
-      c = n = NULL;
+      c = n = nullptr;
 
       // Look for C-N bond
       if (_bgn->GetAtomicNum() == 6 && _end->GetAtomicNum() == 7)
@@ -254,10 +239,10 @@ namespace OpenBabel
       }
       if (!c || !n) return(false);
       if (GetBondOrder() != 1) return(false);
-      if (n->GetImplicitValence() != 3) return(false);
+      if (n->GetTotalDegree() != 3) return false; // must be a degree 3 nitrogen
 
       // Make sure that N is connected to one non-H
-      if (n->GetHvyValence() != 1) return(false);
+      if (n->GetHvyDegree() != 1) return(false);
 
       // Make sure C is attached to =O
       OBBond *bond;
@@ -273,7 +258,7 @@ namespace OpenBabel
    bool OBBond::IsSecondaryAmide()
    {
       OBAtom *c,*n;
-      c = n = NULL;
+      c = n = nullptr;
 
       // Look for C-N bond
       if (_bgn->GetAtomicNum() == 6 && _end->GetAtomicNum() == 7)
@@ -288,10 +273,10 @@ namespace OpenBabel
       }
       if (!c || !n) return(false);
       if (GetBondOrder() != 1) return(false);
-      if (n->GetImplicitValence() != 3) return(false);
+      if (n->GetTotalDegree() != 3) return false; // must be a degree 3 nitrogen
 
       // Make sure that N is connected to two non-H atoms
-      if (n->GetHvyValence() != 2) return(false);
+      if (n->GetHvyDegree() != 2) return(false);
 
       // Make sure C is attached to =O
       OBBond *bond;
@@ -307,7 +292,7 @@ namespace OpenBabel
    bool OBBond::IsTertiaryAmide()
    {
       OBAtom *c,*n;
-      c = n = NULL;
+      c = n = nullptr;
 
       // Look for C-N bond
       if (_bgn->GetAtomicNum() == 6 && _end->GetAtomicNum() == 7)
@@ -322,10 +307,10 @@ namespace OpenBabel
       }
       if (!c || !n) return(false);
       if (GetBondOrder() != 1) return(false);
-      if (n->GetImplicitValence() != 3) return(false);
+      if (n->GetTotalDegree() != 3) return false; // must be a degree 3 nitrogen
 
       // Make sure that N is connected to three non-H atoms
-      if (n->GetHvyValence() != 3) return(false);
+      if (n->GetHvyDegree() != 3) return(false);
 
       // Make sure C is attached to =O
       OBBond *bond;
@@ -358,7 +343,7 @@ namespace OpenBabel
 
     if (!a1 || !a2)
       return(false);
-    if (GetBO() != 1)
+    if (GetBondOrder() != 1)
       return(false);
 
     OBBond *bond;
@@ -389,14 +374,14 @@ namespace OpenBabel
 
     if (!a1 || !a2)
       return(false);
-    if (GetBO() != 1)
+    if (GetBondOrder() != 1)
       return(false);
 
     OBBond *bond;
     vector<OBBond*>::iterator i;
     for (bond = a1->BeginBond(i);bond;bond = a1->NextBond(i))
       if (bond->IsCarbonyl())
-        if (a2->GetHvyValence() == 2)
+        if (a2->GetHvyDegree() == 2)
           return(true);
 
     return(false);
@@ -421,14 +406,14 @@ namespace OpenBabel
 
     if (!a1 || !a2)
       return(false);
-    if (GetBO() != 1)
+    if (GetBondOrder() != 1)
       return(false);
 
     OBBond *bond;
     vector<OBBond*>::iterator i;
     for (bond = a1->BeginBond(i);bond;bond = a1->NextBond(i))
       if (bond->IsCarbonyl())
-        if (a2->GetHvyValence() == 3)
+        if (a2->GetHvyDegree() == 3)
           return(true);
 
     return(false);
@@ -438,7 +423,7 @@ namespace OpenBabel
   bool OBBond::IsEster()
   {
     OBAtom *a1,*a2;
-    a1 = a2 = NULL;
+    a1 = a2 = nullptr;
 
     if (_bgn->GetAtomicNum() == 6 && _end->GetAtomicNum() == 8)
       {
@@ -454,7 +439,7 @@ namespace OpenBabel
 
     if (!a1 || !a2)
       return(false);
-    if (GetBO() != 1)
+    if (GetBondOrder() != 1)
       return(false);
 
     OBBond *bond;
@@ -468,7 +453,7 @@ namespace OpenBabel
 
   bool OBBond::IsCarbonyl()
   {
-    if (GetBO() != 2)
+    if (GetBondOrder() != 2)
       return(false);
 
     if ((_bgn->GetAtomicNum() == 6 && _end->GetAtomicNum() == 8) ||
@@ -478,68 +463,16 @@ namespace OpenBabel
     return(false);
   }
 
-  bool OBBond::IsSingle()
-  {
-    if (HasFlag(OB_AROMATIC_BOND))
-      return(false);
-
-    if (!((OBMol*)GetParent())->HasAromaticPerceived())
-      {
-        aromtyper.AssignAromaticFlags(*((OBMol*)GetParent()));
-      }
-
-    if ((this->GetBondOrder()==1) && !(HasFlag(OB_AROMATIC_BOND)))
-      return(true);
-
-    return(false);
-  }
-
-  bool OBBond::IsDouble()
-  {
-    if	(HasFlag(OB_AROMATIC_BOND))
-      return(false);
-
-    if (!((OBMol*)GetParent())->HasAromaticPerceived())
-      {
-        aromtyper.AssignAromaticFlags(*((OBMol*)GetParent()));
-      }
-
-    if ((this->GetBondOrder()==2) && !(HasFlag(OB_AROMATIC_BOND)))
-      return(true);
-
-    return(false);
-  }
-
-  bool OBBond::IsTriple()
-  {
-    if	(HasFlag(OB_AROMATIC_BOND))
-      return(false);
-
-    if (!((OBMol*)GetParent())->HasAromaticPerceived())
-      {
-        aromtyper.AssignAromaticFlags(*((OBMol*)GetParent()));
-      }
-
-    if ((this->GetBondOrder()==3) && !(HasFlag(OB_AROMATIC_BOND)))
-      return(true);
-
-    return(false);
-  }
-
   bool OBBond::IsAromatic() const
   {
-    if (((OBBond*)this)->HasFlag(OB_AROMATIC_BOND))
-      return(true);
-
-    OBMol *mol = (OBMol*)((OBBond*)this)->GetParent();
+    OBMol *mol = ((OBBond*)this)->GetParent();
     if (!mol->HasAromaticPerceived())
-      {
         aromtyper.AssignAromaticFlags(*mol);
-        if (((OBBond*)this)->HasFlag(OB_AROMATIC_BOND))
-          return(true);
-      }
 
-    return(false);
+    if (this->HasFlag(OB_AROMATIC_BOND))
+      return true;
+
+    return false;
   }
 
   /*! This method checks if the geometry around this bond looks unsaturated
@@ -552,8 +485,8 @@ namespace OpenBabel
     vector<OBBond*>::iterator i,j;
     // We concentrate on sp2 atoms with valence up to 3 and ignore the rest (like sp1 or S,P)
     // As this is called from PerceiveBondOrders, GetHyb() may still be undefined.
-    if (_bgn->GetHyb()==1 || _bgn->GetValence()>3||
-        _end->GetHyb()==1 || _end->GetValence()>3)
+    if (_bgn->GetHyb()==1 || _bgn->GetExplicitDegree()>3||
+        _end->GetHyb()==1 || _end->GetExplicitDegree()>3)
       return(true);
 
     for (nbrStart = static_cast<OBAtom*>(_bgn)->BeginNbrAtom(i); nbrStart;
@@ -566,10 +499,7 @@ namespace OpenBabel
               {
                 if (nbrEnd != _bgn)
                   {
-                    torsion=fabs(CalcTorsionAngle(nbrStart->GetVector(),
-                                                  static_cast<OBAtom*>(_bgn)->GetVector(),
-                                                  static_cast<OBAtom*>(_end)->GetVector(),
-                                                  nbrEnd->GetVector()));
+                    torsion=fabs(_parent->GetTorsion(nbrStart, _bgn, _end, nbrEnd));
 
                     // >12&&<168 not enough
                     if (torsion > 15.0  && torsion < 160.0)
@@ -585,68 +515,16 @@ namespace OpenBabel
     return(true);
   }
 
-  void OBBond::SetKSingle()
-  {
-    _flags &= (~(OB_KSINGLE_BOND|OB_KDOUBLE_BOND|OB_KTRIPLE_BOND));
-    _flags |= OB_KSINGLE_BOND;
-  }
-
-  void OBBond::SetKDouble()
-  {
-    _flags &= (~(OB_KSINGLE_BOND|OB_KDOUBLE_BOND|OB_KTRIPLE_BOND));
-    _flags |= OB_KDOUBLE_BOND;
-  }
-
-  void OBBond::SetKTriple()
-  {
-    _flags &= (~(OB_KSINGLE_BOND|OB_KDOUBLE_BOND|OB_KTRIPLE_BOND));
-    _flags |= OB_KTRIPLE_BOND;
-  }
-
-  bool OBBond::IsKSingle()
-  {
-    if (_flags & OB_KSINGLE_BOND)
-      return(true);
-    if (!((OBMol*)GetParent())->HasKekulePerceived())
-      ((OBMol*)GetParent())->NewPerceiveKekuleBonds();
-
-    return((_flags & OB_KSINGLE_BOND) != 0) ? true : false;
-  }
-
-  bool OBBond::IsKDouble()
-  {
-    if (_flags & OB_KDOUBLE_BOND)
-      return(true);
-    if (!((OBMol*)GetParent())->HasKekulePerceived())
-      ((OBMol*)GetParent())->NewPerceiveKekuleBonds();
-
-    return((_flags & OB_KDOUBLE_BOND) != 0) ? true : false;
-  }
-
-  bool OBBond::IsKTriple()
-  {
-    if (_flags & OB_KTRIPLE_BOND)
-      return(true);
-    if (!((OBMol*)GetParent())->HasKekulePerceived())
-      ((OBMol*)GetParent())->NewPerceiveKekuleBonds();
-
-    return((_flags & OB_KTRIPLE_BOND) != 0) ? true : false;
-  }
-
   bool OBBond::IsInRing() const
   {
-    if (((OBBond*)this)->HasFlag(OB_RING_BOND))
-      return(true);
-
-    OBMol *mol = (OBMol*)((OBBond*)this)->GetParent();
+    OBMol *mol = ((OBBond*)this)->GetParent();
     if (!mol->HasRingAtomsAndBondsPerceived())
-      {
-        mol->FindRingAtomsAndBonds();
-        if (((OBBond*)this)->HasFlag(OB_RING_BOND))
-          return(true);
-      }
+      mol->FindRingAtomsAndBonds();
 
-    return(false);
+    if (((OBBond*)this)->HasFlag(OB_RING_BOND))
+      return true;
+
+    return false;
   }
 
   // Adapted from OBAtom::IsInRingSize()
@@ -658,7 +536,7 @@ namespace OpenBabel
     OBMol *mol = (OBMol*)((OBBond*)this)->GetParent();
 
     rlist = mol->GetSSSR();
-    OBRing* result = (OBRing*) NULL;
+    OBRing* result = nullptr;
     size_t min_size = UINT_MAX;
     for (i = rlist.begin();i != rlist.end();++i) {
       if ((*i)->IsMember((OBBond*)this) && (*i)->Size() < min_size) {
@@ -679,26 +557,40 @@ namespace OpenBabel
     return HasFlag(OB_CLOSURE_BOND);
   }
 
+  //! \return a "corrected" bonding radius based on the hybridization.
+  //! Scales the covalent radius by 0.95 for sp2 and 0.90 for sp hybrids
+  static double CorrectedBondRad(unsigned int elem, unsigned int hyb)
+  {
+    double rad = OBElements::GetCovalentRad(elem);
+    switch (hyb) {
+    case 2:
+      return rad * 0.95;
+    case 1:
+      return rad * 0.90;
+    default:
+      return rad;
+    }
+  }
+
   double OBBond::GetEquibLength() const
   {
-    double length;
     const OBAtom *begin, *end;
-    // CorrectedBondRad will always return a # now
-    //  if (!CorrectedBondRad(GetBeginAtom(),rad1)) return(0.0);
-    //  if (!CorrectedBondRad(GetEndAtom(),rad2))   return(0.0);
 
     begin = GetBeginAtom();
     end = GetEndAtom();
-    length = etab.CorrectedBondRad(begin->GetAtomicNum(), begin->GetHyb())
-      + etab.CorrectedBondRad(end->GetAtomicNum(), end->GetHyb());
+    double length = CorrectedBondRad(begin->GetAtomicNum(), begin->GetHyb())
+                  + CorrectedBondRad(end->GetAtomicNum(), end->GetHyb());
 
     if (IsAromatic())
-      length *= 0.93;
-    else if (GetBO() == 2)
-      length *= 0.91;
-    else if (GetBO() == 3)
-      length *= 0.87;
-    return(length);
+      return length * 0.93;
+    
+    switch (_order) {
+    case 3:
+      return length * 0.87;
+    case 2:
+      return length * 0.91;
+    }
+    return length;
   }
 
   double OBBond::GetLength() const
@@ -708,11 +600,19 @@ namespace OpenBabel
     begin = GetBeginAtom();
     end = GetEndAtom();
 
-    d2 = SQUARE(begin->GetX() - end->GetX());
-    d2 += SQUARE(begin->GetY() - end->GetY());
-    d2 += SQUARE(begin->GetZ() - end->GetZ());
-
-    return(sqrt(d2));
+    if (!IsPeriodic())
+      {
+        d2 = SQUARE(begin->GetX() - end->GetX());
+        d2 += SQUARE(begin->GetY() - end->GetY());
+        d2 += SQUARE(begin->GetZ() - end->GetZ());
+        return(sqrt(d2));
+      }
+    else
+      {
+        OBMol *mol = (OBMol*)((OBBond*)this)->GetParent();
+        OBUnitCell *box = (OBUnitCell*)mol->GetData(OBGenericDataType::UnitCell);
+        return (box->MinimumImageCartesian(begin->GetVector() - end->GetVector())).length();
+      }
   }
 
   /*Now in OBBase

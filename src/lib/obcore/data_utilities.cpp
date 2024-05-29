@@ -20,12 +20,14 @@ GNU General Public License for more details.
 #ifdef WIN32
 #pragma warning (disable : 4786)
 #endif
-
+#include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <openbabel/babelconfig.h>
 #include <openbabel/data_utilities.h>
 #include <openbabel/mol.h>
+#include <openbabel/generic.h>
 #include <openbabel/locale.h>
 
 namespace OpenBabel {
@@ -43,9 +45,10 @@ bool extract_thermochemistry(OpenBabel::OBMol  &mol,
                              double *S0T,
                              double *CVT,
                              double *CPT,
-                             std::vector<double> &Scomponents)
+                             std::vector<double> &Scomponents,
+                             double *ZPVE)
 {
-    enum kkTYPE { kkDH, kkDG, kkDS, kkS0, kkCV, kkSt, kkSr, kkSv };
+    enum kkTYPE {kkDH, kkDG, kkDS, kkS0, kkCV, kkSt, kkSr, kkSv, kkZP};
     typedef struct {
         std::string term;
         kkTYPE kk;
@@ -56,7 +59,7 @@ bool extract_thermochemistry(OpenBabel::OBMol  &mol,
     OpenBabel::OBRotationData* rd;
     
     rd = (OpenBabel::OBRotationData*)mol.GetData("RotationData");
-    if (NULL != rd)
+    if (nullptr != rd)
     {
         RotSymNum = rd->GetSymmetryNumber();
         if (bVerbose)
@@ -87,6 +90,7 @@ bool extract_thermochemistry(OpenBabel::OBMol  &mol,
         Sconf = Rgas*Nrotbonds*log(3.0);
     }
     energy_unit eu[] = {
+        { "zpe",        kkZP },
         { "DeltaHform", kkDH },
         { "DeltaGform", kkDG },
         { "DeltaSform", kkDS },
@@ -122,12 +126,17 @@ bool extract_thermochemistry(OpenBabel::OBMol  &mol,
                 }
             }
         }
-        for(int i = 0; (i<NEU); i++)
+        for(unsigned int i = 0; (i<NEU); i++)
         {
-            if (strstr(term.c_str(), eu[i].term.c_str()) != 0)
+            if (strstr(term.c_str(), eu[i].term.c_str()) != nullptr)
             {
                 switch (eu[i].kk)
                 {
+		            case kkZP:
+		                {
+		                    *ZPVE = value;
+		                }
+		                break;
                 case kkDH:
                     if (0 == T)
                     {

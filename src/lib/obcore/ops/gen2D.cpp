@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include<openbabel/op.h>
 #include<openbabel/mol.h>
 #include <openbabel/mcdlutil.h>
+#include <openbabel/stereo/stereo.h>
 
 namespace OpenBabel
 {
@@ -37,8 +38,8 @@ public:
     "Modular Chemical Descriptor Language (MCDL)."
     "Molecules, 2006, 11, 219-231"; }
 
-  virtual bool WorksWith(OBBase* pOb)const{ return dynamic_cast<OBMol*>(pOb)!=NULL; }
-  virtual bool Do(OBBase* pOb, const char* OptionText=NULL, OpMap* pOptions=NULL, OBConversion* pConv=NULL);
+  virtual bool WorksWith(OBBase* pOb) const { return dynamic_cast<OBMol*>(pOb) != nullptr; }
+  virtual bool Do(OBBase* pOb, const char* OptionText=nullptr, OpMap* pOptions=nullptr, OBConversion* pConv=nullptr);
 };
 
 /////////////////////////////////////////////////////////////////
@@ -50,6 +51,19 @@ bool OpGen2D::Do(OBBase* pOb, const char* OptionText, OpMap* pOptions, OBConvers
   OBMol* pmol = dynamic_cast<OBMol*>(pOb);
   if(!pmol)
     return false;
+
+  // If we are coming from a 0D structure, then we need to perceive the cis/trans
+  // bonds *now*, before adding the coordinates, to mark unspecified cis/trans
+  // as such. Otherwise, when writing a MOL file it will be missing the '3', or
+  // similarly when depicting it would be presented as specified.
+  // Really, all we need to do is handle the cis/trans bond cases.
+  // However, the current API requires us to also reperceive the tet stereo,
+  // and to remove any stereo that is not real.
+
+  if (pmol->GetDimension() == 0) {
+    pmol->UnsetFlag(OB_CHIRALITY_MOL);
+    StereoFrom0D(pmol);
+  }
 
   generateDiagram(pmol);
   pmol->SetDimension(2);

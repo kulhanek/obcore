@@ -15,11 +15,19 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/obiter.h>
+
 
 #include <limits.h>
 #include <locale> // For isalpha(int)
 #include <map>
 #include <stdexcept>
+#include <cstdlib>
+#include <algorithm>
 
 #ifdef _MSC_VER
 #define INFINITY (DBL_MAX+DBL_MAX)
@@ -103,7 +111,7 @@ namespace OpenBabel {
   bool MDFFFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     // Move stream to EOF, some apps check ifs position to check for multimolecule files.
@@ -196,7 +204,7 @@ namespace OpenBabel {
     for (size_t i = 0; i < atom_t_prop.size(); ++i) 
     {  
       atom_t_prop[i].atom_symbol = vs[i];
-      atom_t_prop[i].atom_etab_num = OpenBabel::etab.GetAtomicNum(atom_t_prop[i].atom_symbol.c_str());
+      atom_t_prop[i].atom_etab_num = OpenBabel::OBElements::GetAtomicNum(atom_t_prop[i].atom_symbol.c_str());
     }  
  
     // Fetch next line to get stoichiometry
@@ -339,7 +347,7 @@ namespace OpenBabel {
     //output looks nice, this can be reversed by using command line flag "-xw".
     //
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if (pmol == NULL) {
+    if (pmol == nullptr) {
       return false;
     }
 
@@ -353,7 +361,7 @@ namespace OpenBabel {
     }            
 
     char buffer[BUFF_SIZE];
-    OBUnitCell *uc = NULL;
+    OBUnitCell *uc = nullptr;
     vector<vector3> cell;
 
     const char * sortAtoms     = pConv->IsOption("w", OBConversion::OUTOPTIONS);
@@ -365,20 +373,20 @@ namespace OpenBabel {
     
     map<int, int> indl; 
     
-    if (sortAtoms != NULL) 
+    if (sortAtoms != nullptr)
     {
       indl.clear();
       for(int i = 0; i < 200; i++)
         indl[i] = i;
     }
     
-    if (sortAtomsList != NULL) 
+    if (sortAtomsList != nullptr)
     {
       indl.clear();
       vector<string> vs;
       tokenize(vs, sortAtomsList);
       for(int i = 0; i < vs.size(); i++)
-        indl[etab.GetAtomicNum(vs[i].c_str())] = i;
+        indl[OBElements::GetAtomicNum(vs[i].c_str())] = i;
     }
     
     map<aindx, OBAtom *> amap;
@@ -396,7 +404,7 @@ namespace OpenBabel {
     string last_atom_smb = "";
     for(map<aindx, OBAtom *>::const_iterator it = amap.begin(); it != amap.end(); ++it)
     {
-      string curr_atom_smb = OpenBabel::etab.GetSymbol(it->second->GetAtomicNum());
+      string curr_atom_smb = OpenBabel::OBElements::GetSymbol(it->second->GetAtomicNum());
       if( last_atom_smb != curr_atom_smb )
       {  
         last_atom_smb = curr_atom_smb;
@@ -456,7 +464,7 @@ namespace OpenBabel {
                                               it != amap.end(); ++it)
     {  
       // Print coordinates
-      string smb = OpenBabel::etab.GetSymbol(it->second->GetAtomicNum());
+      string smb = OpenBabel::OBElements::GetSymbol(it->second->GetAtomicNum());
       snprintf(buffer, BUFF_SIZE, "%-3s %26.19f %26.19f %26.19f", smb.c_str(),
                it->second->GetX(), it->second->GetY(), it->second->GetZ());
       
@@ -469,7 +477,7 @@ namespace OpenBabel {
       ofs << buffer << endl;
     }
     
-    if( writeIONS == NULL)
+    if (writeIONS == nullptr)
       return true;
     
     //Write IONS.POT
@@ -494,7 +502,7 @@ namespace OpenBabel {
         if( (i == 0) || (i == 2) )
           ofs_ions << atypes_def[j].first << "  ";
         else if (i == 1)
-          ofs_ions << etab.GetMass(etab.GetAtomicNum(atypes_def[j].first.c_str())) << "d0 ";
+          ofs_ions << OBElements::GetMass(OBElements::GetAtomicNum(atypes_def[j].first.c_str())) << "d0 ";
         else if (i == 3)
           ofs_ions << charge_smb[atypes_def[j].first] << "d0 ";
       }

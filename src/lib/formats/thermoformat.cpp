@@ -21,7 +21,12 @@ GNU General Public License for more details.
 #include <string>
 #include <iomanip>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+
 #include <openbabel/kinetics.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -60,7 +65,7 @@ bool ThermoFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   OBMol* pmol = pOb->CastAndClear<OBMol>();
   if(!pmol)
     return false;
-  bool stopOnEnd = pConv->IsOption("e",OBConversion::INOPTIONS)!=NULL;
+  bool stopOnEnd = pConv->IsOption("e", OBConversion::INOPTIONS) != nullptr;
   pmol->SetDimension(0);
   OBNasaThermoData* pND = new OBNasaThermoData; //to store rate constant data
   pND->SetOrigin(fileformatInput);
@@ -98,9 +103,8 @@ bool ThermoFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
     for(i=0;i<toks.size();i+=2)
     {
       OBAtom atom;
-      atom.SetAtomicNum(etab.GetAtomicNum(toks[i].c_str()));
+      atom.SetAtomicNum(OBElements::GetAtomicNum(toks[i].c_str()));
       elnum = atoi(toks[i+1].c_str());
-      atom.ForceNoH();
       for(;elnum>0;--elnum)
         pmol->AddAtom(atom);
     }
@@ -117,8 +121,7 @@ bool ThermoFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
         if(elname[1]==' ')
           elname[1]=0;
         OBAtom atom;
-        atom.SetAtomicNum(etab.GetAtomicNum(elname));
-        atom.ForceNoH();
+        atom.SetAtomicNum(OBElements::GetAtomicNum(elname));
         for(;elnum>0;--elnum)
           pmol->AddAtom(atom);
       }

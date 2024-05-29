@@ -13,10 +13,16 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/bond.h>
+
 #include <openbabel/obiter.h>
 
 #include <sstream>
 #include <map>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -29,8 +35,8 @@ namespace OpenBabel
     LMPDATFormat()
     {
       OBConversion::RegisterFormat("lmpdat", this, "chemical/x-lmpdat");
-      OBConversion::RegisterOptionParam("q", NULL, 1, OBConversion::OUTOPTIONS);
-      OBConversion::RegisterOptionParam("d", NULL, 1, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("q", nullptr, 1, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("d", nullptr, 1, OBConversion::OUTOPTIONS);
     }
 
     virtual const char* Description() //required
@@ -72,7 +78,7 @@ namespace OpenBabel
   bool LMPDATFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -94,7 +100,7 @@ namespace OpenBabel
     FOR_ATOMS_OF_MOL(atom, mol)
     {
 		 ThisMass=atom->GetAtomicMass();
-		 ThisAtom=etab.GetSymbol(atom->GetAtomicNum());
+		 ThisAtom=OBElements::GetSymbol(atom->GetAtomicNum());
 		 AtomMass[ThisAtom] = ThisMass;
     }
     map<string, int> AtomType;
@@ -122,15 +128,15 @@ namespace OpenBabel
 	    {
 		    snprintf(BondString,BUFF_SIZE,
 				    "%2s:%2s",
-				    etab.GetSymbol(b->GetAtomicNum()),
-				    etab.GetSymbol(a->GetAtomicNum()));
+				    OBElements::GetSymbol(b->GetAtomicNum()),
+				    OBElements::GetSymbol(a->GetAtomicNum()));
 	    }
 	    else
 	    {
 		    snprintf(BondString,BUFF_SIZE,
 				    "%2s:%2s",
-				    etab.GetSymbol(a->GetAtomicNum()),
-				    etab.GetSymbol(b->GetAtomicNum()));
+				    OBElements::GetSymbol(a->GetAtomicNum()),
+				    OBElements::GetSymbol(b->GetAtomicNum()));
 	    }
 	    BondType[BondString] = 0;
     }
@@ -161,17 +167,17 @@ namespace OpenBabel
 	    {
 		    snprintf(AngleString,BUFF_SIZE,
 				    "%2s:%2s:%2s",
-				    etab.GetSymbol(b->GetAtomicNum()),
-				    etab.GetSymbol(a->GetAtomicNum()),
-				    etab.GetSymbol(c->GetAtomicNum()));
+				    OBElements::GetSymbol(b->GetAtomicNum()),
+				    OBElements::GetSymbol(a->GetAtomicNum()),
+				    OBElements::GetSymbol(c->GetAtomicNum()));
 	    }
 	    else
 	    {
 		    snprintf(AngleString,BUFF_SIZE,
 				    "%2s:%2s:%2s",
-				    etab.GetSymbol(c->GetAtomicNum()),
-				    etab.GetSymbol(a->GetAtomicNum()),
-				    etab.GetSymbol(b->GetAtomicNum()));
+				    OBElements::GetSymbol(c->GetAtomicNum()),
+				    OBElements::GetSymbol(a->GetAtomicNum()),
+				    OBElements::GetSymbol(b->GetAtomicNum()));
 	    }
 	    AngleType[AngleString]=0;
     }
@@ -201,19 +207,19 @@ namespace OpenBabel
 	    {
 		    snprintf(DihedralString,BUFF_SIZE,
 				    "%2s:%2s:%2s:%2s",
-				    etab.GetSymbol(a->GetAtomicNum()),
-				    etab.GetSymbol(b->GetAtomicNum()),
-				    etab.GetSymbol(c->GetAtomicNum()),
-				    etab.GetSymbol(d->GetAtomicNum()));
+				    OBElements::GetSymbol(a->GetAtomicNum()),
+				    OBElements::GetSymbol(b->GetAtomicNum()),
+				    OBElements::GetSymbol(c->GetAtomicNum()),
+				    OBElements::GetSymbol(d->GetAtomicNum()));
 	    }
 	    else
 	    {
 		    snprintf(DihedralString,BUFF_SIZE,
 				    "%2s:%2s:%2s:%2s",
-				    etab.GetSymbol(d->GetAtomicNum()),
-				    etab.GetSymbol(b->GetAtomicNum()),
-				    etab.GetSymbol(c->GetAtomicNum()),
-				    etab.GetSymbol(a->GetAtomicNum()));
+				    OBElements::GetSymbol(d->GetAtomicNum()),
+				    OBElements::GetSymbol(b->GetAtomicNum()),
+				    OBElements::GetSymbol(c->GetAtomicNum()),
+				    OBElements::GetSymbol(a->GetAtomicNum()));
 	    }
 	    DihedralType[DihedralString]=0;
     }
@@ -247,7 +253,7 @@ namespace OpenBabel
     }
 
     //For now, a simple cube may be the best way to go.
-    //It may be necessary to set the boxlenght to enforce
+    //It may be necessary to set the boxlength to enforce
     //a density.
     const char *boxLn = pConv->IsOption("d",OBConversion::OUTOPTIONS);
     double xlo,xhi;
@@ -361,7 +367,7 @@ namespace OpenBabel
 		    int atomid=5;
 		    double charge=0.5;
 		    atomcount++;
-		    ThisAtom=etab.GetSymbol(atom->GetAtomicNum());
+		    ThisAtom=OBElements::GetSymbol(atom->GetAtomicNum());
 		    snprintf(buffer,BUFF_SIZE,"%-4d %4d %4d %10.5f %10.5f %10.5f %10.5f # %3s\n",
 				    atomcount,molcount,
 				    AtomType[ThisAtom],
@@ -395,8 +401,8 @@ namespace OpenBabel
 	    {
 		    snprintf(BondString,BUFF_SIZE,
 				    "%2s:%2s",
-				    etab.GetSymbol(b->GetAtomicNum()),
-				    etab.GetSymbol(a->GetAtomicNum()));
+				    OBElements::GetSymbol(b->GetAtomicNum()),
+				    OBElements::GetSymbol(a->GetAtomicNum()));
 		    snprintf(buffer,BUFF_SIZE,
 				    "%-4d %4d %4d %4d # %5s\n",
 				    BondIndex,
@@ -409,8 +415,8 @@ namespace OpenBabel
 	    {
 		    snprintf(BondString,BUFF_SIZE,
 				    "%2s:%2s",
-				    etab.GetSymbol(a->GetAtomicNum()),
-				    etab.GetSymbol(b->GetAtomicNum()));
+				    OBElements::GetSymbol(a->GetAtomicNum()),
+				    OBElements::GetSymbol(b->GetAtomicNum()));
 		    snprintf(buffer,BUFF_SIZE,
 				    "%-4d %4d %4d %4d # %5s\n",
 				    BondIndex,
@@ -445,9 +451,9 @@ namespace OpenBabel
 	    {
 		    snprintf(AngleString,BUFF_SIZE,
 				    "%2s:%2s:%2s",
-				    etab.GetSymbol(b->GetAtomicNum()),
-				    etab.GetSymbol(a->GetAtomicNum()),
-				    etab.GetSymbol(c->GetAtomicNum()));
+				    OBElements::GetSymbol(b->GetAtomicNum()),
+				    OBElements::GetSymbol(a->GetAtomicNum()),
+				    OBElements::GetSymbol(c->GetAtomicNum()));
 		    snprintf(buffer,BUFF_SIZE,
 				    "%-4d %4d %4d %4d %4d # %8s\n",
 				    AngleIndex,
@@ -461,9 +467,9 @@ namespace OpenBabel
 	    {
 		    snprintf(AngleString,BUFF_SIZE,
 				    "%2s:%2s:%2s",
-				    etab.GetSymbol(c->GetAtomicNum()),
-				    etab.GetSymbol(a->GetAtomicNum()),
-				    etab.GetSymbol(b->GetAtomicNum()));
+				    OBElements::GetSymbol(c->GetAtomicNum()),
+				    OBElements::GetSymbol(a->GetAtomicNum()),
+				    OBElements::GetSymbol(b->GetAtomicNum()));
 		    snprintf(buffer,BUFF_SIZE,
 				    "%-4d %4d %4d %4d %4d # %8s\n",
 				    AngleIndex,
@@ -502,10 +508,10 @@ namespace OpenBabel
 		    {
 			    snprintf(DihedralString,BUFF_SIZE,
 					    "%2s:%2s:%2s:%2s",
-					    etab.GetSymbol(a->GetAtomicNum()),
-					    etab.GetSymbol(b->GetAtomicNum()),
-					    etab.GetSymbol(c->GetAtomicNum()),
-					    etab.GetSymbol(d->GetAtomicNum()));
+					    OBElements::GetSymbol(a->GetAtomicNum()),
+					    OBElements::GetSymbol(b->GetAtomicNum()),
+					    OBElements::GetSymbol(c->GetAtomicNum()),
+					    OBElements::GetSymbol(d->GetAtomicNum()));
 			    snprintf(buffer,BUFF_SIZE,
 					    "%-4d %4d %4d %4d %4d %4d # %11s\n",
 					    DihedralIndex,
@@ -520,10 +526,10 @@ namespace OpenBabel
 		    {
 			    snprintf(DihedralString,BUFF_SIZE,
 					    "%2s:%2s:%2s:%2s",
-					    etab.GetSymbol(d->GetAtomicNum()),
-					    etab.GetSymbol(b->GetAtomicNum()),
-					    etab.GetSymbol(c->GetAtomicNum()),
-					    etab.GetSymbol(a->GetAtomicNum()));
+					    OBElements::GetSymbol(d->GetAtomicNum()),
+					    OBElements::GetSymbol(b->GetAtomicNum()),
+					    OBElements::GetSymbol(c->GetAtomicNum()),
+					    OBElements::GetSymbol(a->GetAtomicNum()));
 			    snprintf(buffer,BUFF_SIZE,
 					    "%-4d %4d %4d %4d %4d %4d # %11s\n",
 					    DihedralIndex,

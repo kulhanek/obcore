@@ -15,6 +15,11 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <cstdlib>
+
 
 using namespace std;
 namespace OpenBabel
@@ -60,7 +65,7 @@ bool CCCFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
         return false;
 
     //Define some references so we can use the old parameter names
@@ -96,7 +101,7 @@ bool CCCFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
         atom.Clear();
         element[0] = buffer[0];
         element[1] = (buffer[1] != ' ') ? buffer[1]:'\0';
-        atom.SetAtomicNum(etab.GetAtomicNum(element));
+        atom.SetAtomicNum(OBElements::GetAtomicNum(element));
         sscanf(&buffer[15],"%lf%lf%lf",&x,&y,&z);
         v.Set(x,y,z);
         atom.SetVector(v);

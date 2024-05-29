@@ -14,6 +14,14 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
+
 
 using namespace std;
 namespace OpenBabel
@@ -64,7 +72,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -81,6 +89,7 @@ namespace OpenBabel
     vector<string> vs;
     vector<vector3> atomPositions;
     bool createdAtoms = false;
+    int atomicNum;
 
     mol.BeginModify();
 
@@ -88,15 +97,20 @@ namespace OpenBabel
       {
         if (buffer[0] == '#')
           continue; // comment
-        if (strstr(buffer, "ATOMS") != NULL) {
-          // Minimum of 4 columns -- atomic number, x, y, z (forces)
+        if (strstr(buffer, "ATOMS") != nullptr) {
+          // Minimum of 4 columns -- AtNum, x, y, z (forces)
+          // where AtNum stands for atomic number (or symbol), while X Y Z are
           ifs.getline(buffer, BUFF_SIZE);
           tokenize(vs, buffer);
           while (vs.size() >= 4) {
             if (!createdAtoms) {
               atom = mol.NewAtom();
               //set atomic number
-              atom->SetAtomicNum(atoi(vs[0].c_str()));
+              atomicNum = OBElements::GetAtomicNum(vs[0].c_str());
+              if (atomicNum == 0) {
+                atomicNum = atoi(vs[0].c_str());
+              }
+              atom->SetAtomicNum(atomicNum);
             }
             x = atof((char*)vs[1].c_str());
             y = atof((char*)vs[2].c_str());
@@ -121,7 +135,7 @@ namespace OpenBabel
             translationVectors[numTranslationVectors++].Set(x, y, z);
           }
         }
-        else if (strstr(buffer, "PRIMCOORD") != NULL) {
+        else if (strstr(buffer, "PRIMCOORD") != nullptr) {
           // read the coordinates
           ifs.getline(buffer, BUFF_SIZE);
           tokenize(vs, buffer);
@@ -137,7 +151,11 @@ namespace OpenBabel
             if (!createdAtoms) {
               atom = mol.NewAtom();
               //set atomic number
-              atom->SetAtomicNum(atoi(vs[0].c_str()));
+              atomicNum = OBElements::GetAtomicNum(vs[0].c_str());
+              if (atomicNum == 0) {
+                atomicNum = atoi(vs[0].c_str());
+              }
+              atom->SetAtomicNum(atomicNum);
             }
             x = atof((char*)vs[1].c_str());
             y = atof((char*)vs[2].c_str());

@@ -22,8 +22,12 @@ GNU General Public License for more details.
 #include <climits> // UINT_MAX
 
 #include <openbabel/math/align.h>
+#include <openbabel/atom.h>
+#include <openbabel/oberror.h>
+#include <openbabel/obiter.h>
 #include <openbabel/graphsym.h>
 #include <openbabel/math/vector3.h>
+#include <openbabel/elements.h>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -34,12 +38,14 @@ using namespace std;
 
 namespace OpenBabel
 {
+  extern OBMessageHandler obErrorLog;
+
   OBAlign::OBAlign(bool includeH, bool symmetry) : _method(OBAlign::Kabsch)
   {
     _ready = false;
     _symmetry = symmetry;
     _includeH = includeH;
-    _prefmol = 0;
+    _prefmol = nullptr;
   }
 
   OBAlign::OBAlign(const vector<vector3> &ref, const vector<vector3> &target) : _method(OBAlign::Kabsch)
@@ -47,7 +53,7 @@ namespace OpenBabel
     SetRef(ref);
     SetTarget(target);
     _symmetry = false;
-    _prefmol = 0;
+    _prefmol = nullptr;
   }
 
   OBAlign::OBAlign(const OBMol &refmol, const OBMol &targetmol, bool includeH, bool symmetry) : _method(OBAlign::Kabsch)
@@ -113,7 +119,7 @@ namespace OpenBabel
 
     for (unsigned int i=1; i<=refmol.NumAtoms(); ++i) {
       atom = refmol.GetAtom(i);
-      if (_includeH || !atom->IsHydrogen()) {
+      if (_includeH || atom->GetAtomicNum() != OBElements::Hydrogen) {
         _frag_atoms.SetBitOn(i);
         _newidx.push_back(i - delta);
         _refmol_coords.push_back(atom->GetVector());
@@ -136,7 +142,7 @@ namespace OpenBabel
     OBAtom const *atom;
     for (unsigned int i=1; i<=targetmol.NumAtoms(); ++i) {
       atom = targetmol.GetAtom(i);
-      if (_includeH || !atom->IsHydrogen())
+      if (_includeH || atom->GetAtomicNum() != OBElements::Hydrogen)
         _targetmol_coords.push_back(atom->GetVector());
     }
     SetTarget(_targetmol_coords);
@@ -396,7 +402,7 @@ namespace OpenBabel
       VectorsToMatrix(&target_coords, mtarget);
 
       // Subtract the centroid of the non-H atoms
-      for (vector<vector3>::size_type i=0; i<mtarget.cols(); ++i)
+      for (unsigned int i=0; i<mtarget.cols(); ++i)
         mtarget.col(i) -= _target_centr;
 
       // Rotate
@@ -439,7 +445,7 @@ namespace OpenBabel
   double OBAlign::GetRMSD() {
     if (!_ready) {
       obErrorLog.ThrowError(__FUNCTION__, "RMSD not available until you call Align()" , obError);
-      return (double) NULL;
+      return nan("");
     }
 
     return _rmsd;

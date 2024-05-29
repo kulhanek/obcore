@@ -20,8 +20,11 @@ GNU General Public License for more details.
 
 #include <ctype.h>
 #include <iomanip>
+#include <cstring>
 
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
 #include <openbabel/parsmart.h>
 #include <openbabel/stereo/stereo.h>
 #include <openbabel/stereo/tetrahedral.h>
@@ -30,7 +33,6 @@ using namespace std;
 
 namespace OpenBabel
 {
-
   /*! \class OBSmartsPattern parsmart.h <openbabel/parsmart.h>
 
     Substructure search is an incredibly useful tool in the context of a
@@ -148,7 +150,6 @@ namespace OpenBabel
 #define BE_DOWNUNSPEC   16
 
 
-  static int GetVectorBinding();
   static int CreateAtom(Pattern*,AtomExpr*,int,int vb=0);
 
   const int SmartsImplicitRef = -9999; // Used as a placeholder when recording atom nbrs for chiral atoms
@@ -174,7 +175,7 @@ namespace OpenBabel
 
   static AtomExpr *CopyAtomExpr( AtomExpr *expr )
   {
-    register AtomExpr *result;
+    AtomExpr *result;
 
     result = new AtomExpr;
     result->type = expr->type;
@@ -230,7 +231,7 @@ namespace OpenBabel
 
   static AtomExpr *BuildAtomPred( int type )
   {
-    register AtomExpr *result;
+    AtomExpr *result;
 
     result = new AtomExpr;
     result->leaf.type = type;
@@ -240,7 +241,7 @@ namespace OpenBabel
 
   static AtomExpr *BuildAtomLeaf( int type, int val )
   {
-    register AtomExpr *result;
+    AtomExpr *result;
 
     result = new AtomExpr;
     result->leaf.type = type;
@@ -250,7 +251,7 @@ namespace OpenBabel
 
   static AtomExpr *BuildAtomNot( AtomExpr *expr )
   {
-    register AtomExpr *result;
+    AtomExpr *result;
 
     result = new AtomExpr;
     result->mon.type = AE_NOT;
@@ -260,7 +261,7 @@ namespace OpenBabel
 
   static AtomExpr *BuildAtomBin( int op, AtomExpr *lft, AtomExpr *rgt )
   {
-    register AtomExpr *result;
+    AtomExpr *result;
 
     result = new AtomExpr;
     result->bin.type = op;
@@ -271,7 +272,7 @@ namespace OpenBabel
 
   static AtomExpr *BuildAtomRecurs( Pattern *pat )
   {
-    register AtomExpr *result;
+    AtomExpr *result;
 
     result = new AtomExpr;
     result->recur.type = AE_RECUR;
@@ -290,18 +291,13 @@ namespace OpenBabel
                 : BuildAtomLeaf(AE_ALIPHELEM,elem);
   }
 
-  static int IsInvalidAtom( AtomExpr *expr )
-  {
-    return !expr || expr->type==AE_FALSE;
-  }
-
   /*================================*/
   /*  Bond Expression Manipulation  */
   /*================================*/
 
   static BondExpr *CopyBondExpr( BondExpr *expr )
   {
-    register BondExpr *result;
+    BondExpr *result;
 
     result = new BondExpr;
     result->type = expr->type;
@@ -336,11 +332,11 @@ namespace OpenBabel
    */
   static bool EquivalentBondExpr( BondExpr *expr1, BondExpr *expr2 )
   {
-    if (expr1 == NULL && expr2 == NULL)
+    if (expr1 == nullptr && expr2 == nullptr)
       return true;
-    if (expr1 == NULL && expr2 != NULL)
+    if (expr1 == nullptr && expr2 != nullptr)
       return false;
-    if (expr1 != NULL && expr2 == NULL)
+    if (expr1 != nullptr && expr2 == nullptr)
       return false;
 
     if (expr1->type != expr2->type)
@@ -384,7 +380,7 @@ namespace OpenBabel
 
   static BondExpr *BuildBondLeaf( int type )
   {
-    register BondExpr *result;
+    BondExpr *result;
 
     result = new BondExpr;
     result->type = type;
@@ -393,7 +389,7 @@ namespace OpenBabel
 
   static BondExpr *BuildBondNot( BondExpr *expr )
   {
-    register BondExpr *result;
+    BondExpr *result;
 
     result = new BondExpr;
     result->mon.type = BE_NOT;
@@ -403,7 +399,7 @@ namespace OpenBabel
 
   static BondExpr *BuildBondBin( int op, BondExpr *lft, BondExpr *rgt )
   {
-    register BondExpr *result;
+    BondExpr *result;
 
     result = new BondExpr;
     result->bin.type = op;
@@ -428,14 +424,14 @@ namespace OpenBabel
     ptr = new Pattern;
     if( !ptr ) {
       FatalAllocationError("pattern");
-      return NULL;
+      return nullptr;
     }
 
-    ptr->atom = (AtomSpec*)0;
+    ptr->atom = nullptr;
     ptr->aalloc = 0;
     ptr->acount = 0;
 
-    ptr->bond = (BondSpec*)0;
+    ptr->bond = nullptr;
     ptr->balloc = 0;
     ptr->bcount = 0;
 
@@ -542,10 +538,10 @@ namespace OpenBabel
           {
             for( i=0; i<pat->acount; i++ )
               FreeAtomExpr(pat->atom[i].expr);
-            if (pat->atom != NULL) {
+            if (pat->atom != nullptr) {
               //free(pat->atom);
               delete [] pat->atom;
-              pat->atom = NULL;
+              pat->atom = nullptr;
             }
           }
 
@@ -553,14 +549,14 @@ namespace OpenBabel
           {
             for( i=0; i<pat->bcount; i++ )
               FreeBondExpr(pat->bond[i].expr);
-            if (pat->bond != NULL) {
+            if (pat->bond != nullptr) {
               //free(pat->bond);
               delete [] pat->bond;
-              pat->bond = NULL;
+              pat->bond = nullptr;
             }
           }
         delete pat;
-        pat = NULL;
+        pat = nullptr;
       }
   }
 
@@ -577,7 +573,7 @@ namespace OpenBabel
     obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obError, onceOnly);
 
     FreePattern(pat);
-    return (Pattern*)0;
+    return nullptr;
   }
 
   AtomExpr *OBSmartsPattern::ParseSimpleAtomPrimitive( void )
@@ -638,19 +634,19 @@ namespace OpenBabel
         return GenerateAromElem(16,true);
       }
     LexPtr--;
-    return (AtomExpr*)0;
+    return nullptr;
   }
 
   AtomExpr *OBSmartsPattern::ParseComplexAtomPrimitive( void )
   {
-    register Pattern *pat;
-    register int index;
+    Pattern *pat;
+    int index;
 
     switch( *LexPtr++ )
       {
       case('#'):
         if( !isdigit(*LexPtr) )
-          return( (AtomExpr*)0 );
+          return nullptr;
 
         index = 0;
         while( isdigit(*LexPtr) )
@@ -658,24 +654,22 @@ namespace OpenBabel
         if( index > 255 )
           {
             LexPtr--;
-            return( (AtomExpr*)0 );
+            return nullptr;
           }
-        else if( !index )
-          return( (AtomExpr*)0 );
         return( GenerateElement(index) );
 
       case('$'):
         if( *LexPtr != '(' )
-          return( (AtomExpr*)0 );
+          return nullptr;
         LexPtr++;
         pat = ParseSMARTSPattern();
 
         if( !pat )
-          return( (AtomExpr*)0 );
+          return nullptr;
         if( *LexPtr != ')' )
           {
             FreePattern(pat);
-            return( (AtomExpr*)0 );
+            return nullptr;
           }
         LexPtr++;
         return( BuildAtomRecurs(pat) );
@@ -1158,20 +1152,20 @@ namespace OpenBabel
         return BuildAtomPred(AE_CYCLIC);
       }
     LexPtr--;
-    return (AtomExpr*)0;
+    return nullptr;
   }
 
   AtomExpr *OBSmartsPattern::ParseAtomExpr( int level )
   {
-    register AtomExpr *expr1 = NULL;
-    register AtomExpr *expr2 = NULL;
-    register char *prev;
+    AtomExpr *expr1 = nullptr;
+    AtomExpr *expr2 = nullptr;
+    char *prev;
 
     switch( level )
       {
       case(0): /* Low Precedence Conjunction */
         if( !(expr1=ParseAtomExpr(1)) )
-          return (AtomExpr*)0;
+          return nullptr;
 
         while( *LexPtr == ';' )
           {
@@ -1179,7 +1173,7 @@ namespace OpenBabel
             if( !(expr2=ParseAtomExpr(1)) )
               {
                 FreeAtomExpr(expr1);
-                return (AtomExpr*)0;
+                return nullptr;
               }
             expr1 = BuildAtomBin(AE_ANDLO,expr1,expr2);
           }
@@ -1187,7 +1181,7 @@ namespace OpenBabel
 
       case(1): /* Disjunction */
         if( !(expr1=ParseAtomExpr(2)) )
-          return (AtomExpr*)0;
+          return nullptr;
 
         while( *LexPtr == ',' )
           {
@@ -1195,7 +1189,7 @@ namespace OpenBabel
             if( !(expr2=ParseAtomExpr(2)) )
               {
                 FreeAtomExpr(expr1);
-                return( (AtomExpr*)0 );
+                return nullptr;
               }
             expr1 = BuildAtomBin(AE_OR,expr1,expr2);
           }
@@ -1203,7 +1197,7 @@ namespace OpenBabel
 
       case(2): /* High Precedence Conjunction */
         if( !(expr1=ParseAtomExpr(3)) )
-          return( (AtomExpr*)0 );
+          return nullptr;
 
         while( (*LexPtr!=']') && (*LexPtr!=';') &&
                (*LexPtr!=',') && *LexPtr )
@@ -1216,7 +1210,7 @@ namespace OpenBabel
                 if( prev != LexPtr )
                   {
                     FreeAtomExpr(expr1);
-                    return( (AtomExpr*)0 );
+                    return nullptr;
                   }
                 else
                   return( expr1 );
@@ -1230,12 +1224,12 @@ namespace OpenBabel
           {
             LexPtr++;
             if( !(expr1=ParseAtomExpr(3)) )
-              return( (AtomExpr*)0 );
+              return nullptr;
             return( BuildAtomNot(expr1) );
           }
         return( ParseComplexAtomPrimitive() );
       }
-    return (AtomExpr*)0;
+    return nullptr;
   }
 
   BondExpr *OBSmartsPattern::ParseBondPrimitive( void )
@@ -1258,20 +1252,20 @@ namespace OpenBabel
       case '\\': return BuildBondLeaf(BE_SINGLE);
       }
     LexPtr--;
-    return (BondExpr*)0;
+    return nullptr;
   }
 
   BondExpr *OBSmartsPattern::ParseBondExpr( int level )
   {
-    register BondExpr *expr1 = NULL;
-    register BondExpr *expr2 = NULL;
-    register char *prev;
+    BondExpr *expr1 = nullptr;
+    BondExpr *expr2 = nullptr;
+    char *prev;
 
     switch( level )
       {
       case(0): /* Low Precedence Conjunction */
         if( !(expr1=ParseBondExpr(1)) )
-          return (BondExpr*)0;
+          return nullptr;
 
         while( *LexPtr == ';' )
           {
@@ -1279,7 +1273,7 @@ namespace OpenBabel
             if( !(expr2=ParseBondExpr(1)) )
               {
                 FreeBondExpr(expr1);
-                return (BondExpr*)0;
+                return nullptr;
               }
             expr1 = BuildBondBin(BE_ANDLO,expr1,expr2);
           }
@@ -1287,7 +1281,7 @@ namespace OpenBabel
 
       case(1): /* Disjunction */
         if( !(expr1=ParseBondExpr(2)) )
-          return (BondExpr*)0;
+          return nullptr;
 
         while( *LexPtr == ',' )
           {
@@ -1295,7 +1289,7 @@ namespace OpenBabel
             if( !(expr2=ParseBondExpr(2)) )
               {
                 FreeBondExpr(expr1);
-                return (BondExpr*)0;
+                return nullptr;
               }
             expr1 = BuildBondBin(BE_OR,expr1,expr2);
           }
@@ -1303,7 +1297,7 @@ namespace OpenBabel
 
       case(2): /* High Precedence Conjunction */
         if( !(expr1=ParseBondExpr(3)) )
-          return (BondExpr*)0;
+          return nullptr;
 
         while( (*LexPtr!=']') && (*LexPtr!=';') &&
                (*LexPtr!=',') && *LexPtr )
@@ -1316,7 +1310,7 @@ namespace OpenBabel
                 if( prev != LexPtr )
                   {
                     FreeBondExpr(expr1);
-                    return (BondExpr*)0;
+                    return nullptr;
                   }
                 else
                   return expr1;
@@ -1330,12 +1324,12 @@ namespace OpenBabel
           {
             LexPtr++;
             if( !(expr1=ParseBondExpr(3)) )
-              return (BondExpr*)0;
+              return nullptr;
             return BuildBondNot(expr1);
           }
         return ParseBondPrimitive();
       }
-    return (BondExpr*)0;
+    return nullptr;
   }
 
   int OBSmartsPattern::GetVectorBinding()
@@ -1364,11 +1358,11 @@ namespace OpenBabel
                                 int prev, int part )
   {
     int vb = 0;
-    register AtomExpr *aexpr;
-    register BondExpr *bexpr;
-    register int index;
+    AtomExpr *aexpr;
+    BondExpr *bexpr;
+    int index;
 
-    bexpr = (BondExpr*)0;
+    bexpr = nullptr;
 
     while( *LexPtr )
       {
@@ -1398,7 +1392,7 @@ namespace OpenBabel
                 index = pat->acount;
                 pat = SMARTSParser(pat,stat,-1,part);
                 if( !pat )
-                  return( (Pattern*)0 );
+                  return nullptr;
                 if( index == pat->acount )
                   return ParseSMARTSError(pat,bexpr);
                 prev = index;
@@ -1407,7 +1401,7 @@ namespace OpenBabel
               {
                 pat = SMARTSParser(pat,stat,prev,part);
                 if( !pat )
-                  return (Pattern*)0;
+                  return nullptr;
               }
 
             if( *LexPtr != ')' )
@@ -1452,7 +1446,7 @@ namespace OpenBabel
 
                 CreateBond(pat,bexpr,prev,stat->closure[index]);
                 stat->closure[index] = -1;
-                bexpr = (BondExpr*)0;
+                bexpr = nullptr;
               }
             else
               return ParseSMARTSError(pat,bexpr);
@@ -1471,7 +1465,7 @@ namespace OpenBabel
                 stat->closord[index] = bexpr;
                 stat->closure[index] = prev;
                 pat->atom[prev].nbrs.push_back(-index); // Store the BC idx as a -ve
-                bexpr = (BondExpr*)0;
+                bexpr = nullptr;
               }
             else if( stat->closure[index] != prev )
               { // Ring closure
@@ -1486,12 +1480,12 @@ namespace OpenBabel
 
                 CreateBond(pat,bexpr,prev,stat->closure[index]);
                 pat->atom[prev].nbrs.push_back(stat->closure[index]);
-                for (int nbr_idx=0; nbr_idx < pat->atom[stat->closure[index]].nbrs.size(); ++nbr_idx) {
+                for (unsigned int nbr_idx=0; nbr_idx < pat->atom[stat->closure[index]].nbrs.size(); ++nbr_idx) {
                   if (pat->atom[stat->closure[index]].nbrs[nbr_idx] == -index)
                     pat->atom[stat->closure[index]].nbrs[nbr_idx] = prev;
                 }
                 stat->closure[index] = -1;
-                bexpr = (BondExpr*)0;
+                bexpr = nullptr;
               }
             else
               return ParseSMARTSError(pat,bexpr);
@@ -1518,7 +1512,7 @@ namespace OpenBabel
                 CreateBond(pat,bexpr,prev,index);
                 pat->atom[index].nbrs.push_back(prev);
                 pat->atom[prev].nbrs.push_back(index);
-                bexpr = (BondExpr*)0;
+                bexpr = nullptr;
               }
             if(*(LexPtr-1) == 'H' && *(LexPtr-2) == '@' ) { // i.e. [C@H] or [C@@H]
               pat->atom[index].nbrs.push_back(SmartsImplicitRef);
@@ -1540,7 +1534,7 @@ namespace OpenBabel
                 CreateBond(pat,bexpr,prev,index);
                 pat->atom[index].nbrs.push_back(prev);
                 pat->atom[prev].nbrs.push_back(index);
-                bexpr = (BondExpr*)0;
+                bexpr = nullptr;
               }
             prev = index;
           }
@@ -1639,7 +1633,7 @@ namespace OpenBabel
           }
       }
     else
-      return (Pattern*)0;
+      return nullptr;
   }
 
 
@@ -1651,12 +1645,12 @@ namespace OpenBabel
     while( *LexPtr == '(' )
       {
         if (!result)
-          return (Pattern*)0; // ensure we don't get a null dereference
+          return nullptr; // ensure we don't get a null dereference
 
         LexPtr++;
         result = ParseSMARTSPart(result,result->parts);
         if( !result )
-          return (Pattern*)0;
+          return nullptr;
         result->parts++;
 
         if( *LexPtr != ')' )
@@ -1679,10 +1673,10 @@ namespace OpenBabel
 
   Pattern *OBSmartsPattern::ParseSMARTSString( char *ptr )
   {
-    register Pattern *result;
+    Pattern *result;
 
     if( !ptr || !*ptr )
-      return (Pattern*)0;
+      return nullptr;
 
     LexPtr = MainPtr = ptr;
     result = ParseSMARTSPattern();
@@ -1693,7 +1687,7 @@ namespace OpenBabel
 
   Pattern *OBSmartsPattern::ParseSMARTSRecord( char *ptr )
   {
-    register char *src;
+    char *src;
 
     src = ptr;
     while( *src && !isspace(*src) )
@@ -1709,73 +1703,38 @@ namespace OpenBabel
     return ParseSMARTSString(ptr);
   }
 
-  /*================================*/
-  /*  SMARTS Pattern simplification */
-  /*================================*/
-
-  static AtomExpr *NotAtomExpr( AtomExpr *expr )
-  {
-    register AtomExpr *result;
-
-    switch (expr->type)
-      {
-      case AE_TRUE:
-        expr->type = AE_FALSE;
-        return expr;
-      case AE_FALSE:
-        expr->type = AE_TRUE;
-        return expr;
-      case AE_AROMATIC:
-        expr->type = AE_ALIPHATIC;
-        return expr;
-      case AE_ALIPHATIC:
-        expr->type = AE_AROMATIC;
-        return expr;
-      case AE_CYCLIC:
-        expr->type = AE_ACYCLIC;
-        return expr;
-      case AE_ACYCLIC:
-        expr->type = AE_CYCLIC;
-        return expr;
-      
-      case AE_NOT:
-        result = expr->mon.arg;
-        expr->mon.arg = (AtomExpr*)0;
-        FreeAtomExpr(expr);
-        return result;
-      }
-    return BuildAtomNot(expr);
-  }
-
-
   //**********************************
   //********Pattern Matching**********
   //**********************************
 
   bool OBSmartsPattern::Init(const char *buffer)
   {
-	  if (_buffer != NULL)
-		  delete[] _buffer;
-	  _buffer = new char[strlen(buffer) + 1];
+    if (_buffer != nullptr)
+      delete[] _buffer;
+    _buffer = new char[strlen(buffer) + 1];
     strcpy(_buffer,buffer);
 
+    if (_pat != nullptr)
+      FreePattern(_pat);
     _pat = ParseSMARTSRecord(_buffer);
     _str = _buffer;
 
-    return(_pat != (Pattern*)NULL);
+    return _pat != nullptr;
   }
 
   bool OBSmartsPattern::Init(const std::string &s)
   {
-	if (_buffer != NULL)
-		delete[] _buffer;
-	_buffer = new char[s.length() + 1];
-	strcpy(_buffer, s.c_str());
+    if (_buffer != nullptr)
+      delete[] _buffer;
+    _buffer = new char[s.length() + 1];
+    strcpy(_buffer, s.c_str());
 
-	_pat = ParseSMARTSRecord(_buffer);
-	_str = s;
+    if (_pat != nullptr)
+      FreePattern(_pat);
+    _pat = ParseSMARTSRecord(_buffer);
+    _str = s;
 
-	return (_pat != (Pattern*) NULL);
+    return _pat != nullptr;
   }
 
   OBSmartsPattern::~OBSmartsPattern()
@@ -1789,7 +1748,7 @@ namespace OpenBabel
   bool OBSmartsPattern::Match(OBMol &mol,bool single)
   {
 	OBSmartsMatcher matcher;
-	if(_pat == NULL)
+	if (_pat == nullptr)
       return false;
     if(_pat->hasExplicitH) //The SMARTS pattern contains [H]
       {
@@ -1813,7 +1772,7 @@ namespace OpenBabel
   {
 	OBSmartsMatcher matcher;
 	mlist.clear();
-	if(_pat == NULL)
+	if (_pat == nullptr)
       return false;
     if(_pat->hasExplicitH) //The SMARTS pattern contains [H]
       {
@@ -2174,22 +2133,21 @@ namespace OpenBabel
                  !atom->IsAromatic();
         case AE_HCOUNT:
           return expr->leaf.value == ((int)atom->ExplicitHydrogenCount() +
-                                      (int)atom->ImplicitHydrogenCount());
+                                      (int)atom->GetImplicitHCount());
         case AE_CHARGE:
           return expr->leaf.value == atom->GetFormalCharge();
         case AE_CONNECT:
-          return expr->leaf.value == (int)atom->GetImplicitValence();
+          return expr->leaf.value == (int)atom->GetTotalDegree();
         case AE_DEGREE:
-          return expr->leaf.value == (int)atom->GetValence();
+          return expr->leaf.value == (int)atom->GetExplicitDegree();
         case AE_IMPLICIT:
-          return expr->leaf.value == (int)atom->ImplicitHydrogenCount();
+          return expr->leaf.value == (int)atom->GetImplicitHCount();
         case AE_RINGS:
           return expr->leaf.value == (int)atom->MemberOfRingCount();
         case AE_SIZE:
           return atom->IsInRingSize(expr->leaf.value);
         case AE_VALENCE:
-          return expr->leaf.value == (int)(atom->KBOSum()
-            - (atom->GetSpinMultiplicity() ? atom->GetSpinMultiplicity()-1 : 0));
+          return expr->leaf.value == (int)atom->GetTotalValence();
         case AE_CHIRAL:
           // always return true (i.e. accept the match) and check later
           return true;
@@ -2265,27 +2223,27 @@ namespace OpenBabel
         case BE_ANY:
           return true;
         case BE_DEFAULT:
-          return bond->GetBO()==1 || bond->IsAromatic();
+          return bond->GetBondOrder()==1 || bond->IsAromatic();
         case BE_SINGLE:
-          return bond->GetBO()==1 && !bond->IsAromatic();
+          return bond->GetBondOrder()==1 && !bond->IsAromatic();
         case BE_DOUBLE:
-          return bond->GetBO()==2 && !bond->IsAromatic();
+          return bond->GetBondOrder()==2 && !bond->IsAromatic();
         case BE_TRIPLE:
-          return bond->GetBO() == 3;
+          return bond->GetBondOrder() == 3;
         case BE_QUAD:
-          return bond->GetBO() == 4;
+          return bond->GetBondOrder() == 4;
         case BE_AROM:
           return bond->IsAromatic();
         case BE_RING:
           return bond->IsInRing();
-        case BE_UP:
-          return bond->IsUp();
-        case BE_DOWN:
-          return bond->IsDown();
-        case BE_UPUNSPEC: // up or unspecified (i.e., not down)
-          return !bond->IsDown();
-        case BE_DOWNUNSPEC: // down or unspecified (i.e., not up)
-          return !bond->IsUp();
+        //case BE_UP:
+        //  return bond->IsUp();
+        //case BE_DOWN:
+        //  return bond->IsDown();
+        //case BE_UPUNSPEC: // up or unspecified (i.e., not down)
+        //  return !bond->IsDown();
+        //case BE_DOWNUNSPEC: // down or unspecified (i.e., not up)
+        //  return !bond->IsUp();
         default:
           return false;
         }
@@ -2354,7 +2312,7 @@ namespace OpenBabel
         memset((char*)_uatoms,'\0',sizeof(bool)*(mol.NumAtoms()+1));
       }
     else
-      _uatoms = (bool*)NULL;
+      _uatoms = nullptr;
   }
 
   OBSSMatch::~OBSSMatch()

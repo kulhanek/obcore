@@ -11,7 +11,7 @@ SET(OBCORE_LIB_SRC
         math/vector3.cpp
 
         forcefields/forcefieldgaff.cpp
-        forcefields/forcefieldmm2.cpp
+#        forcefields/forcefieldmm2.cpp
         forcefields/forcefieldghemical.cpp
         forcefields/forcefieldmmff94.cpp
         forcefields/forcefielduff.cpp
@@ -24,6 +24,7 @@ SET(OBCORE_LIB_SRC
         stereo/tetrahedral.cpp
         stereo/tetranonplanar.cpp
         stereo/tetraplanar.cpp
+        stereo/gen3dstereohelper.cpp
 
         ops/addinindex.cpp
         ops/addpolarh.cpp
@@ -71,10 +72,11 @@ SET(OBCORE_LIB_SRC
         builder.cpp
         canon.cpp
         chains.cpp
-        chiral.cpp
+        # chiral.cpp
         chargemodel.cpp
         data.cpp
         descriptor.cpp
+        elements.cpp
         fingerprint.cpp
         forcefield.cpp
         format.cpp
@@ -90,6 +92,7 @@ SET(OBCORE_LIB_SRC
         mcdlutil.cpp
         obconversion.cpp
         oberror.cpp
+        obfunctions.cpp
         obiter.cpp
         obmolecformat.cpp
         obutil.cpp

@@ -15,7 +15,13 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/internalcoord.h>
 #include <openbabel/math/matrix3x3.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -65,7 +71,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -128,7 +134,7 @@ namespace OpenBabel
         v.Set(x,y,z);
         v = uc->FractionalToCartesian(v);
 
-        atom->SetAtomicNum(etab.GetAtomicNum(vs[0].c_str()));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(vs[0].c_str()));
         atom->SetVector(v);
       }
 
@@ -138,9 +144,14 @@ namespace OpenBabel
       mol.PerceiveBondOrders();
 
     // clean out remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     mol.EndModify();
     return(true);
@@ -151,7 +162,7 @@ namespace OpenBabel
   bool CacaoFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -181,7 +192,7 @@ namespace OpenBabel
     for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
       {
         snprintf(buffer,BUFF_SIZE,"%2s %7.4f, %7.4f, %7.4f\n",
-                 etab.GetSymbol(atom->GetAtomicNum()),
+                 OBElements::GetSymbol(atom->GetAtomicNum()),
                  atom->x(),
                  atom->y(),
                  atom->z());
@@ -206,7 +217,7 @@ namespace OpenBabel
     OBAtom *atom,*a1,*a2,*ref;
     vector<OBAtom*>::iterator ai;
 
-    vit.push_back((OBInternalCoord*)NULL);
+    vit.push_back(nullptr);
     for (atom = mol.BeginAtom(ai);atom;atom = mol.NextAtom(ai))
       vit.push_back(new OBInternalCoord (atom));
 
@@ -223,7 +234,7 @@ namespace OpenBabel
     unsigned int i,j;
     for (i = 2;i <= mol.NumAtoms();i++)
       {
-        ref = (OBAtom*)NULL;
+        ref = nullptr;
         a1 = mol.GetAtom(i);
         sum = 100.0;
         for (j = 1;j < i;j++)
@@ -258,6 +269,7 @@ namespace OpenBabel
         a = vit[i]->_a;
         b = vit[i]->_b;
         c = vit[i]->_c;
+        // TODO: fix explicit calculations for PBC?
         v1 = atom->GetVector() - a->GetVector();
         v2 = b->GetVector() - a->GetVector();
         vit[i]->_ang = vectorAngle(v1,v2);
@@ -307,7 +319,7 @@ namespace OpenBabel
   bool CacaoInternalFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -328,7 +340,7 @@ namespace OpenBabel
 
     vector<OBInternalCoord*> vit;
     CacaoFormat::SetHilderbrandt(mol,vit);
-    strncpy(tmptype,etab.GetSymbol(mol.GetAtom(1)->GetAtomicNum()), sizeof(tmptype));
+    strncpy(tmptype,OBElements::GetSymbol(mol.GetAtom(1)->GetAtomicNum()), sizeof(tmptype));
     tmptype[sizeof(tmptype) - 1] = '\0';
 
     ofs << " # TITLE\n";
@@ -338,7 +350,7 @@ namespace OpenBabel
     ofs << buffer;
     for (i = 2; i <= mol.NumAtoms(); i++)
       {
-        strncpy(tmptype,etab.GetSymbol(mol.GetAtom(i)->GetAtomicNum()), sizeof(tmptype));
+        strncpy(tmptype,OBElements::GetSymbol(mol.GetAtom(i)->GetAtomicNum()), sizeof(tmptype));
         tmptype[sizeof(tmptype) - 1] = '\0';
 
         if (vit[i]->_tor < 0.0)
@@ -356,7 +368,7 @@ namespace OpenBabel
       if (*j)
         {
           delete *j;
-          *j = NULL;
+          *j = nullptr;
         }
 
     return(true);

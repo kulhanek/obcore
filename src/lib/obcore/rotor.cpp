@@ -20,14 +20,24 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/mol.h>
+#include <openbabel/bond.h>
+#include <openbabel/ring.h>
+#include <openbabel/obiter.h>
+#include <openbabel/oberror.h>
 #include <openbabel/rotor.h>
 #include <openbabel/graphsym.h>
+#include <openbabel/elements.h>
 
 #include <set>
 #include <assert.h>
 
 // private data headers with default parameters
 #include "torlib.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 
 using namespace std;
 namespace OpenBabel
@@ -134,15 +144,15 @@ namespace OpenBabel
 
   bool OBRotorList::IsFixedBond(OBBond *bond)
   {
-    if (_fixedatoms.Empty() && _fixedbonds.Empty())
+    if (_fixedatoms.IsEmpty() && _fixedbonds.IsEmpty())
       return false;
 
     // new fixed bonds
-    if (!_fixedbonds.Empty()) {
+    if (!_fixedbonds.IsEmpty()) {
       return _fixedbonds.BitIsSet(bond->GetIdx());
     }
 
-    if (_fixedatoms.Empty())
+    if (_fixedatoms.IsEmpty())
       return false;
 
     // deprecated fixed atoms
@@ -204,16 +214,16 @@ namespace OpenBabel
         used.SetBitOn(atom->GetIdx());
         curr.SetBitOn(atom->GetIdx());
 
-        while (!curr.IsEmpty() && (bv&curr).Empty())
+        while (!curr.IsEmpty() && (bv&curr).IsEmpty())
           {
             next.Clear();
             for (natom = curr.NextBit(-1);natom != curr.EndBit();natom = curr.NextBit(natom))
               {
                 atom1 = mol.GetAtom(natom);
                 for (bond = atom1->BeginBond(j);bond;bond = atom1->NextBond(j))
-                  if (!used.BitIsOn(bond->GetNbrAtomIdx(atom1)) &&
-                      !curr.BitIsOn(bond->GetNbrAtomIdx(atom1)))
-                    if (!(bond->GetNbrAtom(atom1))->IsHydrogen())
+                  if (!used.BitIsSet(bond->GetNbrAtomIdx(atom1)) &&
+                      !curr.BitIsSet(bond->GetNbrAtomIdx(atom1)))
+                      if (bond->GetNbrAtom(atom1)->GetAtomicNum() != OBElements::Hydrogen)
                       next.SetBitOn(bond->GetNbrAtomIdx(atom1));
               }
 
@@ -252,8 +262,8 @@ namespace OpenBabel
           this_side = end; other_side = begin;
         }
 
-        for (int hyb=2; hyb<=3; ++hyb) { // sp2 and sp3 carbons, with explicit Hs
-          if (this_side->GetAtomicNum() == 6 && this_side->GetHyb() == hyb && this_side->GetValence() == (hyb + 1) ) {
+        for (unsigned int hyb=2; hyb<=3; ++hyb) { // sp2 and sp3 carbons, with explicit Hs
+          if (this_side->GetAtomicNum() == 6 && this_side->GetHyb() == hyb && this_side->GetExplicitDegree() == (hyb + 1) ) {
             syms.clear();
             FOR_NBORS_OF_ATOM(nbr, this_side) {
               if ( &(*nbr) == other_side ) continue;
@@ -297,7 +307,7 @@ namespace OpenBabel
         eval |= curr;
 
         //follow all non-rotor bonds and add atoms to eval list
-        for (;!curr.Empty();)
+        for (;!curr.IsEmpty();)
           {
             next.Clear();
             for (j = curr.NextBit(0);j != curr.EndBit();j = curr.NextBit(j))
@@ -483,10 +493,10 @@ namespace OpenBabel
   {
   }
 
-  void OBRotor::SetRings(OBBond *bond)
+  void OBRotor::SetRings()
   {
     _rings.clear();
-    if (_bond == NULL)
+    if (_bond == nullptr)
       return; // nothing to do
 
     vector<OBRing*> rlist;
@@ -494,7 +504,7 @@ namespace OpenBabel
 
     OBMol *mol = _bond->GetParent();
 
-    if (mol == NULL)
+    if (mol == nullptr)
       return; // nothing to do
 
     rlist = mol->GetSSSR();
@@ -918,14 +928,14 @@ namespace OpenBabel
         OBAtom *a1,*a2,*a3,*a4,*r;
         a1 = mol.GetAtom(ref[0]);
         a4 = mol.GetAtom(ref[3]);
-        if (a1->IsHydrogen() && a4->IsHydrogen())
+        if (a1->GetAtomicNum() == OBElements::Hydrogen && a4->GetAtomicNum() == OBElements::Hydrogen)
           continue; //don't allow hydrogens at both ends
-        if (a1->IsHydrogen() || a4->IsHydrogen()) //need a heavy atom reference - can use hydrogen
+        if (a1->GetAtomicNum() == OBElements::Hydrogen || a4->GetAtomicNum() == OBElements::Hydrogen) //need a heavy atom reference - can use hydrogen
           {
             bool swapped = false;
             a2 = mol.GetAtom(ref[1]);
             a3 = mol.GetAtom(ref[2]);
-            if (a4->IsHydrogen())
+            if (a4->GetAtomicNum() == OBElements::Hydrogen)
               {
                 swap(a1,a4);
                 swap(a2,a3);
@@ -934,7 +944,7 @@ namespace OpenBabel
 
             vector<OBBond*>::iterator k;
             for (r = a2->BeginNbrAtom(k);r;r = a2->NextNbrAtom(k))
-              if (!r->IsHydrogen() && r != a3)
+              if (r->GetAtomicNum() != OBElements::Hydrogen && r != a3)
                 break;
 
             if (!r)
@@ -991,10 +1001,10 @@ namespace OpenBabel
     vector<OBBond*>::iterator k;
 
     for (a1 = a2->BeginNbrAtom(k);a1;a1 = a2->NextNbrAtom(k))
-      if (!a1->IsHydrogen() && a1 != a3)
+      if (a1->GetAtomicNum() != OBElements::Hydrogen && a1 != a3)
         break;
     for (a4 = a3->BeginNbrAtom(k);a4;a4 = a3->NextNbrAtom(k))
-      if (!a4->IsHydrogen() && a4 != a2)
+      if (a4->GetAtomicNum() != OBElements::Hydrogen && a4 != a2)
         break;
 
     ref[0] = a1->GetIdx();

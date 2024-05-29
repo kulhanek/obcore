@@ -13,10 +13,15 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+
 #include <openbabel/generic.h>
 #include <openbabel/math/spacegroup.h>
 
 #include <sstream>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -76,7 +81,7 @@ namespace OpenBabel
   bool POSFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -190,7 +195,7 @@ namespace OpenBabel
           atom = mol.NewAtom();
           // check to see if first column is number or element symbol
           // (PCModel has files of the form X Y Z symbol)
-          atomicNum = etab.GetAtomicNum(vs[0].c_str());
+          atomicNum = OBElements::GetAtomicNum(vs[0].c_str());
           x = atof(vs[4].c_str());
           y = atof(vs[5].c_str());
           z = atof(vs[6].c_str());

@@ -16,9 +16,15 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/obiter.h>
 
 #include <sstream>
 #include <iomanip>
+#include <cstdlib>
 
 #define notFound string::npos
 
@@ -105,7 +111,7 @@ namespace OpenBabel
   bool EXYZFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -212,7 +218,7 @@ namespace OpenBabel
         // something "special" in mind.
         OBAtom *atom  = mol.NewAtom();
 
-        int atomicNum = etab.GetAtomicNum(vs[0].c_str());
+        int atomicNum = OBElements::GetAtomicNum(vs[0].c_str());
         //set atomic number, or '0' if the atom type is not recognized
         if (atomicNum == 0) {
           // Sometimes people call this an XYZ file, but it's actually Unichem
@@ -401,9 +407,14 @@ namespace OpenBabel
 
 
     // clean out any remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     if (!pConv->IsOption("b",OBConversion::INOPTIONS))
       mol.ConnectTheDots();
@@ -420,7 +431,7 @@ namespace OpenBabel
   bool EXYZFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -440,7 +451,7 @@ namespace OpenBabel
     FOR_ATOMS_OF_MOL(atom, mol)
       {
         ofs << setw(4) << right
-            << OpenBabel::etab.GetSymbol(atom->GetAtomicNum())
+            << OpenBabel::OBElements::GetSymbol(atom->GetAtomicNum())
             << setw(15) << setprecision(5) << fixed << showpoint
             << right << atom->GetX() << " " << setw(15) << atom->GetY() << " "
             << setw(15) << atom->GetZ() << endl;

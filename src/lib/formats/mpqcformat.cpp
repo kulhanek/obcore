@@ -14,6 +14,11 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/obiter.h>
+
 
 using namespace std;
 namespace OpenBabel
@@ -99,7 +104,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -117,13 +122,13 @@ namespace OpenBabel
     mol.BeginModify();
     while	(ifs.getline(buffer,BUFF_SIZE))
       {
-        if(strstr(buffer,"<Molecule>:") != NULL)
+        if (strstr(buffer, "<Molecule>:") != nullptr)
           {
             // mol.EndModify();
             mol.Clear();
-            while	(strstr(buffer,"geometry") == NULL)
+            while (strstr(buffer, "geometry") == nullptr)
               {
-                if (strstr(buffer,"angstrom") != NULL)
+                if (strstr(buffer, "angstrom") != nullptr)
                   bohr = false;
                 if (!ifs.getline(buffer,BUFF_SIZE))
                   return(false);
@@ -146,7 +151,7 @@ namespace OpenBabel
                   }
                 atom = mol.NewAtom();
                 atom->SetVector(x,y,z);
-                atom->SetAtomicNum(etab.GetAtomicNum(vs[1].c_str()));
+                atom->SetAtomicNum(OBElements::GetAtomicNum(vs[1].c_str()));
 
                 if (!ifs.getline(buffer,BUFF_SIZE))
                   break;
@@ -175,7 +180,7 @@ namespace OpenBabel
   bool MPQCInputFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -192,7 +197,7 @@ namespace OpenBabel
     FOR_ATOMS_OF_MOL(atom, mol)
       {
         snprintf(buffer, BUFF_SIZE, "%4s  %8.5f  %8.5f  %8.5f \n",
-                etab.GetSymbol(atom->GetAtomicNum()),
+                OBElements::GetSymbol(atom->GetAtomicNum()),
                 atom->GetX(),
                 atom->GetY(),
                 atom->GetZ());

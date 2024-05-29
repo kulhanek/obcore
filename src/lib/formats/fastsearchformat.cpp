@@ -21,6 +21,12 @@ GNU General Public License for more details.
 #include <openbabel/obconversion.h>
 #include <openbabel/fingerprint.h>
 #include <openbabel/op.h>
+#include <openbabel/elements.h>
+#include <openbabel/bond.h>
+#include <openbabel/obutil.h>
+#include <cstdlib>
+#include <algorithm>
+
 
 using namespace std;
 namespace OpenBabel {
@@ -30,7 +36,7 @@ class FastSearchFormat : public OBFormat
 {
 public:
 //Register this format type ID
-FastSearchFormat() : fsi(NULL)
+FastSearchFormat() : fsi(nullptr)
 {
   OBConversion::RegisterFormat("fs",this);
   //Specify the number of option taken by options
@@ -74,7 +80,7 @@ virtual const char* Description() //required
   "      obabel index.fs -O outfile.yyy -at0.7,0.9 -sSMILES\n"
   "      #     Tanimoto >0.7 && Tanimoto < 0.9\n\n"
   "The datafile plus the ``-ifs`` option can be used instead of the index file.\n\n"
-  "NOTE that the datafile MUST NOT be larger than 4GB. (A 32 pointer is used.)\n\n"
+  "NOTE on 32-bit systems the datafile MUST NOT be larger than 4GB.\n\n"
   "Dative bonds like -[N+][O-](=O) are indexed as -N(=O)(=O), and when searching\n"
   "the target molecule should be in the second form.\n\n"
 
@@ -168,7 +174,7 @@ virtual const char* Description() //required
     if(!ObtainTarget(pConv, patternMols, indexname))
       return false;
 
-    bool exactmatch = pConv->IsOption("e",OBConversion::INOPTIONS)!=NULL;// -ae option
+    bool exactmatch = pConv->IsOption("e", OBConversion::INOPTIONS) != nullptr; // -ae option
 
     //Open the datafile and put it in pConv
     //datafile name derived from index file probably won't have a file path
@@ -190,9 +196,16 @@ virtual const char* Description() //required
     pConv->SetInStream(&datastream);
 
     //Input format is currently fs; set it appropriately
-    if(!pConv->SetInAndOutFormats(pConv->FormatFromExt(datafilename.c_str()),pConv->GetOutFormat()))
+    bool isgzip = false;
+    if(!pConv->SetInAndOutFormats(pConv->FormatFromExt(datafilename.c_str(), isgzip), pConv->GetOutFormat()))
       return false;
 
+    if (isgzip)
+      {
+	errorMsg << "Index datafile must not be in gzip format: " << path << endl;
+        obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obError);
+        return false;
+      }
     // If target has dative bonds like -[N+](=O)[O-] convert it to the uncharged form
     // (-N(=O)=O and add uncharged form to vector of mols which are sent to
     // the -s (SMARTS)filter.
@@ -224,7 +237,7 @@ virtual const char* Description() //required
     if(p)
       {
         //Do a similarity search
-        multimap<double, unsigned int> SeekposMap;
+        multimap<double, unsigned long> SeekposMap;
         string txt=p;
         if(txt.find('.')==string::npos)
           {
@@ -249,7 +262,7 @@ virtual const char* Description() //required
         //also because op names are case independent
         pConv->RemoveOption("S", OBConversion::GENOPTIONS);
 
-        multimap<double, unsigned int>::reverse_iterator itr;
+        multimap<double, unsigned long>::reverse_iterator itr;
         for(itr=SeekposMap.rbegin();itr!=SeekposMap.rend();++itr)
           {
             datastream.seekg(itr->second);
@@ -267,7 +280,7 @@ virtual const char* Description() //required
             pConv->SetOneObjectOnly();
             if(itr != --SeekposMap.rend())
               pConv->SetMoreFilesToCome();//so that not seen as last on output
-            pConv->Convert(NULL,NULL);
+            pConv->Convert(nullptr, nullptr);
           }
       }
 
@@ -279,7 +292,7 @@ virtual const char* Description() //required
       if(p && atoi(p))
         MaxCandidates = atoi(p);
 
-      vector<unsigned int> SeekPositions;
+      vector<unsigned long> SeekPositions;
 
       if(exactmatch)
       {
@@ -301,7 +314,7 @@ virtual const char* Description() //required
         clog << SeekPositions.size() << " candidates from fingerprint search phase" << endl;
       }
 
-      vector<unsigned int>::iterator seekitr,
+      vector<unsigned long>::iterator seekitr,
           begin = SeekPositions.begin(), end = SeekPositions.end();
 
       if(patternMols.size()>1)//only sort and eliminate duplicates if necessary
@@ -330,12 +343,21 @@ virtual const char* Description() //required
   bool FastSearchFormat::WriteChemObject(OBConversion* pConv)
   {
     //Prepares or updates an index file. Called for each molecule indexed
-    bool update = pConv->IsOption("u")!=NULL;
+    bool update = pConv->IsOption("u") != nullptr;
 
     static ostream* pOs;
     static bool NewOstreamUsed;
-    if(fsi==NULL)
+    if (fsi == nullptr)
       {
+	// Warn that compressed files cannot be used. It's hard to seek
+	// inside of a gzip file.
+	if(pConv->GetInGzipped())
+	  {
+	    obErrorLog.ThrowError(__FUNCTION__,
+	      "Fastindex search requires an uncompressed input file so it can quickly seek to a record.",
+	      obWarning);
+	  }
+	
         //First pass sets up FastSearchIndexer object
         pOs = pConv->GetOutStream();// with named index it is already open
         NewOstreamUsed=false;
@@ -358,7 +380,7 @@ virtual const char* Description() //required
         auditMsg += description.substr( 0, description.find('\n') );
         obErrorLog.ThrowError(__FUNCTION__,auditMsg,obAuditMsg);
 
-        FptIndex* pidx=NULL; //used with update
+        FptIndex* pidx = nullptr; //used with update
 
         //if(pOs==&cout) did not work with GUI
         if(!dynamic_cast<ofstream*>(pOs))
@@ -444,7 +466,7 @@ virtual const char* Description() //required
           streampos origpos = is->tellg();
           is->seekg(0,ios_base::end);
           long long filesize = is->tellg();
-          if(filesize > 4294967295u)
+          if(sizeof(void*) < 8 && filesize > 4294967295u)
           {
             obErrorLog.ThrowError(__FUNCTION__, "The datafile must not be larger than 4GB", obError);
             return false;
@@ -499,7 +521,7 @@ virtual const char* Description() //required
           delete pOs;
 
         //return to starting conditions
-        fsi=NULL;
+        fsi=nullptr;
 
         obErrorLog.StartLogging();
 
@@ -579,7 +601,7 @@ virtual const char* Description() //required
           pos2 = txt.find(']');
           int atno;
           if(pos2!=string::npos &&  (atno = atoi(txt.substr(pos1+2, pos2-pos1-2).c_str())) && atno>0)
-            txt.replace(pos1, pos2-pos1+1, etab.GetSymbol(atno));
+            txt.replace(pos1, pos2-pos1+1, OBElements::GetSymbol(atno));
           else
           {
             obErrorLog.ThrowError(__FUNCTION__,"Ill-formed [#n] atom in SMARTS", obError);
@@ -667,14 +689,14 @@ virtual const char* Description() //required
 
     if(idx>=patternMol.NumBonds())
       return;
-    if(patternMol.GetBond(idx)->GetBO()==4)
+    if(patternMol.GetBond(idx)->GetBondOrder()==4)
     {
-      patternMol.GetBond(idx)->SetBO(1);
+      patternMol.GetBond(idx)->SetBondOrder(1);
       patternMols.push_back(patternMol);
       AddPattern(patternMols, patternMol,idx+1);
 
       patternMols.push_back(patternMol);
-      patternMols.back().GetBond(idx)->SetBO(5);
+      patternMols.back().GetBond(idx)->SetBondOrder(5);
     }
     AddPattern(patternMols, patternMol,idx+1);
   }

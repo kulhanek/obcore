@@ -22,6 +22,12 @@ GNU General Public License for more details.
 
 #include <openbabel/mol.h> // implements some OBMol methods
 #include <openbabel/ring.h>
+#include <openbabel/bond.h>
+#include <openbabel/atom.h>
+#include <openbabel/obiter.h>
+#include <openbabel/generic.h>
+#include <openbabel/oberror.h>
+#include <openbabel/elements.h>
 
 using namespace std;
 
@@ -98,7 +104,7 @@ namespace OpenBabel
     OBRing *ring;
     vector<OBRing*>::iterator j;
 
-    //get frerejaque taking int account multiple possible spanning graphs
+    //get Fr�rejacque taking int account multiple possible spanning graphs
     int frj = DetermineFRJ(*this);
     if (frj)
       {
@@ -371,14 +377,14 @@ namespace OpenBabel
 
   void OBRingSearch::AddRingFromClosure(OBMol &mol,OBBond *cbond)
   {
-    vector<OBRTree*> t1(mol.NumAtoms()+1,(OBRTree*)NULL);
-    vector<OBRTree*> t2(mol.NumAtoms()+1,(OBRTree*)NULL);
+    vector<OBRTree*> t1(mol.NumAtoms()+1, nullptr);
+    vector<OBRTree*> t2(mol.NumAtoms()+1, nullptr);
     OBBitVec bv1,bv2;
 
     bv1.SetBitOn(cbond->GetEndAtomIdx());
     bv2.SetBitOn(cbond->GetBeginAtomIdx());
-    BuildOBRTreeVector(cbond->GetBeginAtom(),NULL,t1,bv1);
-    BuildOBRTreeVector(cbond->GetEndAtom(),NULL,t2,bv2);
+    BuildOBRTreeVector(cbond->GetBeginAtom(), nullptr, t1, bv1);
+    BuildOBRTreeVector(cbond->GetEndAtom(), nullptr, t2, bv2);
 
     bool pathok;
     deque<int> p1,p2;
@@ -533,6 +539,13 @@ namespace OpenBabel
     mol.SetRingAtomsAndBondsPerceived(); // mol.SetFlag(OB_RINGFLAGS_MOL);
     mol.SetClosureBondsPerceived();      // mol.SetFlag(OB_CLOSURE_MOL);
 
+    FOR_ATOMS_OF_MOL(atom, mol)
+      atom->SetInRing(false);
+    FOR_BONDS_OF_MOL(bond, mol) {
+      bond->SetInRing(false);
+      bond->SetClosure(false);
+    }
+
     unsigned int bsize = mol.NumBonds()+1;
     unsigned char *bvisit = (unsigned char*)malloc(bsize);
     memset(bvisit,0,bsize);
@@ -558,8 +571,9 @@ namespace OpenBabel
   {
     if (HasFlag(OB_RINGFLAGS_MOL))
       return;
-    obErrorLog.ThrowError(__FUNCTION__,
-                          "Ran OpenBabel::FindRingAtomsAndBonds", obAuditMsg);
+    if (obErrorLog.GetOutputLevel() >= obAuditMsg)
+      obErrorLog.ThrowError(__FUNCTION__,
+                            "Ran OpenBabel::FindRingAtomsAndBonds", obAuditMsg);
     FindRingAtomsAndBonds2(*this);
   }
 
@@ -605,18 +619,26 @@ namespace OpenBabel
 
     if (Size() == 6)
       for (i = _path.begin();i != _path.end();++i)
-        if (!(mol->GetAtom(*i))->IsCarbon())
-	  return (*i);
+        if (mol->GetAtom(*i)->GetAtomicNum() != OBElements::Carbon)
+	        return (*i);
 
     if (Size() == 5)
       for (i = _path.begin();i != _path.end();++i) {
         OBAtom *atom = mol->GetAtom(*i);
-        if (atom->IsSulfur() && (atom->GetValence() == 2))
-	  return (*i);
-        if (atom->IsOxygen() && (atom->GetValence() == 2))
-	  return (*i);
-        if (atom->IsNitrogen() && (atom->BOSum() == atom->GetValence()))
-	  return (*i);
+        switch (atom->GetAtomicNum()) {
+        case OBElements::Sulfur:
+          if (atom->GetExplicitDegree() == 2)
+            return (*i);
+          break;
+        case OBElements::Oxygen:
+          if (atom->GetExplicitDegree() == 2)
+            return (*i);
+          break;
+        case OBElements::Nitrogen:
+          if (atom->GetExplicitValence() == atom->GetExplicitDegree())
+            return (*i);
+          break;
+        }
       }
 
     return 0;
@@ -624,12 +646,12 @@ namespace OpenBabel
 
   bool OBRing::IsMember(OBAtom *a)
   {
-    return(_pathset.BitIsOn(a->GetIdx()));
+    return(_pathset.BitIsSet(a->GetIdx()));
   }
 
   bool OBRing::IsMember(OBBond *b)
   {
-    return((_pathset.BitIsOn(b->GetBeginAtomIdx()))&&(_pathset.BitIsOn(b->GetEndAtomIdx())));
+    return((_pathset.BitIsSet(b->GetBeginAtomIdx()))&&(_pathset.BitIsSet(b->GetEndAtomIdx())));
   }
 
   OBRing::OBRing(vector<int> &path,int size) : _path(path)
@@ -704,7 +726,7 @@ namespace OpenBabel
                 }
           }
 
-        if (next.Empty())
+        if (next.IsEmpty())
           break;
         curr = next;
         level++;

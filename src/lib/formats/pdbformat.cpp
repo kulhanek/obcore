@@ -15,24 +15,40 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/obfunctions.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/data.h>
 
 #include <vector>
 #include <map>
+#include <cstdlib>
+#include <algorithm>
 
 #include <sstream>
 
 using namespace std;
 namespace OpenBabel
 {
-
   class PDBFormat : public OBMoleculeFormat
   {
   public:
     //Register this format type ID
     PDBFormat()
-    {
+    { 
       OBConversion::RegisterFormat("pdb",this, "chemical/x-pdb");
       OBConversion::RegisterFormat("ent",this, "chemical/x-pdb");
+
+      OBConversion::RegisterOptionParam("s", this, 0, OBConversion::INOPTIONS);
+      OBConversion::RegisterOptionParam("b", this, 0, OBConversion::INOPTIONS);
+      OBConversion::RegisterOptionParam("c", this, 0, OBConversion::INOPTIONS);
+
+      OBConversion::RegisterOptionParam("o", this, 0, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("n", this, 0, OBConversion::OUTOPTIONS);
     }
 
     virtual const char* Description() //required
@@ -42,7 +58,11 @@ namespace OpenBabel
         "Read Options e.g. -as\n"
         "  s  Output single bonds only\n"
         "  b  Disable bonding entirely\n"
-        "  c  Ignore CONECT records\n\n";
+        "  c  Ignore CONECT records\n\n"
+
+        "Write Options, e.g. -xo\n"
+        "  n  Do not write duplicate CONECT records to indicate bond order\n"
+        "  o  Write origin in space group label (CRYST1 section)\n\n";
     };
 
     virtual const char* SpecificationURL()
@@ -90,11 +110,19 @@ namespace OpenBabel
     return ifs.good() ? 1 : -1;
   }
   /////////////////////////////////////////////////////////////////
+   template <typename T> string to_string(T pNumber)
+  {
+    ostringstream oOStrStream;
+    oOStrStream << pNumber;
+    return oOStrStream.str();
+  }
+
+  /////////////////////////////////////////////////////////////////
   bool PDBFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -103,22 +131,27 @@ namespace OpenBabel
     const char* title = pConv->GetTitle();
 
     int chainNum = 1;
-    char buffer[BUFF_SIZE];
-    OBBitVec bs;
+    char buffer[BUFF_SIZE] = {0,};
     string line, key, value;
     OBPairData *dp;
 
     mol.SetTitle(title);
-    mol.SetChainsPerceived(); // It's a PDB file, we read all chain/res info.
+    // We need to prevent chains perception routines from running while
+    // we are adding residues from the PDB file
+    mol.SetChainsPerceived();
 
     mol.BeginModify();
+    bool ateend = false;
     while (ifs.good() && ifs.getline(buffer,BUFF_SIZE))
       {
-        if (EQn(buffer,"ENDMDL",6))
+        if (EQn(buffer,"ENDMDL",6)) {
+          ateend = true;
           break;
+        }
         if (EQn(buffer,"END",3)) {
           // eat anything until the next ENDMDL
           while (ifs.getline(buffer,BUFF_SIZE) && !EQn(buffer,"ENDMDL",6));
+          ateend = true;
           break;
         }
         if (EQn(buffer,"TER",3)) {
@@ -134,8 +167,6 @@ namespace OpenBabel
                          << "  Problems reading a ATOM/HETATM record.\n";
                 obErrorLog.ThrowError(__FUNCTION__, errorMsg.str() , obError);
               }
-            if (EQn(buffer,"ATOM",4))
-              bs.SetBitOn(mol.NumAtoms());
             continue;
           }
 
@@ -201,10 +232,10 @@ namespace OpenBabel
 
     if (!mol.NumAtoms()) { // skip the rest of this processing
       mol.EndModify();
-      return(false);
+      return ateend; //explicitly empty molecules are not invalid
     }
 
-    resdat.AssignBonds(mol,bs);
+    resdat.AssignBonds(mol);
     /*assign hetatm bonds based on distance*/
 
     mol.EndModify();
@@ -212,17 +243,28 @@ namespace OpenBabel
     vector<OBGenericData*> vbonds = mol.GetAllData(OBGenericDataType::VirtualBondData);
     mol.DeleteData(vbonds);
 
-
     if (!pConv->IsOption("b",OBConversion::INOPTIONS))
       mol.ConnectTheDots();
 
     if (!pConv->IsOption("s",OBConversion::INOPTIONS) && !pConv->IsOption("b",OBConversion::INOPTIONS))
       mol.PerceiveBondOrders();
 
+    // EndModify() blows away the chains perception flag so we set it again here
+    mol.SetChainsPerceived();
+
+    // Guess how many hydrogens are present on each atom based on typical valencies
+    FOR_ATOMS_OF_MOL(matom, mol)
+      OBAtomAssignTypicalImplicitHydrogens(&*matom);
+
     // clean out remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     return(true);
   }
@@ -313,7 +355,7 @@ namespace OpenBabel
     // connect record, to which the other atoms connect to.
     long int startAtomSerialNumber;
     // A pointer to the first atom.
-    OBAtom *firstAtom = NULL;
+    OBAtom *firstAtom = nullptr;
     // Serial numbers of the atoms which bind to firstAtom, read from
     // columns 12-16, 17-21, 22-27 and 27-31 of the connect record. Note
     // that we reserve space for 5 integers, but read only four of
@@ -360,7 +402,7 @@ namespace OpenBabel
     for (OBAtom *a1 = mol.BeginAtom(i);a1;a1 = mol.NextAtom(i)) {
       // atoms may not have residue information, but if they do,
       // check serial numbers
-      if (a1->GetResidue() != NULL &&
+      if (a1->GetResidue() != nullptr &&
           static_cast<long int>(a1->GetResidue()->
                                 GetSerialNum(a1)) == startAtomSerialNumber)
         {
@@ -369,7 +411,7 @@ namespace OpenBabel
         }
     }
 
-    if (firstAtom == NULL)
+    if (firstAtom == nullptr)
       {
         errorMsg << "WARNING: Problems reading a PDB file:\n"
                  << "  Problems reading a CONECT record.\n"
@@ -414,10 +456,10 @@ namespace OpenBabel
     for(unsigned int k=0; boundedAtomsSerialNumbersValid[k]; k++)
       {
         // Find atom that is connected to, write an error message
-        OBAtom *connectedAtom = 0L;
+        OBAtom *connectedAtom = nullptr;
         for (OBAtom *a1 = mol.BeginAtom(i);a1;a1 = mol.NextAtom(i)) {
           // again, atoms may not have residues, but if they do, check serials
-          if (a1->GetResidue() != NULL &&
+          if (a1->GetResidue() != nullptr &&
               static_cast<long int>(a1->GetResidue()->
                                     GetSerialNum(a1)) == boundedAtomsSerialNumbers[k])
             {
@@ -425,7 +467,7 @@ namespace OpenBabel
               break;
             }
         }
-        if (connectedAtom == 0L)
+        if (connectedAtom == nullptr)
           {
             errorMsg << "WARNING: Problems reading a PDB file:\n"
                      << "  Problems reading a CONECT record.\n"
@@ -467,7 +509,7 @@ namespace OpenBabel
   bool PDBFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -484,6 +526,8 @@ namespace OpenBabel
     char the_insertioncode = ' ';
     bool het=true;
     int model_num = 0;
+    const int MAX_HM_NAME_LEN = 11;
+
     if (!pConv->IsLast() || pConv->GetOutputIndex() > 1)
       { // More than one molecule record
         model_num = pConv->GetOutputIndex(); // MODEL 1-based index
@@ -560,9 +604,26 @@ namespace OpenBabel
         if(pUC->GetSpaceGroup()){
           string tmpHM=pUC->GetSpaceGroup()->GetHMName();
           fixRhombohedralSpaceGroupWriter(tmpHM);
+
           // Do we have an extended HM symbol, with origin choice as ":1" or ":2" ? If so, remove it.
           size_t n=tmpHM.find(":");
-          if(n!=string::npos) tmpHM=tmpHM.substr(0,n);
+          if(n!=string::npos) tmpHM=tmpHM.substr(0, n);
+
+          if (pConv->IsOption("o", OBConversion::OUTOPTIONS))
+            {
+              unsigned int origin = pUC->GetSpaceGroup()->GetOriginAlternative();
+              if (origin == pUC->GetSpaceGroup()->HEXAGONAL_ORIGIN)
+                tmpHM[0] = 'H';
+              else if (origin > 0)
+                tmpHM += ":" + to_string(origin);
+
+              if (tmpHM.length() > MAX_HM_NAME_LEN)
+              {
+                tmpHM.erase(std::remove(tmpHM.begin(), tmpHM.end(), ' '),
+                            tmpHM.end());
+              }
+            }
+
           snprintf(buffer, BUFF_SIZE,
                    "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f %-11s 1",
                    pUC->GetA(), pUC->GetB(), pUC->GetC(),
@@ -610,7 +671,7 @@ namespace OpenBabel
     for (i = 1; i <= mol.NumAtoms(); i++)
       {
         atom = mol.GetAtom(i);
-        strncpy(type_name, etab.GetSymbol(atom->GetAtomicNum()), sizeof(type_name));
+        strncpy(type_name, OBElements::GetSymbol(atom->GetAtomicNum()), sizeof(type_name));
         type_name[sizeof(type_name) - 1] = '\0';
 
         //two char. elements are on position 13 and 14 one char. start at 14
@@ -623,7 +684,7 @@ namespace OpenBabel
             snprintf(type_name, sizeof(type_name), " %-3s", tmp);
           }
 
-        if ( (res = atom->GetResidue()) != 0 )
+        if ((res = atom->GetResidue()) != nullptr)
           {
             het = res->IsHetAtom(atom);
             snprintf(the_res,4,"%s",(char*)res->GetName().c_str());
@@ -632,7 +693,7 @@ namespace OpenBabel
             the_chain = res->GetChain();
 
             //two char. elements are on position 13 and 14 one char. start at 14
-            if (strlen(etab.GetSymbol(atom->GetAtomicNum())) == 1)
+            if (strlen(OBElements::GetSymbol(atom->GetAtomicNum())) == 1)
               {
                 if (strlen(type_name) < 4)
                   {
@@ -669,7 +730,7 @@ namespace OpenBabel
             the_insertioncode=' ';
           }
 
-        element_name = etab.GetSymbol(atom->GetAtomicNum());
+        element_name = OBElements::GetSymbol(atom->GetAtomicNum());
 
         int charge = atom->GetFormalCharge();
         char scharge[3] = { ' ', ' ', '\0' };
@@ -680,7 +741,15 @@ namespace OpenBabel
             scharge[1] = scharge[0];
             scharge[0] = tmp;
           }
-        snprintf(buffer, BUFF_SIZE, "%s%5d %-4s %-3s %c%4d%c   %8.3f%8.3f%8.3f  1.00  0.00          %2s%2s\n",
+
+        double occup = 1.0;
+        if (atom->HasData("_atom_site_occupancy"))
+        {
+         OBPairFloatingPoint *occup_fp = dynamic_cast<OBPairFloatingPoint*> (atom->GetData("_atom_site_occupancy"));
+         occup = occup_fp->GetGenericValue();
+        }
+
+        snprintf(buffer, BUFF_SIZE, "%s%5d %-4s %-3s %c%4d%c   %8.3f%8.3f%8.3f%6.2f  0.00          %2s%2s\n",
                  het?"HETATM":"ATOM  ",
                  i,
                  type_name,
@@ -691,6 +760,7 @@ namespace OpenBabel
                  atom->GetX(),
                  atom->GetY(),
                  atom->GetZ(),
+                 occup,
                  element_name,
                  scharge);
         ofs << buffer;
@@ -701,24 +771,34 @@ namespace OpenBabel
     for (i = 1; i <= mol.NumAtoms(); i ++)
       {
         atom = mol.GetAtom(i);
-        if (atom->GetValence() == 0)
+        if (atom->GetExplicitDegree() == 0)
           continue; // no need to write a CONECT record -- no bonds
 
         // Write out up to 4 real bonds per line PR#1711154
         int currentValence = 0;
         for (nbr = atom->BeginNbrAtom(k);nbr;nbr = atom->NextNbrAtom(k))
           {
-            if ((currentValence % 4) == 0) {
-              if (currentValence > 0) 
-                // Add the trailing space to finish the previous record
-                ofs << "                                       \n";
-              // write the start of a new CONECT record
-              snprintf(buffer, BUFF_SIZE, "CONECT%5d", i);
+            OBBond *bond = mol.GetBond(atom, nbr);
+            if(!bond) continue;
+            unsigned bondorder = bond->GetBondOrder();
+            if(bondorder == 0 || pConv->IsOption("n", OBConversion::OUTOPTIONS)) 
+              bondorder = 1;
+            //a non-standard convention is to store bond orders by
+            //replicating conect records
+            for(unsigned bo = 0; bo < bondorder; bo++) {
+              if ((currentValence % 4) == 0) {
+                if (currentValence > 0) {
+                  // Add the trailing space to finish the previous record
+                  ofs << "                                       \n";
+                }
+                // write the start of a new CONECT record
+                snprintf(buffer, BUFF_SIZE, "CONECT%5d", i);
+                ofs << buffer;
+              }
+              currentValence++;
+              snprintf(buffer, BUFF_SIZE, "%5d", nbr->GetIdx());
               ofs << buffer;
             }
-            currentValence++;
-            snprintf(buffer, BUFF_SIZE, "%5d", nbr->GetIdx());
-            ofs << buffer;
           }
 
         // Add trailing spaces
@@ -835,7 +915,6 @@ namespace OpenBabel
     /* insertion code */
     char insertioncode = sbuf.substr(27-6-1,1)[0];
     if (' '==insertioncode) insertioncode=0;
-
     /* element */
     string element = "  ";
     if (sbuf.size() > 71)
@@ -851,6 +930,7 @@ namespace OpenBabel
             else if (isalpha(element[0]))
               {
                 elementFound = true;
+                element[1] = tolower(element[1]);
               }
           }
       }
@@ -934,6 +1014,10 @@ namespace OpenBabel
              atmid[1] == 'G' || atmid[1] == 'H' ||
              atmid[1] == 'N')) // HD, HE, HG, HH, HN...
           type = "H";
+
+        if (type.size() == 2)
+          type[1] = tolower(type[1]);
+
       } else { //must be hetatm record
         if (isalpha(element[1]) && (isalpha(element[0]) || (element[0] == ' '))) {
           if (isalpha(element[0]))
@@ -945,7 +1029,7 @@ namespace OpenBabel
             type[1] = tolower(type[1]);
         } else { // no element column to use
           if (isalpha(atmid[0])) {
-            if (atmid.size() > 2 && (atmid[2] == '\0' || atmid[2] == ' '))
+            if (atmid.size() > 2)
               type = atmid.substr(0,2);
             else if (atmid[0] == 'A') // alpha prefix
               type = atmid.substr(1, atmid.size() - 1);
@@ -995,14 +1079,29 @@ namespace OpenBabel
     string zstr = sbuf.substr(40,8);
     vector3 v(atof(xstr.c_str()),atof(ystr.c_str()),atof(zstr.c_str()));
     atom.SetVector(v);
-    atom.ForceImplH();
+
+    double occupancy = atof(sbuf.substr(48, 6).c_str());
+    OBPairFloatingPoint* occup = new OBPairFloatingPoint;
+    occup->SetAttribute("_atom_site_occupancy");
+    if (occupancy <= 0.0 || occupancy > 1.0){
+      occupancy = 1.0;
+    }
+    occup->SetValue(occupancy);
+    occup->SetOrigin(fileformatInput);
+    atom.SetData(occup);
 
     // useful for debugging unknown atom types (e.g., PR#1577238)
-    //    cout << mol.NumAtoms() + 1  << " : '" << element << "'" << " " << etab.GetAtomicNum(element.c_str()) << endl;
+    //    cout << mol.NumAtoms() + 1  << " : '" << element << "'" << " " << OBElements::GetAtomicNum(element.c_str()) << endl;
     if (elementFound)
-      atom.SetAtomicNum(etab.GetAtomicNum(element.c_str()));
-    else // use our old-style guess from athe atom type
-      atom.SetAtomicNum(etab.GetAtomicNum(type.c_str()));
+      atom.SetAtomicNum(OBElements::GetAtomicNum(element.c_str()));
+    else { // use our old-style guess from athe atom type
+      unsigned int atomic_num = OBElements::GetAtomicNum(type.c_str());
+      if (atomic_num ==  0) { //try one character if two character element not found
+        type = type.substr(0,1);
+        atomic_num = OBElements::GetAtomicNum(type.c_str());
+      }
+      atom.SetAtomicNum(atomic_num);
+    }
 
     if ( (! scharge.empty()) && "  " != scharge )
       {
@@ -1029,8 +1128,8 @@ namespace OpenBabel
 
     /* residue sequence number */
     string resnum = sbuf.substr(16,4);
-    OBResidue *res  = (mol.NumResidues() > 0) ? mol.GetResidue(mol.NumResidues()-1) : NULL;
-    if (res == NULL
+    OBResidue *res  = (mol.NumResidues() > 0) ? mol.GetResidue(mol.NumResidues()-1) : nullptr;
+    if (res == nullptr
         || res->GetName() != resname
         || res->GetNumString() != resnum
         || res->GetChain() != chain
@@ -1046,7 +1145,7 @@ namespace OpenBabel
             break;
           }
 
-        if (res == NULL) {
+        if (res == nullptr) {
           res = mol.NewResidue();
           res->SetChain(chain);
           res->SetName(resname);

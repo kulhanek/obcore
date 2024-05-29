@@ -26,16 +26,25 @@
 
 
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
 #include <openbabel/obconversion.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/elements.h>
 
 #include <openbabel/obiter.h>
 #include <openbabel/data.h>
+#include <openbabel/bitvec.h>
 
 #include <iostream>
 
 #include <stdlib.h>
 #include <math.h>
+#include <cstdlib>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 
 using namespace std;
 
@@ -155,12 +164,12 @@ namespace OpenBabel
   bool PointCloudFormat::WriteMolecule( OBBase* pOb, OBConversion* pConv )
   {
     OBMol* pmol = dynamic_cast< OBMol* >(pOb);
-    if( pmol == 0 ) return false;
+    if (pmol == nullptr) return false;
 
     ostream& os = *pConv->GetOutStream();
 
-    const char *radius_list_str  = NULL;
-    const char *density_list_str = NULL;
+    const char *radius_list_str  = nullptr;
+    const char *density_list_str = nullptr;
     double probe_radius = 0.;
     bool format_xyz = false;
 
@@ -194,7 +203,7 @@ namespace OpenBabel
       while( x ) {
         double d = atof(x);
         if( isfinite(d) && d>0. ) { radius_mult_list.push_back( d ); }
-        x = strtok( NULL, "," );
+        x = strtok(nullptr, ",");
       }
       free(a);
     }
@@ -204,7 +213,7 @@ namespace OpenBabel
       while( x ) {
         double d = atof(x);
         if( isfinite(d) && d>0. ) { density_list.push_back( d ); }
-        x = strtok( NULL, "," );
+        x = strtok(nullptr, ",");
       }
       free(a);
     }
@@ -229,7 +238,7 @@ namespace OpenBabel
         // on the atom-centred spherical surface r_VDW * radius_multiplier
         // ensuring each point is >= density_r from all others
         const double* c = a->GetCoordinate();
-        double vdwrad   = probe_radius + ( etab.GetVdwRad( a->GetAtomicNum() ) * radius_mult );
+        double vdwrad   = probe_radius + ( OBElements::GetVdwRad( a->GetAtomicNum() ) * radius_mult );
 
         // estimate # of points by dividing area of VDW sphere
         // by the required density
@@ -250,7 +259,7 @@ namespace OpenBabel
           FOR_ATOMS_OF_MOL( a, *pmol )
           {
             const double* c = a->GetCoordinate();
-            double vdwrad   =  probe_radius + ( etab.GetVdwRad( a->GetAtomicNum() ) * radius_mult );
+            double vdwrad   =  probe_radius + ( OBElements::GetVdwRad( a->GetAtomicNum() ) * radius_mult );
             vdwrad *= vdwrad;
             vector3 r = *it - vector3( c[0], c[1], c[2] );
             double r2 = r[0]*r[0] + r[1]*r[1] + r[2] * r[2];

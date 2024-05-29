@@ -15,8 +15,13 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/obiter.h>
 
 #include <sstream>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -101,7 +106,7 @@ namespace OpenBabel
   bool XYZFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -193,7 +198,7 @@ namespace OpenBabel
         // something "special" in mind.
         OBAtom *atom  = mol.NewAtom();
 
-        int atomicNum = etab.GetAtomicNum(vs[0].c_str());
+        int atomicNum = OBElements::GetAtomicNum(vs[0].c_str());
         //set atomic number, or '0' if the atom type is not recognized
         if (atomicNum == 0) {
           // Sometimes people call this an XYZ file, but it's actually Unichem
@@ -258,9 +263,14 @@ namespace OpenBabel
       }
 
     // clean out any remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     if (!pConv->IsOption("b",OBConversion::INOPTIONS))
       mol.ConnectTheDots();
@@ -277,7 +287,7 @@ namespace OpenBabel
   bool XYZFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -297,8 +307,8 @@ namespace OpenBabel
 
     FOR_ATOMS_OF_MOL(atom, mol)
       {
-        snprintf(buffer, BUFF_SIZE, "%-3s %20.10f %20.10f %20.10f\n",
-                 etab.GetSymbol(atom->GetAtomicNum()),
+        snprintf(buffer, BUFF_SIZE, "%-3s%15.5f%15.5f%15.5f\n",
+                 OBElements::GetSymbol(atom->GetAtomicNum()),
                  atom->GetX(),
                  atom->GetY(),
                  atom->GetZ());

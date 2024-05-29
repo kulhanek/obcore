@@ -89,7 +89,7 @@ namespace OpenBabel
   };
 
   /* Avoid SGI Compiler Warnings! */
-  char ElemDesc[MAXELEM][4] = {
+    char ElemDesc[MAXELEM][4] = {
     { ' ', 'N', ' ', ' ' },  /* 0*/
     { ' ', 'C', 'A', ' ' },  /* 1*/
     { ' ', 'C', ' ', ' ' },  /* 2*/
@@ -121,9 +121,6 @@ namespace OpenBabel
     { ' ', 'O', '6', ' ' }   /*28*/   /* 21-28 Nucleic Acid H-Bonding */
   };
 
-  unsigned int ResNo  = MINRES;
-  unsigned int ElemNo = MINELEM;
-
  /** \class OBResidue residue.h <openbabel/residue.h>
       \brief Residue information
 
@@ -153,7 +150,7 @@ namespace OpenBabel
 
   static unsigned int GetAtomIDNumber(const char *atomid)
   {
-    if (atomid != NULL)
+    if (atomid != nullptr)
       {
         int ch1 = toupper(atomid[0]);
         int ch2 = toupper(atomid[1]);
@@ -329,36 +326,19 @@ namespace OpenBabel
               }
           }
 
-        unsigned int refno;
-        for( refno = MINELEM ; refno < ElemNo ; refno++ )
-          if( !strncmp(ElemDesc[refno], atomid, 4) )
-            return refno;
-
-        if ( ElemNo < MAXELEM - 1 )
-          {
-            ElemNo++;
-            ElemDesc[refno][0] = (char) ch1;
-            ElemDesc[refno][1] = (char) ch2;
-            ElemDesc[refno][2] = (char) ch3;
-            ElemDesc[refno][3] = (char) ch4;
-            return refno;
-          }
-        else
-          {
-            obErrorLog.ThrowError(__FUNCTION__, "Maximum number of atom ids exceeded", obWarning);
-            return 0;
-          }
+        return MAXELEM;
       }
+
     else
       {
         obErrorLog.ThrowError(__FUNCTION__, "NULL Atom IDs specified", obWarning);
-        return 0;
+        return MAXELEM;
       }
   }
 
   static unsigned int GetResidueNumber(const char *res)
   {
-    if (res != NULL && strlen(res) > 2)
+    if (res != nullptr && strlen(res) > 2)
       {
         int ch1 = toupper(res[0]);
         int ch2 = toupper(res[1]);
@@ -751,19 +731,6 @@ namespace OpenBabel
             break;
           }
 
-        unsigned int refno;
-        for( refno = MINRES; refno < ResNo ; refno++ )
-          if( !strncmp(Residue[refno],res,3) )
-            return refno;
-
-        if ( ResNo < MAXRES - 1 )
-          {
-            ResNo++;
-            Residue[refno][0] = (char) ch1;
-            Residue[refno][1] = (char) ch2;
-            Residue[refno][2] = (char) ch3;
-            return refno;
-          }
       }
 
     return OBResidueIndex::UNK;
@@ -860,7 +827,7 @@ namespace OpenBabel
     _resnum   = "";
     _resname  = "";
     _vdata.clear();
-_insertioncode=0;
+    _insertioncode=0;
   }
 
   OBResidue::OBResidue(const OBResidue &src) :
@@ -874,7 +841,7 @@ _insertioncode=0;
     _atomid   = src._atomid;
     _hetatm   = src._hetatm;
     _sernum   = src._sernum;
-_insertioncode=src._insertioncode;
+    _insertioncode=src._insertioncode;
 
   }
 
@@ -882,7 +849,7 @@ _insertioncode=src._insertioncode;
   {
     vector<OBAtom*>::iterator a;
     for ( a = _atoms.begin() ; a != _atoms.end() ; ++a )
-      (*a)->SetResidue(NULL);
+      (*a)->SetResidue(nullptr);
     _atoms.clear();
 
   }
@@ -905,7 +872,7 @@ _insertioncode=src._insertioncode;
         _atomid   = src._atomid;
         _hetatm   = src._hetatm;
         _sernum   = src._sernum;
-   _insertioncode = src._insertioncode;
+        _insertioncode = src._insertioncode;
       }
 
     return(*this);
@@ -917,7 +884,7 @@ _insertioncode=src._insertioncode;
 
   void OBResidue::AddAtom(OBAtom *atom)
   {
-    if (atom != NULL)
+    if (atom != nullptr)
       {
         atom->SetResidue(this);
 
@@ -935,13 +902,13 @@ _insertioncode=src._insertioncode;
 
   void OBResidue::RemoveAtom(OBAtom *atom)
   {
-    if (atom != NULL && _atoms.size())
+    if (atom != nullptr && _atoms.size())
       {
         for ( unsigned int i = 0 ; i < _atoms.size() ; ++i)
           {
-            if (_atoms[i] != NULL && _atoms[i] == atom)
+            if (_atoms[i] != nullptr && _atoms[i] == atom)
               {
-                atom->SetResidue(NULL);
+                atom->SetResidue(nullptr);
                 _atoms.erase(_atoms.begin() + i);
                 _atomid.erase(_atomid.begin() + i);
                 _hetatm.erase(_hetatm.begin() + i);
@@ -954,7 +921,7 @@ _insertioncode=src._insertioncode;
   bool OBResidue::Clear(void)
   {
     for (unsigned int i = 0 ; i < _atoms.size() ; ++i)
-      _atoms[i]->SetResidue(NULL);
+      _atoms[i]->SetResidue(nullptr);
 
     _chain   = 'A';
     _idx     = 0;
@@ -1046,7 +1013,7 @@ _insertioncode=src._insertioncode;
         vector<OBBond*>::iterator b;
         for (bond = atom->BeginBond(b) ; bond ; bond = atom->NextBond(b))
           {
-            if (!idxs.BitIsOn(bond->GetIdx()))
+            if (!idxs.BitIsSet(bond->GetIdx()))
               {
                 if (!exterior)
                   {
@@ -1074,7 +1041,7 @@ _insertioncode=src._insertioncode;
     return _resnum;
   }
 
-  unsigned int OBResidue::GetNum(void)
+  int OBResidue::GetNum(void)
   {
     return atoi(_resnum.c_str());
   }
@@ -1143,13 +1110,13 @@ _insertioncode=src._insertioncode;
   OBAtom *OBResidue::BeginAtom(vector<OBAtom*>::iterator &i)
   {
     i = _atoms.begin();
-    return ((i == _atoms.end()) ? NULL : *i);
+    return ((i == _atoms.end()) ? nullptr : *i);
   }
 
   OBAtom *OBResidue::NextAtom(vector<OBAtom*>::iterator &i)
   {
     ++i;
-    return ((i == _atoms.end()) ? NULL : *i);
+    return ((i == _atoms.end()) ? nullptr : *i);
   }
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -1201,7 +1168,7 @@ _insertioncode=src._insertioncode;
 
   bool OBResidue::GetAtomProperty(OBAtom *atom, int property) const
   {
-    if (atom != NULL)
+    if (atom != nullptr)
       {
         unsigned int atomid = GetAtomIDNumber(GetAtomID(atom).c_str());
 

@@ -15,7 +15,15 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/bond.h>
+#include <openbabel/data.h>
+#include <openbabel/generic.h>
+
 #include <openbabel/forcefield.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -35,11 +43,15 @@ namespace OpenBabel
       return
         "Tinker XYZ format\n"
         "The cartesian XYZ file format used by the molecular mechanics package TINKER.\n"
-        "By default, the MM2 atom types are used for writiting files.\n\n"
+        "By default, the MM2 atom types are used for writing files but MM3 atom types\n"
+        "are provided as an option. Another option provides the ability to take the\n"
+        "atom type from the atom class (e.g. as used in SMILES, or set via the API).\n\n"
+
         "Read Options e.g. -as\n"
-        "  s  Output single bonds only\n\n"
+        "  s  Generate single bonds only\n\n"
         "Write Options e.g. -xm\n"
         "  m  Write an input file for the CNDO/INDO program.\n"
+        "  c  Write atom types using custom atom classes, if available\n"
         "  3  Write atom types for the MM3 forcefield.\n\n";
     };
 
@@ -71,7 +83,7 @@ namespace OpenBabel
   bool TinkerFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
         return false;
 
     //Define some references so we can use the old parameter names
@@ -98,7 +110,6 @@ namespace OpenBabel
     string str;
     double x,y,z;
     OBAtom *atom;
-    int atomicNum;
 
     for (int i = 1; i <= natoms; ++i)
     {
@@ -116,7 +127,7 @@ namespace OpenBabel
         atom->SetVector(x,y,z); //set coordinates
 
         //set atomic number
-        atom->SetAtomicNum(etab.GetAtomicNum(vs[1].c_str()));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(vs[1].c_str()));
 
         // add bonding
         if (vs.size() > 6)
@@ -128,9 +139,14 @@ namespace OpenBabel
       mol.PerceiveBondOrders();
 
     // clean out remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-	  (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     mol.EndModify();
     mol.SetTitle(title);
@@ -140,14 +156,16 @@ namespace OpenBabel
   bool TinkerFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
     ostream &ofs = *pConv->GetOutStream();
     OBMol &mol = *pmol;
-    bool mmffTypes = pConv->IsOption("m",OBConversion::OUTOPTIONS) != NULL;
-    bool mm3Types = pConv->IsOption("3",OBConversion::OUTOPTIONS) != NULL;
+    bool mm2Types = false;
+    bool mmffTypes = pConv->IsOption("m", OBConversion::OUTOPTIONS) != nullptr;
+    bool mm3Types = pConv->IsOption("3", OBConversion::OUTOPTIONS) != nullptr;
+    bool classTypes = pConv->IsOption("c", OBConversion::OUTOPTIONS) != nullptr;
 
     unsigned int i;
     char buffer[BUFF_SIZE];
@@ -161,10 +179,14 @@ namespace OpenBabel
     else
       mmffTypes = false; // either the force field isn't available, or it doesn't work
 
-    if (!mmffTypes && !mm3Types)
+    if (!mmffTypes && !mm3Types && !classTypes) {
       snprintf(buffer, BUFF_SIZE, "%6d %-20s   MM2 parameters\n",mol.NumAtoms(),mol.GetTitle());
+      mm2Types = true;
+    }
     else if (mm3Types)
       snprintf(buffer, BUFF_SIZE, "%6d %-20s   MM3 parameters\n",mol.NumAtoms(),mol.GetTitle());
+    else if (classTypes)
+      snprintf(buffer, BUFF_SIZE, "%6d %-20s   Custom parameters\n",mol.NumAtoms(),mol.GetTitle());
     else
       snprintf(buffer, BUFF_SIZE, "%6d %-20s   MMFF94 parameters\n",mol.NumAtoms(),mol.GetTitle());
     ofs << buffer;
@@ -178,25 +200,41 @@ namespace OpenBabel
       {
         atom = mol.GetAtom(i);
         str = atom->GetType();
-        ttab.SetToType("MM2");
-        ttab.Translate(str1,str);
+        atomType = 0; // Something is very wrong if this doesn't get set below
 
-        if (mmffTypes && !mm3Types) {
+        if (mm2Types) {
+          ttab.SetToType("MM2");
+          ttab.Translate(str1,str);
+          atomType = atoi((char*)str1.c_str());
+        }
+        if (mmffTypes) {
           // Override the MM2 typing
           OBPairData *type = (OpenBabel::OBPairData*)atom->GetData("FFAtomType");
-          if (type)
+          if (type) {
             str1 = type->GetValue().c_str();
+            atomType = atoi((char*)str1.c_str());
+          }
         }
-
-        // convert to integer for MM3 typing
-        atomType = atoi((char*)str1.c_str());
         if (mm3Types) {
+          // convert to integer for MM3 typing
           atomType = SetMM3Type(atom);
+        }
+        if (classTypes) {
+          // Atom classes are set by the user, so use those
+          OBGenericData *data = atom->GetData("Atom Class");
+          if (data) {
+            OBPairInteger* acdata = dynamic_cast<OBPairInteger*>(data); // Could replace with C-style cast if willing to live dangerously
+            if (acdata) {
+              int ac = acdata->GetGenericValue();
+              if (ac >= 0)
+                atomType = ac;
+            }
+          }
         }
 
         snprintf(buffer, BUFF_SIZE, "%6d %2s  %12.6f%12.6f%12.6f %5d",
                  i,
-                 etab.GetSymbol(atom->GetAtomicNum()),
+                 OBElements::GetSymbol(atom->GetAtomicNum()),
                  atom->GetX(),
                  atom->GetY(),
                  atom->GetZ(),
@@ -217,7 +255,7 @@ namespace OpenBabel
 
   int SetMM3Type(OBAtom *atom)
   {
-    OBAtom *b, *c; // neighbors
+    OBAtom *b; // neighbor
     OBBondIterator i, j;
     int countNeighborO, countNeighborS, countNeighborN, countNeighborC;
     countNeighborO = countNeighborS = countNeighborN = countNeighborC = 0;
@@ -228,19 +266,19 @@ namespace OpenBabel
       b = atom->BeginNbrAtom(j);
       if (b->IsCarboxylOxygen())
         return 24;
-      if (b->IsSulfur())
+      if (b->GetAtomicNum() == OBElements::Sulfur)
         return 44;
-      if (b->IsNitrogen()) {
+      if (b->GetAtomicNum() == OBElements::Nitrogen) {
         if (b->IsAmideNitrogen())
           return 28;
-        if (b->GetValence() > 3)
+        if (b->GetExplicitDegree() > 3)
           return 48;// ammonium
         return 23; // default amine/imine
       }
-      if (b->IsCarbon() && b->GetHyb() == 1)
+      if (b->GetAtomicNum() == OBElements::Carbon && b->GetHyb() == 1)
         return 124; // acetylene
 
-      if (b->IsOxygen()) {
+      if (b->GetAtomicNum() == OBElements::Oxygen) {
         if (b->HasAlphaBetaUnsat())
           return 73; // includes non-enol/phenol, but has the right spirit
         return 21; // default alcohol
@@ -255,7 +293,7 @@ namespace OpenBabel
       return 163; break;
 
     case 5: // B
-      if (atom->GetValence() >= 4)
+      if (atom->GetExplicitDegree() >= 4)
         return 27; // tetrahedral
       return 26; break;
 
@@ -318,7 +356,7 @@ namespace OpenBabel
         return 46;
 
       if (atom->GetHyb() == 3) {
-        if (atom->GetValence() > 3)
+        if (atom->GetExplicitDegree() > 3)
           return 39; // ammonium
         return 8;
       }
@@ -333,12 +371,12 @@ namespace OpenBabel
       if (atom->IsPhosphateOxygen())
         return 159;
       if (atom->IsCarboxylOxygen())
-        return 47;
+        return 75;
       if (atom->IsInRingSize(3))
         return 49; // epoxy
 
       b = atom->BeginNbrAtom(j);
-      if (atom->HasBondOfOrder(2) && b->IsCarbon()) { // O=C
+      if (atom->HasBondOfOrder(2) && b->GetAtomicNum() == OBElements::Carbon) { // O=C
         return 7;
       }
 
@@ -354,12 +392,12 @@ namespace OpenBabel
     case 12: // Mg
       return 59; break;
     case 14: // Si
-      return 59; break;
+      return 19; break;
 
     case 15: // P
       if (atom->CountFreeOxygens() > 0)
         return 153; // phosphate
-      if (atom->BOSum() > 3)
+      if (atom->GetExplicitValence() > 3)
         return 60; // phosphorus V
       return 25; break;
 
@@ -379,7 +417,7 @@ namespace OpenBabel
         case 7:
           countNeighborN++; break;
         case 8:
-          if (b->GetHvyValence() == 1)
+          if (b->GetHvyDegree() == 1)
             countNeighborO++;
           break;
         case 16:

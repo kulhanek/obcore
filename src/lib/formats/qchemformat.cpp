@@ -13,8 +13,16 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
+#include <iostream>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -99,7 +107,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -128,7 +136,7 @@ namespace OpenBabel
 
     while	(ifs.getline(buffer,BUFF_SIZE))
       {
-        if(strstr(buffer,"Standard Nuclear Orientation") != NULL)
+        if (strstr(buffer, "Standard Nuclear Orientation") != nullptr)
           {
             // mol.EndModify();
             mol.Clear();
@@ -140,7 +148,7 @@ namespace OpenBabel
             while (vs.size() == 5)
               {
                 atom = mol.NewAtom();
-                atom->SetAtomicNum(etab.GetAtomicNum(vs[1].c_str()));
+                atom->SetAtomicNum(OBElements::GetAtomicNum(vs[1].c_str()));
                 x = atof((char*)vs[2].c_str());
                 y = atof((char*)vs[3].c_str());
                 z = atof((char*)vs[4].c_str());
@@ -151,7 +159,7 @@ namespace OpenBabel
                 tokenize(vs,buffer);
               }
           }
-        else if(strstr(buffer,"Dipole Moment") != NULL)
+        else if (strstr(buffer, "Dipole Moment") != nullptr)
           {
             ifs.getline(buffer,BUFF_SIZE); // actual components   X ###  Y #### Z ###
             tokenize(vs,buffer);
@@ -164,7 +172,7 @@ namespace OpenBabel
               }
             if (!ifs.getline(buffer,BUFF_SIZE)) break;
           }
-        else if(strstr(buffer,"Mulliken Net Atomic Charges") != NULL)
+        else if (strstr(buffer, "Mulliken Net Atomic Charges") != nullptr)
           {
             hasPartialCharges = true;
             ifs.getline(buffer,BUFF_SIZE);	// (blank)
@@ -172,18 +180,26 @@ namespace OpenBabel
             ifs.getline(buffer,BUFF_SIZE);	// -----------------
             ifs.getline(buffer,BUFF_SIZE);
             tokenize(vs,buffer);
+            int nbAtomRead = 0;
             while (vs.size() >= 3)
               {
                 atom = mol.GetAtom(atoi(vs[0].c_str()));
-                atom->SetPartialCharge(atof(vs[2].c_str()));
-
+                ++nbAtomRead;
+                if (atom)
+                  atom->SetPartialCharge(atof(vs[2].c_str()));
                 if (!ifs.getline(buffer,BUFF_SIZE))
                   break;
                 tokenize(vs,buffer);
               }
+            if (nbAtomRead != mol.NumAtoms())
+            {
+              std::cerr << "Error: a Standard Nuclear Orientation paragraph contains " << mol.NumAtoms()
+                 << " whereas the following Mulliken paragraph contains " << nbAtomRead << " atoms\n";
+              return false;
+            }
           }
-        else if (strstr(buffer, "ISOTROPIC") != NULL
-                 && strstr(buffer, "ATOM") != NULL) // NMR summary
+        else if (strstr(buffer, "ISOTROPIC") != nullptr &&
+                 strstr(buffer, "ATOM") != nullptr) // NMR summary
           {
             ifs.getline(buffer, BUFF_SIZE); // -------
             ifs.getline(buffer, BUFF_SIZE);
@@ -207,7 +223,7 @@ namespace OpenBabel
                 tokenize(vs, buffer);
               }
           }
-        else if(strstr(buffer,"Frequency:") != NULL)
+        else if (strstr(buffer,"Frequency:") != nullptr)
           {
             hasVibData = true;
             // We'll only see this data once -- several modes per "section"
@@ -217,7 +233,7 @@ namespace OpenBabel
               frequencies.push_back(atof(vs[i].c_str()));
 
             ifs.getline(buffer,BUFF_SIZE); // IR active or force constant
-            if (strstr(buffer, "Force Cnst:") != NULL) {
+            if (strstr(buffer, "Force Cnst:") != nullptr) {
               ifs.getline(buffer, BUFF_SIZE); // now reduced mass
               ifs.getline(buffer, BUFF_SIZE); // now IR active
             }
@@ -232,7 +248,7 @@ namespace OpenBabel
             tokenize(vs, buffer);
             vector<vector3> vib1, vib2, vib3;
             while (vs.size() > 3) {
-              if (strstr(buffer, "TransDip") != NULL) {
+              if (strstr(buffer, "TransDip") != nullptr) {
                 ifs.getline(buffer, BUFF_SIZE);
                 break;
               }
@@ -263,7 +279,7 @@ namespace OpenBabel
         // In principle, the final geometry in cartesians is exactly the same
         // as this geometry, so we shouldn't lose any information
         // but we grab the charge and spin from this $molecule block
-        else if(strstr(buffer,"OPTIMIZATION CONVERGED") != NULL)
+        else if (strstr(buffer, "OPTIMIZATION CONVERGED") != nullptr)
           {
             // Unfortunately this will come in a Z-matrix, which would
             // change our frame of reference -- we'll ignore this geometry
@@ -326,7 +342,7 @@ namespace OpenBabel
   bool QChemInputFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names

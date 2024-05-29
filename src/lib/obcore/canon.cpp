@@ -22,6 +22,11 @@ GNU General Public License for more details.
 #include <openbabel/graphsym.h>
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/obutil.h>
+#include <openbabel/elements.h>
 
 #include <openbabel/stereo/cistrans.h>
 #include <openbabel/stereo/tetrahedral.h>
@@ -56,6 +61,11 @@ void print_vector(const std::string &label, const std::vector<T> &v)
 
 
 namespace OpenBabel {
+
+  static unsigned int TotalHydrogenCount(OBAtom* atom)
+  {
+    return atom->ExplicitHydrogenCount() + atom->GetImplicitHCount();
+  }
 
   inline bool CompareBondPairSecond(const std::pair<OBBond*,unsigned int> &a,const std::pair<OBBond*,unsigned int> &b)
   {
@@ -135,7 +145,7 @@ namespace OpenBabel {
     if (bond->GetBondOrder() != 1)
       return false;
 
-    OBAtom *Fe = 0, *C = 0;
+    OBAtom *Fe = nullptr, *C = nullptr;
 
     OBAtom *begin = bond->GetBeginAtom();
     if (begin->GetAtomicNum() == 26)
@@ -152,7 +162,7 @@ namespace OpenBabel {
     if (!Fe || !C)
       return false;
 
-    if (Fe->GetValence() < 10)
+    if (Fe->GetExplicitDegree() < 10)
       return false;
 
     return C->HasDoubleBond() && C->IsInRing();
@@ -603,7 +613,7 @@ namespace OpenBabel {
       /**
        * Indexes for the stereo center neighbor atoms. Tetrahedral centers have
        * all neighbor atoms in nbrIndexes1. CisTrans stereo centers store the
-       * neighbor atoms for each double bond atom seperatly.
+       * neighbor atoms for each double bond atom separately.
        */
       std::vector<unsigned int> nbrIndexes1, nbrIndexes2;
     };
@@ -686,7 +696,7 @@ namespace OpenBabel {
             const OBBitVec &_fragment, std::vector<StereoCenter> &_stereoCenters,
             std::vector<FullCode> &_identityCodes, Orbits &_orbits, OBBitVec &_mcr,
             bool _onlyOne) : symmetry_classes(_symmetry_classes), fragment(_fragment),
-          stereoCenters(_stereoCenters), onlyOne(_onlyOne),
+          onlyOne(_onlyOne), stereoCenters(_stereoCenters),
           code(_symmetry_classes.size()), identityCodes(_identityCodes),
           backtrackDepth(0), orbits(_orbits), mcr(_mcr)
       {
@@ -729,7 +739,7 @@ namespace OpenBabel {
     {
       Timeout(time_t _maxTime) : maxTime(_maxTime)
       {
-        startTime = time(NULL);
+        startTime = time(nullptr);
       }
       time_t startTime, maxTime;
     };
@@ -798,14 +808,8 @@ namespace OpenBabel {
         if (atom->GetFormalCharge())
           hasCharge = true;
 
-	// Include all explicit hydrogens
-        int hydrogens_to_include = atom->ExplicitHydrogenCount();
-
-        // We also include any implicit hydrogen on a stereocenter.
-        hydrogens_to_include += (facade.HasTetrahedralStereo(atom->GetId()) && atom->ImplicitHydrogenCount()==1) ? 1 : 0;
-
-	// Include implicit H on an aromatic nitrogen, e.g. distinguish the two nitrogens in c1ncc[nH]1
-	hydrogens_to_include += (atom->IsAromatic() && atom->GetAtomicNum() == 7) ? atom->ImplicitHydrogenCount() : 0;
+	      // Include all hydrogens
+        int hydrogens_to_include = TotalHydrogenCount(atom);
 
         unsigned int c = 10000 * atom->GetSpinMultiplicity() +
                           1000 * hydrogens_to_include +
@@ -964,7 +968,7 @@ namespace OpenBabel {
             if (lbl >= ligandSizes[lcodes[l].first])
               continue;
 
-            OBAtom *atom = 0;
+            OBAtom *atom = nullptr;
             for (std::size_t i = 0; i < mol->NumAtoms(); ++i)
               if (lcodes[l].second.labels[i] == lbl) {
                 atom = mol->GetAtom(i+1);
@@ -1133,7 +1137,7 @@ namespace OpenBabel {
     /**
      * Update the minimum cell representations (mcr).
      */
-    static void UpdateMcr(OBBitVec &mcr, Orbits &orbits, OBMol *mol, const std::vector<unsigned int> &bestLabels)
+    static void UpdateMcr(OBBitVec &mcr, Orbits &orbits, const std::vector<unsigned int> &bestLabels)
     {
       //print_orbits("UpdateMcr", orbits);
 
@@ -1219,7 +1223,7 @@ namespace OpenBabel {
           }
 
         if (fullcode.code == bestCode.code) {
-          UpdateMcr(state.mcr, state.orbits, mol, bestCode.labels);
+          UpdateMcr(state.mcr, state.orbits, bestCode.labels);
           FindOrbits(state.orbits, mol, fullcode.labels, bestCode.labels);
         } else if (fullcode > bestCode) {
           // if fullcode is greater than bestCode, we have found a new greatest code
@@ -1241,7 +1245,7 @@ namespace OpenBabel {
       }
 
       // Avoid endless loops.
-      if (time(NULL) - timeout.startTime > timeout.maxTime) {
+      if (time(nullptr) - timeout.startTime > timeout.maxTime) {
         return;
       }
 
@@ -1432,7 +1436,7 @@ namespace OpenBabel {
         unsigned int rank = 10000 * symmetry_classes[i]  +
                              1000 * atom->GetSpinMultiplicity() +
                                10 * (atom->GetFormalCharge() + 7) +
-                                    atom->ExplicitHydrogenCount();
+                                    TotalHydrogenCount(atom);
 
         ranks.push_back(rank);
       }
@@ -1448,7 +1452,7 @@ namespace OpenBabel {
         unsigned int rank = 10000 * symmetry_classes[i]  +
                              1000 * atom->GetSpinMultiplicity() +
                                10 * (atom->GetFormalCharge() + 7) +
-                                    atom->ExplicitHydrogenCount();
+                                    TotalHydrogenCount(atom);
 
         if (rank == lowestRank)
           result.push_back(atom);
@@ -1515,13 +1519,13 @@ namespace OpenBabel {
 
             // Add the neighbor atom indexes.
             OBAtom *from = mol->GetAtomById(config.from);
-            if (from && !from->IsHydrogen())
+            if (from && from->GetAtomicNum() != OBElements::Hydrogen)
               stereoCenters.back().nbrIndexes1.push_back(from->GetIndex());
             else
               stereoCenters.back().nbrIndexes1.push_back(std::numeric_limits<unsigned int>::max());
             for (std::size_t j = 0; j < config.refs.size(); ++j) {
               OBAtom *ref = mol->GetAtomById(config.refs[j]);
-              if (ref && !ref->IsHydrogen())
+              if (ref && ref->GetAtomicNum() != OBElements::Hydrogen)
                 stereoCenters.back().nbrIndexes1.push_back(ref->GetIndex());
               else
                 stereoCenters.back().nbrIndexes1.push_back(std::numeric_limits<unsigned int>::max());
@@ -1548,7 +1552,7 @@ namespace OpenBabel {
             // Add the neighbor atom indexes.
             for (std::size_t j = 0; j < config.refs.size(); ++j) {
               OBAtom *ref = mol->GetAtomById(config.refs[j]);
-              unsigned int r = (ref && !ref->IsHydrogen()) ? ref->GetIndex() : std::numeric_limits<unsigned int>::max();
+              unsigned int r = (ref && ref->GetAtomicNum() != OBElements::Hydrogen) ? ref->GetIndex() : std::numeric_limits<unsigned int>::max();
               if (stereoCenters.back().nbrIndexes1.size() < 2)
                 stereoCenters.back().nbrIndexes1.push_back(r);
               else
@@ -1586,7 +1590,7 @@ namespace OpenBabel {
         }
 
         // Throw an error if the timeout is exceeded.
-        if (time(NULL) - timeout.startTime > timeout.maxTime) {
+        if (time(nullptr) - timeout.startTime > timeout.maxTime) {
           obErrorLog.ThrowError(__FUNCTION__, "maximum time exceeded...", obError);
         }
 
@@ -1638,7 +1642,7 @@ namespace OpenBabel {
     if (onlyOne) {
       // Only one labeling requested. This results in canonical labels that do not
       // consider stereochemistry. Used for finding stereo centers with automorphisms.
-      CanonicalLabelsImpl::CalcCanonicalLabels(mol, symmetry_classes, canonical_labels, OBStereoUnitSet(), maskCopy, 0, maxSeconds, true);
+      CanonicalLabelsImpl::CalcCanonicalLabels(mol, symmetry_classes, canonical_labels, OBStereoUnitSet(), maskCopy, nullptr, maxSeconds, true);
     } else {
       std::vector<OBBond*> metalloceneBonds;
       findMetalloceneBonds(metalloceneBonds, mol, symmetry_classes);
@@ -1667,7 +1671,7 @@ namespace OpenBabel {
       }
       if (!hasAtLeastOneDefined) {
         // If there are no specified stereo centers, we don't need to find stereogenic units.
-        CanonicalLabelsImpl::CalcCanonicalLabels(mol, symmetry_classes, canonical_labels, OBStereoUnitSet(), maskCopy, 0, maxSeconds);
+        CanonicalLabelsImpl::CalcCanonicalLabels(mol, symmetry_classes, canonical_labels, OBStereoUnitSet(), maskCopy, nullptr, maxSeconds);
         return;
       }
 

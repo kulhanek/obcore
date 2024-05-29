@@ -2,5 +2,5 @@ CMakeFiles
 MakeFile
 Makefile
 *.cmake
-lib/
+/lib/
 CMakeCache.txt

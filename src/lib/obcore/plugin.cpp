@@ -65,7 +65,7 @@ void OBPlugin::LoadAllPlugins()
 
   DLHandler::getConvDirectory(TargetDir);
 
-  cout << "TargetDir: " << TargetDir << endl;
+  // cout << "TargetDir: " << TargetDir << endl;
 
   vector<string> files;
   if(!DLHandler::findFiles(files,DLHandler::getFormatFilePattern(),TargetDir)) {

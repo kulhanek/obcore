@@ -29,10 +29,10 @@ GNU General Public License for more details.
 #include <openbabel/math/vector3.h>
 #include <openbabel/elements.h>
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <Eigen/SVD>
-#include <Eigen/LU>
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Geometry>
+#include <eigen3/Eigen/SVD>
+#include <eigen3/Eigen/LU>
 
 using namespace std;
 

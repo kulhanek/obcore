@@ -26,8 +26,8 @@ GNU General Public License for more details.
 
 #ifdef HAVE_EIGEN3
 
-#include <Eigen/LU>
-#include <Eigen/SVD>
+#include <eigen3/Eigen/LU>
+#include <eigen3/Eigen/SVD>
 
 #define TABLE_OF_ELEMENTS_SIZE 84 // Number of atoms in data/eqeqIonizations.txt
 #define PI 3.1415926535897932384626433832795 // 32 digits of pi

@@ -41,8 +41,8 @@ GNU General Public License for more details.
 #include <sstream>
 #include <string>
 #include <cmath>
-#include <Eigen/Core>
-#include <Eigen/Eigenvalues>
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Eigenvalues>
 
 using namespace std;
 

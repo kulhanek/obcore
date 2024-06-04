@@ -26,8 +26,8 @@ GNU General Public License for more details.
 
 #ifdef HAVE_EIGEN
 
-#include <Eigen/LU>
-#include <Eigen/SVD>
+#include <eigen3/Eigen/LU>
+#include <eigen3/Eigen/SVD>
 
 //// conversion factor from electron volt to Hartree
 const double eV = 3.67493245e-2;

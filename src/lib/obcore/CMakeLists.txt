@@ -2,9 +2,10 @@
 # OBCore CMake File
 # ==============================================================================
 
-ADD_DEFINITIONS(-DUSING_DYNAMIC_LIBS)
+ADD_DEFINITIONS(-DUSING_DYNAMIC_LIBS -DHAVE_EIGEN -DHAVE_EIGEN3)
 
 SET(OBCORE_LIB_SRC
+        math/align.cpp
         math/matrix3x3.cpp
         math/spacegroup.cpp
         math/transform3d.cpp
@@ -18,34 +19,20 @@ SET(OBCORE_LIB_SRC
 
         stereo/cistrans.cpp
         stereo/facade.cpp
+        stereo/gen3dstereohelper.cpp
         stereo/perception.cpp
         stereo/squareplanar.cpp
         stereo/stereo.cpp
         stereo/tetrahedral.cpp
         stereo/tetranonplanar.cpp
         stereo/tetraplanar.cpp
-        stereo/gen3dstereohelper.cpp
 
-        ops/addinindex.cpp
-        ops/addpolarh.cpp
-        ops/canonical.cpp
-        ops/fillUC.cpp
-        ops/forcefield.cpp
-        ops/gen3d.cpp
-        ops/loader.cpp
-        ops/opisomorph.cpp
-        ops/optransform.cpp
-        ops/partialcharges.cpp
-        ops/readconformers.cpp
-        ops/sort.cpp
-        ops/xout.cpp
-        #ops/conformer.cpp
-        ops/gen2D.cpp
-        #ops/op2d.cpp
-        #ops/unique.cpp
-
+        charges/eem.cpp
+        charges/eqeq.cpp
+        charges/fromfile.cpp
         charges/gasteiger.cpp
         charges/mmff94.cpp
+        charges/none.cpp
         charges/qeq.cpp
         charges/qtpie.cpp
 
@@ -56,13 +43,16 @@ SET(OBCORE_LIB_SRC
         descriptors/inchidescriptor.cpp
         descriptors/smartsdescriptors.cpp
 
+        fingerprints/fingerecfp.cpp
         fingerprints/finger2.cpp
         fingerprints/finger3.cpp
 
+        depict/asciipainter.cpp
+        # depict/cairopainter.cpp
+        depict/commandpainter.cpp
         depict/depict.cpp
         depict/svgpainter.cpp
 
-        graphsym.cpp
         alias.cpp
         atom.cpp
         base.cpp
@@ -72,24 +62,31 @@ SET(OBCORE_LIB_SRC
         builder.cpp
         canon.cpp
         chains.cpp
-        # chiral.cpp
         chargemodel.cpp
+        conformersearch.cpp
+        confsearch.cpp
         data.cpp
+        data_utilities.cpp
         descriptor.cpp
+        distgeom.cpp
+        dlhandler_unix.cpp
+       # dlhandler_win32.cpp
+        doxygen_pages.cpp
         elements.cpp
         fingerprint.cpp
         forcefield.cpp
         format.cpp
         generic.cpp
+        graphsym.cpp
         grid.cpp
         griddata.cpp
         isomorphism.cpp
         kekulize.cpp
         locale.cpp
         matrix.cpp
+        mcdlutil.cpp
         molchrg.cpp
         mol.cpp
-        mcdlutil.cpp
         obconversion.cpp
         oberror.cpp
         obfunctions.cpp
@@ -104,10 +101,14 @@ SET(OBCORE_LIB_SRC
         pointgroup.cpp
         query.cpp
         rand.cpp
+#        RDKitConv.cpp
+        reactionfacade.cpp
         residue.cpp
         ring.cpp
         rotamer.cpp
         rotor.cpp
+        spectrophore.cpp
+        tautomer.cpp
         tokenst.cpp
         transform.cpp
         typer.cpp

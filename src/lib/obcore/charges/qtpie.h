@@ -26,8 +26,8 @@ GNU General Public License for more details.
 
 #ifdef HAVE_EIGEN
 
-#include <Eigen/LU>
-#include <Eigen/SVD>
+#include <eigen3/Eigen/LU>
+#include <eigen3/Eigen/SVD>
 
 #define pi 3.1415926
 #define sqr(x) ((x)*(x))

@@ -82,6 +82,6 @@ ENDIF(NOT DEFINED COMPOSITE_PROJECT)
 # ==============================================================================
 
 ADD_SUBDIRECTORY(src)
-#ADD_SUBDIRECTORY(share)
+ADD_SUBDIRECTORY(share)
 
 

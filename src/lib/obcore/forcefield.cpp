@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <set>
-
+#include <climits>
 #include <openbabel/forcefield.h>
 
 #include <openbabel/mol.h>
@@ -2747,9 +2747,15 @@ namespace OpenBabel
     if (!_validSetup)
       return;
 
-    _nsteps = steps;
-    _cstep = 0;
-    _econv = econv;
+    if( steps == -1 ){
+        _nsteps = INT_MAX;
+        _cstep = 0;
+        _econv = 0; 
+    } else {
+        _nsteps = steps;
+        _cstep = 0;
+        _econv = econv;
+    }
     _gconv = 1.0e-2; // gradient convergence (0.1) squared
 
     if (_cutoff)

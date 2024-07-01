@@ -132,7 +132,11 @@ namespace OpenBabel
       {
         ETA[i] = new double[dim];
       }
-    double totalCharge(0.0);
+
+// PK
+//    double totalCharge(0.0);
+    double totalCharge = mol.GetTotalCharge();
+
     unsigned int i(0);
     double hardness;
     double electronegativity;
@@ -167,7 +171,8 @@ namespace OpenBabel
       ETA[i][i] = hardness;
 
       // Adjust the total molecular charge
-      totalCharge += atom->GetFormalCharge();
+      // PK - taken from OBMol total charge 
+      // totalCharge += atom->GetFormalCharge();
     }
 
     // Complete CHI

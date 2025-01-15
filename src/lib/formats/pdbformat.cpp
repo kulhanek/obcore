@@ -49,6 +49,7 @@ namespace OpenBabel
 
       OBConversion::RegisterOptionParam("o", this, 0, OBConversion::OUTOPTIONS);
       OBConversion::RegisterOptionParam("n", this, 0, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("a", this, 0, OBConversion::OUTOPTIONS);
     }
 
     virtual const char* Description() //required
@@ -62,7 +63,8 @@ namespace OpenBabel
 
         "Write Options, e.g. -xo\n"
         "  n  Do not write duplicate CONECT records to indicate bond order\n"
-        "  o  Write origin in space group label (CRYST1 section)\n\n";
+        "  o  Write origin in space group label (CRYST1 section)\n";
+        "  a  Do not write CONNECT\n\n";
     };
 
     virtual const char* SpecificationURL()
@@ -766,6 +768,8 @@ namespace OpenBabel
         ofs << buffer;
       }
 
+    if (pConv->IsOption("a", OBConversion::OUTOPTIONS) == NULL ){
+
     OBAtom *nbr;
     vector<OBBond*>::iterator k;
     for (i = 1; i <= mol.NumAtoms(); i ++)
@@ -808,6 +812,8 @@ namespace OpenBabel
         }
         ofs << "                                       \n";
       }
+
+    }
 
     snprintf(buffer, BUFF_SIZE, "MASTER        0    0    0    0    0    0    0    0 ");
     ofs << buffer;

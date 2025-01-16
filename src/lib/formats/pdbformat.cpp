@@ -63,7 +63,7 @@ namespace OpenBabel
 
         "Write Options, e.g. -xo\n"
         "  n  Do not write duplicate CONECT records to indicate bond order\n"
-        "  o  Write origin in space group label (CRYST1 section)\n";
+        "  o  Write origin in space group label (CRYST1 section)\n"
         "  a  Do not write CONNECT\n\n";
     };
 

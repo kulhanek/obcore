@@ -31,7 +31,7 @@ GNU General Public License for more details.
 
 #ifdef HAVE_EIGEN
 
-#include <eigen3/Eigen/Core>
+#include <Eigen/Core>
 #include <LBFGS.h>
 
 namespace OpenBabel {

@@ -25,7 +25,7 @@ public:
     OBConversion::RegisterFormat("copy",this);
   }
 
-  virtual const char* Description() //required
+  const char* Description() override  // required
   {
     return
 "Copy raw text\n"
@@ -42,21 +42,21 @@ public:
 "  Extract only structures that include at least one aromatic carbon\n"
 "  (by matching the SMARTS pattern ``[c]``)::\n\n"
 
-"   babel -s '[c]' database.sdf -ocopy new.sd\n\n"
+"   obabel database.sdf -ocopy -O new.sdf -s '[c]' \n\n"
 
 ".. note::\n\n"
 " XML files may be missing non-object elements\n"
 " at the start or end and so may no longer be well formed.\n\n"
 ;
-  };
+  }
 
-  virtual unsigned int Flags()
+  unsigned int Flags() override
   {
       return NOTREADABLE;
-  };
+  }
 
   /////////////////////////////////////////////////////////////////
-  virtual bool WriteChemObject(OBConversion* pConv)
+  bool WriteChemObject(OBConversion* pConv) override
   {
     pConv->GetChemObject();//needed to increment pConv->Index
 
@@ -90,7 +90,7 @@ public:
         ofs << ifs.rdbuf() << flush;
     }
     return true;
-  };
+  }
 
 };
 

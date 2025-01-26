@@ -224,8 +224,7 @@ int mob_atomsize(struct mobatom *atom)
 /* MOVE POINTER TO NEXT ATOM OF YASARA OBJECT STRUCTURE
    ==================================================== */
 struct mobatom *mob_next(struct mobatom *atom)
-{ mem_inc(atom,mob_atomsize(atom));
-  return(atom); }
+{ return((struct mobatom *) ((char *) atom + mob_atomsize(atom))); }
 
 void mob_setnext(struct mobatom **atomadd)
 { *atomadd=mob_next(*atomadd); }
@@ -322,28 +321,28 @@ public:
         OBConversion::RegisterFormat("yob",this);
     }
 
-    virtual const char* Description() //required
+    const char* Description() override  // required
     {
         return
             "YASARA.org YOB format\n"
             "The native YASARA format.\n";
-    };
+    }
 
-    virtual const char* SpecificationURL(){return
-            "http://www.yasara.org";}; //optional
+    const char* SpecificationURL() override { return
+            "http://www.yasara.org"; }  // optional
 
     //Flags() can return be any the following combined by | or be omitted if none apply
     // NOTREADABLE  READONEONLY  NOTWRITABLE  WRITEONEONLY
-    virtual unsigned int Flags()
+    unsigned int Flags() override
     {
         return READONEONLY|READBINARY|WRITEBINARY;
-    };
+    }
 
     //*** This section identical for most OBMol conversions ***
     ////////////////////////////////////////////////////
     /// The "API" interface functions
-    virtual bool ReadMolecule(OBBase* pOb, OBConversion* pConv);
-    virtual bool WriteMolecule(OBBase* pOb, OBConversion* pConv);
+    bool ReadMolecule(OBBase* pOb, OBConversion* pConv) override;
+    bool WriteMolecule(OBBase* pOb, OBConversion* pConv) override;
 
 
 };
@@ -437,7 +436,7 @@ bool YOBFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
     *((int32*)atomname)=id.atom;
     atomname[4]=0;
     /* SHIFT ATOM NAME BY ONE CHARACTER TO REMOVE LEADING SPACE */
-    if (atomname[0]==' '&&(!pConv->IsOption("f",OBConversion::INOPTIONS))) memcpy(atomname,atomname+1,4);
+    if (atomname[0]==' '&&(!pConv->IsOption("f",OBConversion::INOPTIONS))) memmove(atomname,atomname+1,4);
     /* RENAME TERMINAL OXYGENS */
     str=atomname;
     if (str=="OT1") str="O";

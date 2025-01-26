@@ -77,29 +77,29 @@ namespace OpenBabel
       OBConversion::RegisterFormat("xtc",this);
     }
 
-    virtual const char* Description() //required
+    const char* Description() override  // required
     {
       return
         "XTC format\n"
         "A portable format for trajectories (gromacs)\n";
-    };
+    }
 
-    virtual const char* SpecificationURL()
+    const char* SpecificationURL() override
     {
       return "http://manual.gromacs.org/documentation/current/reference-manual/file-formats.html#xtc";
     }
 
     //Flags() can return be any the following combined by | or be omitted if none apply
     // NOTREADABLE  READONEONLY  NOTWRITABLE  WRITEONEONLY
-    virtual unsigned int Flags()
+    unsigned int Flags() override
     {
       return NOTWRITABLE;
-    };
+    }
 
     //*** This section identical for most OBMol conversions ***
     ////////////////////////////////////////////////////
     /// The "API" interface functions
-    virtual bool ReadMolecule(OBBase* pOb, OBConversion* pConv);
+    bool ReadMolecule(OBBase* pOb, OBConversion* pConv) override;
     //virtual bool WriteMolecule(OBBase* pOb, OBConversion* pConv);
   };
   //***
@@ -303,7 +303,7 @@ namespace OpenBabel
      * XDR staructure)
      */
     if (xdrs == nullptr) {
-      xdridptr[xdrid] = (XDR *) malloc(sizeof(XDR));
+      xdridptr[xdrid] = (XDR *) calloc(1,sizeof(XDR));
       xdrstdio_create(xdridptr[xdrid], xdrfiles[xdrid], lmode);
     } else {
       xdridptr[xdrid] = xdrs;
@@ -659,13 +659,13 @@ namespace OpenBabel
 
       xdr_float(xdrs, precision);
       if (ip == nullptr) {
-        ip = (int *)malloc(size3 * sizeof(*ip));
-        if (ip == nullptr) {
+        ip = (int *)calloc(size3, sizeof(*ip));
+        if (ip == NULL) {
           fprintf(stderr,"malloc failed\n");
           return 0;
         }
         bufsize = static_cast<int> (size3 * 1.2);
-        buf = (int *)malloc(bufsize * sizeof(*buf));
+        buf = (int *)calloc(bufsize, sizeof(*buf));
         if (buf == nullptr) {
           fprintf(stderr,"malloc failed\n");
           return 0;
@@ -903,13 +903,13 @@ namespace OpenBabel
       }
       xdr_float(xdrs, precision);
       if (ip == nullptr) {
-        ip = (int *)malloc(size3 * sizeof(*ip));
+        ip = (int *)calloc(size3, sizeof(*ip));
         if (ip == nullptr) {
           fprintf(stderr,"malloc failed\n");
           return 0;
         }
         bufsize = static_cast<int> (size3 * 1.2);
-        buf = (int *)malloc(bufsize * sizeof(*buf));
+        buf = (int *)calloc(bufsize, sizeof(*buf));
         if (buf == nullptr) {
           fprintf(stderr,"malloc failed\n");
           return 0;

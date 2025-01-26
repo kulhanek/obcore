@@ -26,8 +26,8 @@ GNU General Public License for more details.
 
 #ifdef HAVE_EIGEN
 
-#include <eigen3/Eigen/LU>
-#include <eigen3/Eigen/SVD>
+#include <Eigen/LU>
+#include <Eigen/SVD>
 
 //// conversion factor from electron volt to Hartree
 const double eV = 3.67493245e-2;
@@ -48,12 +48,12 @@ class QEqCharges : public OBChargeModel
 public:
   QEqCharges(void) : OBChargeModel("fake ID", false){};
   QEqCharges(const char* ID) : OBChargeModel(ID, false){};
-  const char* Description(){ return "Assign QEq (charge equilibration) partial charges (Rappe and Goddard, 1991)"; }
+  const char* Description() override { return "Assign QEq (charge equilibration) partial charges (Rappe and Goddard, 1991)"; }
 
   /// \return whether partial charges were successfully assigned to this molecule
-  bool ComputeCharges(OBMol &mol);
+  bool ComputeCharges(OBMol &mol) override ;
 
-  double DipoleScalingFactor() { return 1.959; } // fit from regression
+  double DipoleScalingFactor() override { return 1.959; } // fit from regression
 
 private:
   Eigen::Vector3d GetParameters(unsigned int Z, int Q);

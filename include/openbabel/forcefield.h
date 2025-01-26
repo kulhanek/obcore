@@ -182,7 +182,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     }
     //! \return Setup pointers to atom positions and forces (To be called
     //!  while setting up calculations). Sets optimized to true.
-    virtual void SetupPointers()
+    void SetupPointers() override
     {
       if (!a || !b || !c) return;
       pos_a = a->GetCoordinate();
@@ -526,7 +526,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     // general variables
     OBMol 	_mol; //!< Molecule to be evaluated or minimized
     bool 	_init; //!< Used to make sure we only parse the parameter file once, when needed
-    std::string	_parFile; //! < parameter file name
+    std::string	_parFile; //!< parameter file name
     bool 	_validSetup; //!< was the last call to Setup successful
     double	*_gradientPtr; //!< pointer to the gradients (used by AddGradient(), minimization functions, ...)
     // logging variables
@@ -584,7 +584,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     }
 
     //! \return Plugin type ("forcefields")
-    const char* TypeID()
+    const char* TypeID() override
     {
       return "forcefields";
     }
@@ -710,6 +710,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
      */
     bool GetCoordinates(OBMol &mol);
     //! \deprecated Use GetCooordinates instead.
+    OB_DEPRECATED_MSG("Use GetCooordinates instead.")
     bool UpdateCoordinates(OBMol &mol) {return GetCoordinates(mol); }
     /*! Get coordinates for all conformers and attach OBConformerData with energies, forces, ... to mol.
      *  \param mol The OBMol object to copy the coordinates to (from OBForceField::_mol).
@@ -717,6 +718,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
      */
     bool GetConformers(OBMol &mol);
     //! \deprecated Use GetConformers instead.
+    OB_DEPRECATED_MSG("Use GetConformers instead.")
     bool UpdateConformers(OBMol &mol) { return GetConformers(mol); }
     /*! Set coordinates for current conformer.
      *  \param mol the OBMol object to copy the coordinates from (to OBForceField::_mol).
@@ -1044,6 +1046,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     //@{
     //! Generate coordinates for the molecule (distance geometry)
     //! \deprecated Use OBDistanceGeometry class instead
+    OB_DEPRECATED_MSG("Use OBDistanceGeometry class instead")
     void DistanceGeometry();
     /*! Generate conformers for the molecule (systematicaly rotating torsions).
      *
@@ -1216,6 +1219,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     /*! Perform a linesearch starting at atom in direction direction.
      * \deprecated Current code should use LineSearch(double *, double*) instead.
      */
+    OB_DEPRECATED_MSG("Current code should use LineSearch(double *, double*) instead.")
     vector3 LineSearch(OBAtom *atom, vector3 &direction);
     /*! Perform a linesearch for the entire molecule in direction @p direction.
      *  This function is called when using LineSearchType::Simple.
@@ -1370,15 +1374,6 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     bool ConjugateGradientsTakeNSteps(int n);
     //@}
 
-    // NEMESIS versions
-    void SteepestDescentInitializeNemesis(int steps = 1000, double econv = 1e-6f, int method = OBFF_ANALYTICAL_GRADIENT);
-    bool SteepestDescentNemesis(double* rstgrd,double rstene);
-    void ConjugateGradientsInitializeNemesis(int steps = 1000, double econv = 1e-6f, int method = OBFF_ANALYTICAL_GRADIENT);
-    bool ConjugateGradientsNemesis(double* rstgrd, double rstene);
-
-    //! get last energy
-    double  GetLastEnergy(void);
-
     /////////////////////////////////////////////////////////////////////////
     // Molecular Dynamics                                                  //
     /////////////////////////////////////////////////////////////////////////
@@ -1525,6 +1520,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     static double VectorDistanceDerivative(const double* const pos_i, const double* const pos_j,
                                            double *force_i, double *force_j);
     //! \deprecated
+    OB_DEPRECATED
     static double VectorLengthDerivative(vector3 &a, vector3 &b);
 
     /*! Calculate the derivative of a angle a-b-c. The angle is given by dot(ab,cb)/rab*rcb.
@@ -1540,6 +1536,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     static double VectorAngleDerivative(double *pos_a, double *pos_b, double *pos_c,
                                         double *force_a, double *force_b, double *force_c);
     //! \deprecated
+    OB_DEPRECATED
     static double VectorAngleDerivative(vector3 &a, vector3 &b, vector3 &c);
     /*! Calculate the derivative of a OOP angle a-b-c-d. b is the central atom, and a-b-c is the plane.
      * The OOP angle is given by 90° - arccos(dot(corss(ab,cb),db)/rabbc*rdb).
@@ -1556,6 +1553,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     static double VectorOOPDerivative(double *pos_a, double *pos_b, double *pos_c, double *pos_d,
                                       double *force_a, double *force_b, double *force_c, double *force_d);
     //! \deprecated
+    OB_DEPRECATED
     static double VectorOOPDerivative(vector3 &a, vector3 &b, vector3 &c, vector3 &d);
     /*! Calculate the derivative of a torsion angle a-b-c-d. The torsion angle is given by arccos(dot(corss(ab,bc),cross(bc,cd))/rabbc*rbccd).
      * \param pos_a atom a (coordinates)
@@ -1571,6 +1569,7 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     static double VectorTorsionDerivative(double *pos_a, double *pos_b, double *pos_c, double *pos_d,
                                           double *force_a, double *force_b, double *force_c, double *force_d);
     //! \deprecated
+    OB_DEPRECATED
     static double VectorTorsionDerivative(vector3 &a, vector3 &b, vector3 &c, vector3 &d);
 
     /*! inline fuction to speed up minimization speed

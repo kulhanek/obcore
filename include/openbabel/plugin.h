@@ -38,21 +38,11 @@ namespace OpenBabel
 ///@{
 
 /// @brief Case insensitive string comparison for PluginMapType key.
-struct OBERROR CharPtrLess : public std::binary_function<const char*,const char*, bool>
+struct OBERROR CharPtrLess
 {
   bool operator()(const char* p1,const char* p2) const
   { return strcasecmp(p1,p2)<0; }
 };
-
-//--- kulhanek
-class OBCONV OBPlugNotification {
-  public:
-  virtual void notify(const std::string& text);
-
-  /// notification subsystem
-  static OBPlugNotification* PlugNotification;
-};
-//--- kulhanek
 
 /** \class OBPlugin plugin.h <openbabel/plugin.h>
     \brief Base class for all types of dynamic classes discovered at runtime
@@ -208,7 +198,7 @@ protected:\
     static PluginMapType m;\
     return m;\
   }\
-  virtual PluginMapType& GetMap() const {\
+  PluginMapType& GetMap() const override {\
     return Map();\
   }\
 public:\

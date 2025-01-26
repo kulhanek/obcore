@@ -9,8 +9,8 @@ This file contains a binary representation of data tables
 ***************************************************************/
 
 
-#ifndef OB_ATOMTYP_H
-#define OB_ATOMTYP_H
+#ifndef OB_AtomTypeData_H
+#define OB_AtomTypeData_H
 
 namespace OpenBabel
 {
@@ -318,5 +318,5 @@ static const char AtomTypeData[] = {
 0x00};
 
 } // namespace OpenBabel
-#endif // OB_ATOMTYP_H
+#endif // OB_AtomTypeData_H
 

@@ -26,14 +26,6 @@ using namespace std;
 namespace OpenBabel
 {
 
-//--- kulhanek
-void OBPlugNotification::notify(const std::string& text)
-{
-}
-
-OBPlugNotification* OBPlugNotification::PlugNotification = NULL;
-//--- kulhanek
-
 OBPlugin::PluginMapType& OBPlugin::GetTypeMap(const char* PluginID)
 {
   PluginMapType::iterator itr;
@@ -65,8 +57,6 @@ void OBPlugin::LoadAllPlugins()
 
   DLHandler::getConvDirectory(TargetDir);
 
-  // cout << "TargetDir: " << TargetDir << endl;
-
   vector<string> files;
   if(!DLHandler::findFiles(files,DLHandler::getFormatFilePattern(),TargetDir)) {
     obErrorLog.ThrowError(__FUNCTION__, "Unable to find OpenBabel plugins. Try setting the BABEL_LIBDIR environment variable.", obError);
@@ -76,11 +66,6 @@ void OBPlugin::LoadAllPlugins()
   vector<string>::iterator itr;
   for(itr=files.begin();itr!=files.end();++itr) {
     if(DLHandler::openLib(*itr))
-      //--- kulhanek
-      if( OBPlugNotification::PlugNotification != NULL ){
-        OBPlugNotification::PlugNotification->notify(*itr);
-      }
-      //--- kulhanek
       count++;
   }
   if(!count) {

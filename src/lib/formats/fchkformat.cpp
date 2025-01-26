@@ -56,7 +56,7 @@ namespace OpenBabel
                                    "chemical/x-gaussian-checkpoint");
     }
 
-    virtual const char * Description()
+    const char * Description() override
     {
       return "Gaussian formatted checkpoint file format\n"
              "A formatted text file containing the results of a Gaussian calculation\n"
@@ -67,19 +67,19 @@ namespace OpenBabel
              " b  No bond perception\n\n";
       // Vibrational analysis not yet supported in OB-2.1.
       //                    v  Do not perform the vibrational analysis\n\n";
-    };
+    }
 
-    virtual const char * GetMIMEType()
+    const char * GetMIMEType() override
     {
       return "chemical/x-gaussian-checkpoint";
-    };
+    }
 
-    virtual unsigned int Flags()
+    unsigned int Flags() override
     {
       return NOTWRITABLE;
-    };
+    }
 
-    virtual bool ReadMolecule(OBBase *, OBConversion *);
+    bool ReadMolecule(OBBase *, OBConversion *) override;
 
   private :
     bool static read_int(const char * const, int * const);
@@ -665,16 +665,16 @@ namespace OpenBabel
            no atom numbers < 0 or > Natoms */
         if (NBond.end() != find_if(NBond.begin(),
                                    NBond.end(),
-                                   bind2nd(less_equal<int>(), 0)) ||
+                                   [](int i) { return i <= 0; }) ||
             NBond.end() != find_if(NBond.begin(),
                                    NBond.end(),
-                                   bind2nd(greater<int>(), MxBond)) ||
+                                   [=](int i) { return i > MxBond; }) ||
             IBond.end() != find_if(IBond.begin(),
                                    IBond.end(),
-                                   bind2nd(less<int>(), 0)) ||
+                                   [](int i) { return i < 0; }) ||
             IBond.end() != find_if(IBond.begin(),
                                    IBond.end(),
-                                   bind2nd(greater<int>(), Natoms)))
+                                   [=](int i) { return i > Natoms; }))
           {
             error_msg << "Invalid connectivity : check the \"NBond\" and/or"
                       << " \"IBond\" section(s).";

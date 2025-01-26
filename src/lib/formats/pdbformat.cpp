@@ -49,10 +49,9 @@ namespace OpenBabel
 
       OBConversion::RegisterOptionParam("o", this, 0, OBConversion::OUTOPTIONS);
       OBConversion::RegisterOptionParam("n", this, 0, OBConversion::OUTOPTIONS);
-      OBConversion::RegisterOptionParam("a", this, 0, OBConversion::OUTOPTIONS);
     }
 
-    virtual const char* Description() //required
+    const char* Description() override //required
     {
       return
         "Protein Data Bank format\n"
@@ -63,22 +62,21 @@ namespace OpenBabel
 
         "Write Options, e.g. -xo\n"
         "  n  Do not write duplicate CONECT records to indicate bond order\n"
-        "  o  Write origin in space group label (CRYST1 section)\n"
-        "  a  Do not write CONNECT\n\n";
-    };
+        "  o  Write origin in space group label (CRYST1 section)\n\n";
+    }
 
-    virtual const char* SpecificationURL()
-    { return "http://www.wwpdb.org/docs.html";};
+    const char* SpecificationURL() override
+    { return "http://www.wwpdb.org/docs.html"; }
 
-    virtual const char* GetMIMEType()
-    { return "chemical/x-pdb"; };
+    const char* GetMIMEType() override
+    { return "chemical/x-pdb"; }
 
     //*** This section identical for most OBMol conversions ***
     ////////////////////////////////////////////////////
     /// The "API" interface functions
-  	virtual int SkipObjects(int n, OBConversion* pConv);
-    virtual bool ReadMolecule(OBBase* pOb, OBConversion* pConv);
-    virtual bool WriteMolecule(OBBase* pOb, OBConversion* pConv);
+    int SkipObjects(int n, OBConversion* pConv) override;
+    bool ReadMolecule(OBBase* pOb, OBConversion* pConv) override;
+    bool WriteMolecule(OBBase* pOb, OBConversion* pConv) override;
 
   };
   //***
@@ -259,14 +257,10 @@ namespace OpenBabel
       OBAtomAssignTypicalImplicitHydrogens(&*matom);
 
     // clean out remaining blank lines
-    std::streampos ipos;
-    do
+    while(ifs.peek() == '\n' && !ifs.eof())
     {
-      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
     }
-    while(strlen(buffer) == 0 && !ifs.eof() );
-    ifs.seekg(ipos);
 
     return(true);
   }
@@ -520,8 +514,9 @@ namespace OpenBabel
 
     unsigned int i;
     char buffer[BUFF_SIZE];
-    char type_name[10], padded_name[10];
-    char the_res[10];
+    char type_name[10] = {0,}, padded_name[10] = {0,};
+    char the_res[10] = {0,};
+    char segname[10] = {0,};
     char the_chain = ' ';
     const char *element_name;
     int res_num;
@@ -694,6 +689,8 @@ namespace OpenBabel
             snprintf(type_name,5,"%s",(char*)res->GetAtomID(atom).c_str());
             the_chain = res->GetChain();
 
+            snprintf(segname,5,"%s", (char*)res->GetSegName().c_str());
+
             //two char. elements are on position 13 and 14 one char. start at 14
             if (strlen(OBElements::GetSymbol(atom->GetAtomicNum())) == 1)
               {
@@ -730,6 +727,7 @@ namespace OpenBabel
             type_name[4] = '\0';
             res_num = 1;
             the_insertioncode=' ';
+            strcpy(segname,"    ");
           }
 
         element_name = OBElements::GetSymbol(atom->GetAtomicNum());
@@ -751,7 +749,7 @@ namespace OpenBabel
          occup = occup_fp->GetGenericValue();
         }
 
-        snprintf(buffer, BUFF_SIZE, "%s%5d %-4s %-3s %c%4d%c   %8.3f%8.3f%8.3f%6.2f  0.00          %2s%2s\n",
+        snprintf(buffer, BUFF_SIZE, "%s%5d %-4s %-3s %c%4d%c   %8.3f%8.3f%8.3f%6.2f  0.00      %4s%2s%2s\n",
                  het?"HETATM":"ATOM  ",
                  i,
                  type_name,
@@ -763,12 +761,11 @@ namespace OpenBabel
                  atom->GetY(),
                  atom->GetZ(),
                  occup,
+                 segname,
                  element_name,
                  scharge);
         ofs << buffer;
       }
-
-    if (pConv->IsOption("a", OBConversion::OUTOPTIONS) == NULL ){
 
     OBAtom *nbr;
     vector<OBBond*>::iterator k;
@@ -812,8 +809,6 @@ namespace OpenBabel
         }
         ofs << "                                       \n";
       }
-
-    }
 
     snprintf(buffer, BUFF_SIZE, "MASTER        0    0    0    0    0    0    0    0 ");
     ofs << buffer;
@@ -921,6 +916,15 @@ namespace OpenBabel
     /* insertion code */
     char insertioncode = sbuf.substr(27-6-1,1)[0];
     if (' '==insertioncode) insertioncode=0;
+
+    /* segname */
+    string segname;
+    if (sbuf.size() > 67) {
+      segname = sbuf.substr(66,4);
+      if(segname == "    ") { //unset should be empty string
+        segname = string();
+      }     
+    }
     /* element */
     string element = "  ";
     if (sbuf.size() > 71)
@@ -1139,14 +1143,16 @@ namespace OpenBabel
         || res->GetName() != resname
         || res->GetNumString() != resnum
         || res->GetChain() != chain
-        || res->GetInsertionCode() != insertioncode)
+        || res->GetInsertionCode() != insertioncode
+        || res->GetSegName() != segname)
       {
         vector<OBResidue*>::iterator ri;
         for (res = mol.BeginResidue(ri) ; res ; res = mol.NextResidue(ri))
           if (res->GetName() == resname
               && res->GetNumString() == resnum
               && static_cast<int>(res->GetChain()) == chain
-              && static_cast<int>(res->GetInsertionCode()) == insertioncode) {
+              && static_cast<int>(res->GetInsertionCode()) == insertioncode
+              && res->GetSegName() == segname) {
             if (insertioncode) fprintf(stderr,"I: identified residue wrt insertion code: '%c'\n",insertioncode);
             break;
           }
@@ -1157,6 +1163,7 @@ namespace OpenBabel
           res->SetName(resname);
           res->SetNum(resnum);
           res->SetInsertionCode(insertioncode);
+          res->SetSegName(segname);
         }
       }
 

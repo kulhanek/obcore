@@ -43,12 +43,12 @@ namespace OpenBabel
   {
   public:
     EEMCharges(const char* ID, std::string parameters, std::string type);
-    const char *Description(void);
+    const char *Description(void) override;
 
     /// \return whether partial charges were successfully assigned to this molecule
-    bool ComputeCharges(OBMol &mol);
+    bool ComputeCharges(OBMol &mol) override;
 
-    double DipoleScalingFactor() { return 1.0; } // fit from regression
+    double DipoleScalingFactor() override { return 1.0; } // fit from regression
 
   private:
     std::string _description;
@@ -132,11 +132,7 @@ namespace OpenBabel
       {
         ETA[i] = new double[dim];
       }
-
-// PK
-//    double totalCharge(0.0);
-    double totalCharge = mol.GetTotalCharge();
-
+    double totalCharge(0.0);
     unsigned int i(0);
     double hardness;
     double electronegativity;
@@ -171,8 +167,7 @@ namespace OpenBabel
       ETA[i][i] = hardness;
 
       // Adjust the total molecular charge
-      // PK - taken from OBMol total charge 
-      // totalCharge += atom->GetFormalCharge();
+      totalCharge += atom->GetFormalCharge();
     }
 
     // Complete CHI

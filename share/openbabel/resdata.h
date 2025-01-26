@@ -9,8 +9,8 @@ This file contains a binary representation of data tables
 ***************************************************************/
 
 
-#ifndef OB_RESDATA_H
-#define OB_RESDATA_H
+#ifndef OB_ResidueData_H
+#define OB_ResidueData_H
 
 namespace OpenBabel
 {
@@ -916,5 +916,5 @@ static const char ResidueData[] = {
  0x44,0x0A,0x00};
 
 } // namespace OpenBabel
-#endif // OB_RESDATA_H
+#endif // OB_ResidueData_H
 

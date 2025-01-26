@@ -36,32 +36,32 @@ namespace OpenBabel {
       OBConversion::RegisterFormat("got",this);
     }
 
-    virtual const char* Description()
+    const char* Description() override
     {
       return
         "GULP format\n"
         "The format used by GULP (General Utility Lattice Program).\n\n";
-    };
+    }
 
-    virtual const char* SpecificationURL(){return "https://projects.ivec.org/gulp/";};
+    const char* SpecificationURL() override { return "https://projects.ivec.org/gulp/"; }
 
     /* Flags() can return be any of the following combined by |
        or be omitted if none apply
        NOTREADABLE  READONEONLY  NOTWRITABLE  WRITEONEONLY  DEFAULTFORMAT
        READBINARY  WRITEBINARY  READXML  ZEROATOMSOK */
-    virtual unsigned int Flags()
+    unsigned int Flags() override
     {
       return READONEONLY | NOTWRITABLE;
-    };
+    }
 
-    virtual int SkipObjects(int n, OBConversion* pConv)
+    int SkipObjects(int n, OBConversion* pConv) override
     {
       return 0;
-    };
+    }
 
     ////////////////////////////////////////////////////
     /// Declarations for the "API" interface functions. Definitions are below
-    virtual bool ReadMolecule(OBBase* pOb, OBConversion* pConv);
+    bool ReadMolecule(OBBase* pOb, OBConversion* pConv) override;
     //    virtual bool WriteMolecule(OBBase* pOb, OBConversion* pConv);
 
   private:
@@ -332,7 +332,8 @@ namespace OpenBabel {
             enthalpy_eV = atof(vs[4].c_str());
           }
 
-          ifs.getline(buffer,BUFF_SIZE);
+          if (!ifs.getline(buffer,BUFF_SIZE))
+            break;
         }
         if (hasPV)
           pmol->SetEnergy((enthalpy_eV - pv_eV) * EV_TO_KCAL_PER_MOL);

@@ -41,8 +41,8 @@ GNU General Public License for more details.
 #include <sstream>
 #include <string>
 #include <cmath>
-#include <eigen3/Eigen/Core>
-#include <eigen3/Eigen/Eigenvalues>
+#include <Eigen/Core>
+#include <Eigen/Eigenvalues>
 
 using namespace std;
 
@@ -119,8 +119,7 @@ namespace OpenBabel {
 
   OBDistanceGeometry::~OBDistanceGeometry()
   {
-    if (_d != nullptr)
-      delete _d;
+    delete _d;
   }
 
   float OBDistanceGeometry::GetUpperBounds(int i, int j) {
@@ -131,8 +130,7 @@ namespace OpenBabel {
   }
   bool OBDistanceGeometry::Setup(const OBMol &mol, bool useCurrentGeometry)
   {
-    if (_d != nullptr)
-      delete _d;
+    delete _d;
     // TODO: add IsSetupNeeded() like OBForceField to prevent duplication of work
 
     dim = 4;
@@ -531,10 +529,10 @@ namespace OpenBabel {
 
               float lBounds = _d->GetLowerBounds(a->GetIdx() - 1, d->GetIdx() - 1) + DIST14_TOL;
               float uBounds = _d->GetUpperBounds(a->GetIdx() - 1, d->GetIdx() - 1) - DIST14_TOL;
-              if (ct->IsTrans(a, d)) {
+              if (ct->IsTrans(a->GetId(), d->GetId())) {
                 // lower bounds should be trans (current upper bounds)
                 _d->SetLowerBounds(a->GetIdx() - 1, d->GetIdx() - 1, uBounds - DIST14_TOL);
-              } else if (ct->IsCis(a, d)) {
+              } else if (ct->IsCis(a->GetId(), d->GetId())) {
                 // upper bounds should be cis (current lower bounds)
                 _d->SetUpperBounds(a->GetIdx() - 1, d->GetIdx() - 1, lBounds + DIST14_TOL);
               }

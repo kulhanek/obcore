@@ -803,13 +803,13 @@ namespace OpenBabel
       vgid.push_back(k->second);
   }
 
-  unsigned int OBMol::NumHvyAtoms()
+  unsigned int OBMol::NumHvyAtoms() const
   {
-    OBAtom *atom;
-    vector<OBAtom*>::iterator(i);
+    const OBAtom *atom;
+    vector<OBAtom*>::const_iterator(i);
     unsigned int count = 0;
 
-    for(atom = this->BeginAtom(i);atom;atom = this->NextAtom(i))
+    for(atom = this->BeginAtom(i); atom; atom = this->NextAtom(i))
       {
         if (atom->GetAtomicNum() != OBElements::Hydrogen)
           count++;
@@ -2267,7 +2267,9 @@ namespace OpenBabel
 
                 int bondFlags = 0;
                 AddBond(atom->GetIdx(),h->GetIdx(),1, bondFlags);
-                h->SetCoordPtr(&_c);
+                if (_c) {
+                  h->SetCoordPtr(&_c);
+                }
                 OpenBabel::ImplicitRefToStereo(*this, atom->GetId(), h->GetId());
               }
           }
@@ -3164,7 +3166,13 @@ namespace OpenBabel
     EndModify();
     if (unset)
       {
-        _c = nullptr;
+        if (_c != nullptr){
+          delete [] _c;
+
+          // Note that the above delete doesn't set _c value to nullptr
+          _c = nullptr;
+        }
+
         for (atom = BeginAtom(i);atom;atom = NextAtom(i))
           atom->ClearCoordPtr();
 	if (_vconf.size() > 0)
@@ -3218,7 +3226,10 @@ namespace OpenBabel
             && atom->GetExplicitDegree() == 2
             && angle > 109.5)
           atom->SetHyb(2);
-
+        else if(atom->GetAtomicNum() == OBElements::Nitrogen
+            && atom->GetExplicitDegree() == 2
+            && atom->IsInRing()) //azete
+          atom->SetHyb(2);
       } // pass 1
 
     // Make sure upcoming calls to GetHyb() don't kill these temporary values
@@ -3942,10 +3953,22 @@ namespace OpenBabel
     return i == _vatom.end() ? nullptr : (OBAtom*)*i;
   }
 
+  const OBAtom* OBMol::BeginAtom(OBAtomConstIterator &i) const
+  {
+    i = _vatom.cbegin();
+    return i == _vatom.cend() ? nullptr : (OBAtom *)*i;
+  }
+
   OBAtom *OBMol::NextAtom(OBAtomIterator &i)
   {
     ++i;
     return i == _vatom.end() ? nullptr : (OBAtom*)*i;
+  }
+
+  const OBAtom* OBMol::NextAtom(OBAtomConstIterator &i) const
+  {
+    ++i;
+    return i == _vatom.cend() ? nullptr : (OBAtom *)*i;
   }
 
   OBBond *OBMol::BeginBond(OBBondIterator &i)
@@ -4273,6 +4296,8 @@ namespace OpenBabel
             OBAtom *atomB, *atomE;
             if (skipping_bond) {
               for(int N=0; N<2; ++N) {
+                atomB = nullptr;
+                atomE = nullptr;
                 if (N==0) {
                   if (posB != AtomMap.end()) {
                     atomB = posB->second;
@@ -4286,6 +4311,8 @@ namespace OpenBabel
                   if (record_atomorder)
                     atomorder->push_back(bond->GetBeginAtomIdx());
                 }
+                if (atomB == nullptr || atomE == nullptr)
+                  continue;
                 newmol.AddBond(atomB->GetIdx(), atomE->GetIdx(),
                   bond->GetBondOrder(), bond->GetFlags());
                 if (record_bondorder)

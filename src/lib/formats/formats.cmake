@@ -77,6 +77,7 @@ endif(MSVC OR HAVE_REGEX_H)
 if(WITH_JSON)
   set(formats_json
     chemdoodlejsonformat
+    chemicaljsonformat
     pubchemjsonformat
   )
 endif()
@@ -97,7 +98,9 @@ set(formats_misc
       carformat
       cccformat
       chem3dformat
+      chemdrawcdx
       chemdrawct
+      chemkinformat
       chemtoolformat
       cifformat
       cofformat
@@ -132,6 +135,9 @@ set(formats_misc
       pointcloudformat
       posformat
       pqrformat
+      rinchiformat
+      rsmiformat
+      rxnformat
       shelxformat
       smileyformat
       stlformat
@@ -150,17 +156,6 @@ set(wlnformat_additional_sources wln-nextmove.cpp)
 if(NOT BUILD_SHARED)
   set(formats_misc ${formats_misc} genbankformat)
 endif(NOT BUILD_SHARED)
-
-if(MSVC OR SHARED_POINTER)
-  set(formats_misc
-    ${formats_misc}
-    rxnformat
-    chemdrawcdx
-    chemkinformat
-    rinchiformat
-    rsmiformat
-  )
-endif(MSVC OR SHARED_POINTER)
 
 set(optional_formatgroups "")
 if(CAIRO_FOUND)
@@ -235,15 +230,10 @@ if(LIBXML2_FOUND AND (BUILD_SHARED OR WITH_STATIC_LIBXML))
   set(formats_xml
     cdxmlformat
     cmlformat
+    cmlreactformat
     pubchem
     xmlformat
   )
-  if(MSVC OR SHARED_POINTER)
-    set(formats_xml
-        ${formats_xml}
-        cmlreactformat
-    )
-  endif(MSVC OR SHARED_POINTER)
 endif(LIBXML2_FOUND AND (BUILD_SHARED OR WITH_STATIC_LIBXML))
 
 if(HAVE_RPC_XDR_H)

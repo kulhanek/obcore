@@ -40,7 +40,7 @@ public:
     init();
   }
 
-  virtual const char* Description() //required
+  const char* Description() override  // required
   {
     return
     "MCDL format\n"
@@ -58,22 +58,22 @@ public:
 "  CHHH;COCl[2]\n";
   }
 
-  virtual const char* SpecificationURL(){return
+  const char* SpecificationURL() override { return
      "http://pubs.acs.org/cgi-bin/abstract.cgi/jcisd8/2001/41/i06/abs/ci000108y.html";}
 
-  virtual const char* GetMIMEType()
+  const char* GetMIMEType() override
   { return "chemical/x-MCDL"; }
 
   /* Flags() can return be any of the following combined by |
      or be omitted if none apply
      NOTREADABLE  READONEONLY  NOTWRITABLE  WRITEONEONLY  DEFAULTFORMAT
      READBINARY  WRITEBINARY  READXML  ZEROATOMSOK*/
-  virtual unsigned int Flags()
+  unsigned int Flags() override
   {
       return 0;
   }
 
-  virtual int SkipObjects(int n, OBConversion* pConv)
+  int SkipObjects(int n, OBConversion* pConv) override
   {
       if(n==0) n++;
       string temp;
@@ -87,8 +87,8 @@ public:
 
   ////////////////////////////////////////////////////
   /// Declarations for the "API" interface functions. Definitions are below
-  virtual bool ReadMolecule(OBBase* pOb, OBConversion* pConv);
-  virtual bool WriteMolecule(OBBase* pOb, OBConversion* pConv);
+  bool ReadMolecule(OBBase* pOb, OBConversion* pConv) override;
+  bool WriteMolecule(OBBase* pOb, OBConversion* pConv) override;
 
 private:
 
@@ -237,16 +237,16 @@ private:
     int *  nsum[MAXBONDS];
     bool lflag[MAXFRAGS];
     char strg[MAXFRAGS+1];
-	char * strngs[MAXFRAGS+1];
+    char * strngs[MAXFRAGS+1];
     char tstr[MAXFRAGS+1];
-    int  numdups, dupfrag, jump;
+    int  numdups = 0, dupfrag, jump;
     bool jflag;
     int  ix[MAXFRAGS],conntab[MAXBONDS][4],cx[MAXFRAGS];
     int  mx[MAXFRAGS];
 
 	//stack overflow message-move data from stack to heap
-	for (i=0; i<=MAXFRAGS; i++) strngs[i]=(char *)malloc(MAXFRAGS);
-    for (i=0; i<MAXBONDS; i++)  nsum[i]=(int *) malloc(MAXFRAGS);
+	for (i=0; i<=MAXFRAGS; i++) strngs[i]=(char *)calloc(MAXFRAGS,sizeof(char));
+    for (i=0; i<MAXBONDS; i++)  nsum[i]=(int *) calloc(MAXFRAGS,sizeof(int));
 
     // depth = recursion level
     if (depth > 10)

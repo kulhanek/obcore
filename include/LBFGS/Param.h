@@ -4,7 +4,7 @@
 #ifndef PARAM_H
 #define PARAM_H
 
-#include <eigen3/Eigen/Core>
+#include <Eigen/Core>
 #include <stdexcept>  // std::invalid_argument
 
 

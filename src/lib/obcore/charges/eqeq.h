@@ -26,8 +26,8 @@ GNU General Public License for more details.
 
 #ifdef HAVE_EIGEN3
 
-#include <eigen3/Eigen/LU>
-#include <eigen3/Eigen/SVD>
+#include <Eigen/LU>
+#include <Eigen/SVD>
 
 #define TABLE_OF_ELEMENTS_SIZE 84 // Number of atoms in data/eqeqIonizations.txt
 #define PI 3.1415926535897932384626433832795 // 32 digits of pi
@@ -50,10 +50,10 @@ class EQEqCharges : public OBChargeModel
 public:
   EQEqCharges(void) : OBChargeModel("fake ID", false){};
   EQEqCharges(const char* ID) : OBChargeModel(ID, false){};
-  const char* Description(){ return "Assign EQEq (charge equilibration) partial charges."; }
+  const char* Description() override { return "Assign EQEq (charge equilibration) partial charges."; }
 
   /// \return whether partial charges were successfully assigned to this molecule
-  bool ComputeCharges(OBMol &mol);
+  bool ComputeCharges(OBMol &mol) override;
 
 private:
   int _chargeCenter[TABLE_OF_ELEMENTS_SIZE + 1]; // Common charge of metallic ions

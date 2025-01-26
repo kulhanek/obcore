@@ -41,6 +41,8 @@ namespace OpenBabel {
   class OBAtom;
   //! A standard iterator over a vector of atoms
   typedef std::vector<OBAtom*>::iterator OBAtomIterator;
+  //! A standard constant iterator over a vector of atoms
+  typedef std::vector<OBAtom*>::const_iterator OBAtomConstIterator;
   class OBBond;
   //! A standard iterator over a vector of bonds
   typedef std::vector<OBBond*>::iterator OBBondIterator;
@@ -77,6 +79,8 @@ namespace OpenBabel {
     //! MODRES records for modified residues:
     //! http://www.rcsb.org/pdb/file_formats/pdb/pdbguide2.2/part_36.html
     void    SetName(const std::string &resname);
+    //! \brief Set the segment name of this residue (max four characters)
+    void    SetSegName(const std::string &segname);    
     //! Set the residue number (in the sequence)
     void    SetNum(const unsigned int resnum);
     void    SetNum(const std::string  resnum);
@@ -102,11 +106,15 @@ namespace OpenBabel {
 
     //! \return The residue name
     std::string    GetName(void)                  const;
+    //! \return The residue segment name
+    std::string    GetSegName(void)               const;    
     //! \return The residue number (in the sequence)
     int    GetNum(void);
     std::string     GetNumString(void);
     //! \return The number of atoms in this residue
     unsigned int   GetNumAtoms()                  const;
+    //! \return The number of heavy atoms in this residue
+    unsigned int   GetNumHvyAtoms()               const;
     //! \return The ID of the chain which includes this residue
     char           GetChain(void)                 const;
     //! \return The number of the chain which includes this residue
@@ -151,8 +159,12 @@ namespace OpenBabel {
     //@{
     //! \return An iterator to the beginning of the atom list in this residue
     OBAtomIterator BeginAtoms()   { return _atoms.begin(); }
+    //! \return A constant iterator to the beginning of the atom list in this residue
+    OBAtomConstIterator CBeginAtoms() const { return _atoms.cbegin(); }
     //! \return An iterator to the end of the atom list in this residue
     OBAtomIterator EndAtoms()     { return _atoms.end();   }
+    //! \return A constant iterator to the end of the atom list in this residue
+    OBAtomConstIterator CEndAtoms() const { return _atoms.cend(); }
     //! Set the iterator @p i to the beginning of the atom list in this residue
     //! \return The first atom (or NULL if none exist)
     OBAtom *BeginAtom(std::vector<OBAtom*>::iterator &i);
@@ -169,6 +181,7 @@ namespace OpenBabel {
     unsigned int              _reskey;//!< Residue key ID -- see SetResidueKeys()
     std::string               _resnum;//!< Residue number (i.e., in file) 23, 1B, etc.
     std::string               _resname;//!<Residue text name
+    std::string               _segname;//!<Segment text name
     char                _insertioncode;//!<PBB insertion code
 
     std::vector<bool>         _hetatm;//!< Is a given atom a HETAM

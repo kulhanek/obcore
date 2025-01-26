@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #include <openbabel/math/vector3.h>
 #include <openbabel/math/matrix3x3.h>
 #include <openbabel/isomorphism.h>
-#include <eigen3/Eigen/Core>
+#include <Eigen/Core>
 
 namespace OpenBabel
 {

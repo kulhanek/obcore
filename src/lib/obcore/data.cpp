@@ -34,7 +34,7 @@ GNU General Public License for more details.
 // data headers with default parameters
 #include "types.h"
 #include "resdata.h"
-
+#include "atomizationenergies.h"
 
 #if !HAVE_STRNCASECMP
 extern "C" int strncasecmp(const char *s1, const char *s2, size_t n);
@@ -55,6 +55,7 @@ namespace OpenBabel
     _envvar = "BABEL_DATADIR";
     _filename = "atomization-energies.txt";
     _subdir = "data";
+    _dataptr = AtomicHeatOfFormationData;
     Init();
   }
 
@@ -325,6 +326,7 @@ namespace OpenBabel
   //!  string and null-terminating as needed
   //! \deprecated Because there is no guarantee on the length of an atom type
   //!  you should consider using std::string instead
+  OB_DEPRECATED_MSG("you should consider using std::string instead")
   bool OBTypeTable::Translate(char *to, const char *from)
   {
     if (!_init)
@@ -702,7 +704,7 @@ namespace OpenBabel
                 strncpy(charBuffer, p1, (p2 - p1));
                 charBuffer[(p2 - p1)] = '\0';
                 ParseLine(charBuffer);
-                p1 = ++p2;
+                p1 = p2 + 1;
               }
         }
       else

@@ -1,23 +1,17 @@
 /* src/config.h.in.  Generated from configure.in by autoheader.  */
 
-/* kulhanek */
-extern "C" {
-const char* obprefix(const char* suffix);
-}
-
 /* Where the data files are located */
-/* kulhanek */
-#define BABEL_DATADIR obprefix("/share/openbabel")
+#define BABEL_DATADIR "/scratch/kulhanek/Tmp/openbabel/install/share/openbabel"
 
 /* The version of Open Babel */
-#define BABEL_VERSION "3.1.0"
+#define BABEL_VERSION "3.1.1"
 
 /* Version check macro
    Can be used like #if (OB_VERSION >= OB_VERSION_CHECK(2, 2, 99)) */
 #define OB_VERSION_CHECK(major, minor, patch) ((major<<16)|(minor<<8)|(patch))
 
 /* OB_VERSION is (major << 16) + (minor << 8) + patch */
-#define OB_VERSION OB_VERSION_CHECK(3, 1, 0)
+#define OB_VERSION OB_VERSION_CHECK(3, 1, 1)
 
 /* The file extension used for shared modules */
 #define MODULE_EXTENSION ".so"
@@ -35,6 +29,20 @@ const char* obprefix(const char* suffix);
  #define OB_EXPORT
  #define OB_IMPORT
  #define OB_HIDDEN
+#endif
+
+// deprecated attribute (C++14)
+#if defined(__has_cpp_attribute) && !defined(SWIG)
+  #if __has_cpp_attribute(deprecated)
+    #define OB_DEPRECATED [[deprecated]]
+    #define OB_DEPRECATED_MSG(msg) [[deprecated(msg)]]
+  #else
+    #define OB_DEPRECATED
+    #define OB_DEPRECATED_MSG(msg)
+  #endif
+#else
+  #define OB_DEPRECATED
+  #define OB_DEPRECATED_MSG(msg)
 #endif
 
 /* Used to export symbols for DLL / shared library builds */
@@ -155,12 +163,6 @@ const char* obprefix(const char* suffix);
 /* have struct clock_t */
 #define HAVE_CLOCK_T 1
 
-/* shared pointer implementation to be used */
-#define OB_SHARED_PTR_IMPLEMENTATION std::shared_ptr
-
-/* header to be included for shared pointers */
-#define OB_SHARED_PTR_HEADER <memory>
-
 #if defined(WIN32)
  #ifndef HAVE_SNPRINTF
   #define snprintf _snprintf
@@ -185,12 +187,11 @@ const char* obprefix(const char* suffix);
  #define SCANDIR_CONST
 #endif
 
-/* kulhanek */
-#define OB_MODULE_PATH obprefix("/lib/formats")
+#define OB_MODULE_PATH "/scratch/kulhanek/Tmp/openbabel/install/lib/openbabel/3.1.1"
 
 #ifndef TIME_WITH_SYS_TIME
-  #ifdef HAVE_SYS_TIME
-    #ifdef HAVE_TIME
+  #ifdef HAVE_SYS_TIME_H
+    #ifdef HAVE_TIME_H
       #define TIME_WITH_SYS_TIME 1
     #else
       #define TIME_WITH_SYS_TIME 0

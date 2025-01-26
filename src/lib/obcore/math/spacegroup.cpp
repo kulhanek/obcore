@@ -30,6 +30,8 @@ GNU General Public License for more details.
 #include <cstdarg>
 #include <cstdlib>
 
+#include "spacegroups.h"
+
 using namespace std;
 
 namespace OpenBabel
@@ -50,10 +52,10 @@ namespace OpenBabel
   {
   public:
     SpaceGroups();
-    virtual ~SpaceGroups();
+    ~SpaceGroups() override;
 
-		void ParseLine(const char*);
-    size_t GetSize() { return sgs.size();}
+    void ParseLine(const char*) override;
+    size_t GetSize() override { return sgs.size(); }
     bool Inited() { return _init;}
 
     map<string, const SpaceGroup*> sgbn;
@@ -70,6 +72,7 @@ namespace OpenBabel
     _envvar = "BABEL_DATADIR";
     _filename = "space-groups.txt";
     _subdir = "data";
+    _dataptr = SpaceGroupsData;
   }
 
   SpaceGroups::~SpaceGroups()
@@ -309,8 +312,11 @@ namespace OpenBabel
       }
     }
 
-    if (!transform_exists)
+    if (transform_exists){
+      delete candidate;
+    }else{
       m_transforms.push_back (candidate);
+    }
   }
 
   /*!

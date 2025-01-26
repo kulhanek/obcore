@@ -22,6 +22,7 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/obfunctions.h>
 #include <openbabel/mol.h>
 #include <openbabel/atom.h>
 #include <openbabel/elements.h>
@@ -73,7 +74,7 @@ namespace OpenBabel
       OBConversion::RegisterFormat("pdbqt",this, "chemical/x-pdbqt");
     }
 
-    virtual const char* Description() //required
+    const char* Description() override  // required
     {
       return
 
@@ -93,21 +94,21 @@ namespace OpenBabel
       "  s  Output as a flexible residue\n"
       "  p  Preserve atom indices from input file (default is to renumber atoms sequentially)\n"
       "  h  Preserve hydrogens\n"
-			"  n  Preserve atom names\n\n";
-    };
+      "  n  Preserve atom names\n\n";
+    }
 
-    virtual const char* SpecificationURL()
-      {return "http://autodock.scripps.edu/faqs-help/faq/what-is-the-format-of-a-pdbqt-file";};
+    const char* SpecificationURL() override
+      { return "http://autodock.scripps.edu/faqs-help/faq/what-is-the-format-of-a-pdbqt-file"; }
 
-    virtual const char* GetMIMEType()
-      {return "chemical/x-pdbqt";};
+    const char* GetMIMEType() override
+      { return "chemical/x-pdbqt"; }
 
     //*** This section identical for most OBMol conversions ***
     ////////////////////////////////////////////////////
     /// The "API" interface functions
-    virtual int SkipObjects(int n, OBConversion* pConv);
-    virtual bool ReadMolecule(OBBase* pOb, OBConversion* pConv);
-    virtual bool WriteMolecule(OBBase* pOb, OBConversion* pConv);
+    int SkipObjects(int n, OBConversion* pConv) override;
+    bool ReadMolecule(OBBase* pOb, OBConversion* pConv) override;
+    bool WriteMolecule(OBBase* pOb, OBConversion* pConv) override;
 
   };
   //***
@@ -304,6 +305,10 @@ namespace OpenBabel
 
     mol.SetChainsPerceived();
 
+    // Guess how many hydrogens are present on each atom based on typical valencies (from pdbformat.cpp)
+    FOR_ATOMS_OF_MOL(matom, mol)
+      OBAtomAssignTypicalImplicitHydrogens(&*matom);
+
     // clean out remaining blank lines
     std::streampos ipos;
     do
@@ -398,7 +403,7 @@ namespace OpenBabel
     }
 
     double charge = atom->GetPartialCharge();
-    snprintf(buffer, BUFF_SIZE, "%s%5d %-4s %-3s %c%4d%c   %8.3f%8.3f%8.3f  0.00  0.00    %+5.3f %.2s",
+    snprintf(buffer, BUFF_SIZE, "%s%5d %-4s %-3s %c%4d%c   %8.3f%8.3f%8.3f  0.00  0.00  %+8.3f %-2.2s",
       het?"HETATM":"ATOM  ",
       index,
       type_name,

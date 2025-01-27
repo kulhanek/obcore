@@ -1374,6 +1374,16 @@ const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 
     bool ConjugateGradientsTakeNSteps(int n);
     //@}
 
+    // kulhanek
+    // NEMESIS versions
+    void SteepestDescentInitializeNemesis(int steps = 1000, double econv = 1e-6f, int method = OBFF_ANALYTICAL_GRADIENT);
+    bool SteepestDescentNemesis(double* rstgrd,double rstene);
+    void ConjugateGradientsInitializeNemesis(int steps = 1000, double econv = 1e-6f, int method = OBFF_ANALYTICAL_GRADIENT);
+    bool ConjugateGradientsNemesis(double* rstgrd, double rstene);
+
+    //! get last energy
+    double  GetLastEnergy(void);
+
     /////////////////////////////////////////////////////////////////////////
     // Molecular Dynamics                                                  //
     /////////////////////////////////////////////////////////////////////////

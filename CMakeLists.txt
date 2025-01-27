@@ -11,7 +11,7 @@ PROJECT(OBCORE)
 # ==============================================================================
 
 # define project version -------------------------
-SET(OBCORE_VERSION x2024-01)
+SET(OBCORE_VERSION x2025-01)
 
 # what languages we use --------------------------
 ENABLE_LANGUAGE(CXX)
@@ -32,9 +32,9 @@ ENDIF(NOT DEVELOPMENT_ROOT)
 # external/internal libraries --------------------------------------------------
 # ==============================================================================
 
-INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/x2024-01/include SYSTEM)
-INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/x2024-01/include/inchi SYSTEM)
-INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/x2024-01/share/openbabel SYSTEM)
+INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/x2025-01/include SYSTEM)
+INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/x2025-01/include/inchi SYSTEM)
+INCLUDE_DIRECTORIES(${DEVELOPMENT_ROOT}/thirdparty/obcore/x2025-01/share/openbabel SYSTEM)
 SET(OBCORE_LIB_NAME obcore)
 SET(INCHI_LIB_NAME inchi)
 

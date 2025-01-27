@@ -1,10 +1,16 @@
 /* src/config.h.in.  Generated from configure.in by autoheader.  */
 
+/* kulhanek */
+extern "C" {
+const char* obprefix(const char* suffix);
+}
+
 /* Where the data files are located */
-#define BABEL_DATADIR "/scratch/kulhanek/Tmp/openbabel/install/share/openbabel"
+/* kulhanek */
+#define BABEL_DATADIR obprefix("/share/openbabel")
 
 /* The version of Open Babel */
-#define BABEL_VERSION "3.1.1"
+#define BABEL_VERSION "x2025-01"
 
 /* Version check macro
    Can be used like #if (OB_VERSION >= OB_VERSION_CHECK(2, 2, 99)) */
@@ -187,7 +193,8 @@
  #define SCANDIR_CONST
 #endif
 
-#define OB_MODULE_PATH "/scratch/kulhanek/Tmp/openbabel/install/lib/openbabel/3.1.1"
+/* kulhanek */
+#define OB_MODULE_PATH obprefix("/lib/formats")
 
 #ifndef TIME_WITH_SYS_TIME
   #ifdef HAVE_SYS_TIME_H

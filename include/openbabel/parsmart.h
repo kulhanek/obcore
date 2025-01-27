@@ -155,7 +155,8 @@ namespace OpenBabel
   {
   protected:
     OBSmartsPrivate                *_d;        //!< Internal data storage for future expansion
-    OB_DEPRECATED std::vector<bool> _growbond; //!< \deprecated (Not used)
+    // kulhanek
+    // OB_DEPRECATED std::vector<bool> _growbond; //!< \deprecated (Not used)
     std::vector<std::vector<int> >	_mlist;    //!< The list of matches
     Pattern                        *_pat;      //!< The parsed SMARTS pattern
     std::string				              _str;      //!< The string of the SMARTS expression

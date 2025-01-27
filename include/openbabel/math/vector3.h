@@ -278,7 +278,9 @@ namespace OpenBabel
     OB_DEPRECATED_MSG("Use vector3::IsApprox() instead.")
     bool operator!= ( const vector3& other ) const
     {
-      return ! ( (*this) == other );
+      // kulhanek
+      // return ! ( (*this) == other );
+      return ! ( (*this).IsApprox(other,1e-7) );
     }
     //! \brief Safe comparison for floating-point vector3
     //! \return true if the vector *this is approximately equal to the vector

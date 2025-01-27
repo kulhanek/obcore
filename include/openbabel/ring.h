@@ -118,7 +118,8 @@ namespace OpenBabel
   **/
   class OBAPI OBRingSearch
   {
-    OB_DEPRECATED std::vector<OBBond*> _bonds; //!< the internal list of closure bonds (deprecated)
+    // kulhanek
+    // OB_DEPRECATED std::vector<OBBond*> _bonds; //!< the internal list of closure bonds (deprecated)
     std::vector<OBRing*> _rlist; //!< the internal list of rings
   public:
     OBRingSearch()    {}
